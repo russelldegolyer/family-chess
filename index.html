@@ -187,6 +187,32 @@ body.focus:not(.compact) .panel { display: none; }
 .chat-form input:focus { outline: none; border-color: var(--gold); }
 .send { flex: none; display: grid; place-items: center; border-radius: 50%; border: 0; cursor: pointer; }
 
+
+/* Post-game timeline: same board, a focused review inspector on the right. */
+.review-summary{padding:15px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:linear-gradient(145deg,#29292e,#17171a);margin:4px 0 12px;color:#f5f5f7;}
+.review-kicker{display:flex;justify-content:space-between;align-items:center;gap:8px;font:750 11px/1.3 var(--body);letter-spacing:.13em;color:#d6d6db}
+.review-counter{font:550 11px/1.3 var(--body);letter-spacing:0;color:#a7a7ae;text-align:right}
+.review-track{width:100%;height:5px;overflow:hidden;border-radius:99px;background:#45454a;margin:12px 0 14px}
+.review-progress{height:100%;background:linear-gradient(90deg,#ba8d4b,#f1cf80);border-radius:99px;transition:width .2s ease}
+.review-event{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.review-event strong{font:700 18px/1.2 var(--display);letter-spacing:-.02em}
+.review-san{font:650 15px/1.2 var(--body);color:#c6c6cc;font-variant-numeric:tabular-nums}
+.review-event-event strong{color:#eacc76}
+.review-event-mate strong{color:#f18c8c}
+.review-detail{margin:9px 0 0;color:#c1c1c8;font:400 13px/1.55 var(--body)}
+.review-stepper{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin:10px 0}
+.review-stepper>button{flex:0 0 auto;min-height:36px}
+.review-play-button{min-width:88px}
+.review-exit-button{flex:1 1 100%!important;margin-top:4px}
+.review-move-scroll{max-height:min(34dvh,250px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:7px 6px;background:#111114}
+.review-move-scroll .mv{min-height:33px}
+.review-move-scroll .mv.on{background:rgba(232,189,84,.20);color:#f7d889;border-color:rgba(232,189,84,.48)}
+.review-entry{margin:8px 0 14px;min-height:42px}
+body.compact .review-summary{padding:11px 12px;margin:0 0 8px}
+body.compact .review-detail{font-size:12px;line-height:1.4}
+body.compact .review-move-scroll{max-height:18dvh}
+@media(prefers-reduced-motion:reduce){.review-progress{transition:none}}
+
 /* History */
 .hist { position: absolute; inset: 0; overflow-y: auto; padding: 18px; scrollbar-width: thin; scrollbar-color: rgba(239, 222, 196, 0.18) transparent; }
 .hist h3 { margin: 0; font: 500 24px/1.1 var(--display); color: var(--ink); }
@@ -2811,6 +2837,7 @@ let mySeat = null;
 let viewSide = 'w';
 let localView = store.get('sg.orient', 'w') === 'b' ? 'b' : 'w';
 let review = null;
+let reviewTimer = null;
 let pending = null;
 let selected = null;
 let moveMode = store.get('sg.mode', 'preview') === 'instant' ? 'instant' : 'preview';
@@ -4582,6 +4609,23 @@ function markers2D() {
   const cell = (sq, attrs) => { const [c, r] = sqCR(sq); return sv('rect', { x: c, y: r, width: 1, height: 1, ...attrs }, g); };
   const edge = (sq, a) => { const [c, r] = sqCR(sq); return sv('rect', { x: c + 0.05, y: r + 0.05, width: 0.9, height: 0.9, fill: C2.hl + (a * 0.25) + ')', stroke: C2.hl + a + ')', 'stroke-width': 0.035 }, g); };
   if (last) { if (C2.mono) { edge(last.from, 0.4); edge(last.to, pending ? 0.75 : 0.6); } else { cell(last.from, { fill: C2.hl + '0.34)' }); cell(last.to, { fill: C2.hl + (pending ? '0.58)' : '0.46)') }); } }
+  if (review && last) {
+    const [ax, ay] = sqCR(last.from), [bx, by] = sqCR(last.to);
+    const x1 = ax + 0.5, y1 = ay + 0.5, x2 = bx + 0.5, y2 = by + 0.5;
+    const dx = x2 - x1, dy = y2 - y1, distance = Math.hypot(dx, dy);
+    if (distance > 0) {
+      const ux = dx / distance, uy = dy / distance;
+      const startX = x1 + ux * 0.20, startY = y1 + uy * 0.20;
+      const endX = x2 - ux * 0.22, endY = y2 - uy * 0.22;
+      const color = '#e8bd54';
+      sv('line', { x1:startX, y1:startY, x2:endX, y2:endY, stroke:color, 'stroke-width':0.115, 'stroke-linecap':'round', opacity:0.83 }, g);
+      const wing = 0.19, tipX = x2 - ux * 0.07, tipY = y2 - uy * 0.07;
+      sv('polygon', { points: [
+        [tipX, tipY], [endX - ux*0.18 - uy*wing, endY - uy*0.18 + ux*wing],
+        [endX - ux*0.18 + uy*wing, endY - uy*0.18 - ux*wing]
+      ].map(v => v.join(',')).join(' '), fill:color, opacity:0.88 }, g);
+    }
+  }
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   if (kingSq) { const [c, r] = sqCR(kingSq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.5, fill: 'url(#chk2)' }, g); }
   const live = selected && canAct();
@@ -5197,6 +5241,7 @@ $('promoCancel').addEventListener('click', () => { promoCtx = null; hide($('prom
 
 /* ------------------------------------------------------------------ review */
 function startReview(r) {
+  stopReviewPlayback(false);
   if (pending) cancelPreview(false);
   clearSelection();
   const ply = clamp(r.ply, 0, r.moves.length);
@@ -5205,14 +5250,14 @@ function startReview(r) {
   hide($('endCard'));
   updateAll();
 }
-function reviewTo(ply) {
+function reviewTo(ply, auto = false) {
+  if (!auto) stopReviewPlayback(false);
   if (!review) {
     if (ply >= G.moves.length || !G.moves.length) return;
     startReview({ moves: G.moves.slice(), ply, title: `Game ${G.n}`, live: true });
     return;
   }
   const p = clamp(ply, 0, review.moves.length);
-  if (review.live && p >= G.moves.length) { endReview(); return; }
   if (p === review.ply) return;
   const forward = p === review.ply + 1;
   review.ply = p; review.pos = positionFrom(review.moves, p);
@@ -5220,8 +5265,50 @@ function reviewTo(ply) {
   if (forward) fxForMove(review.pos.last, land, false);
   updateAll();
 }
-function reviewStep(d) { reviewTo((review ? review.ply : G.moves.length) + d); }
+function reviewStep(d, auto = false) { reviewTo((review ? review.ply : G.moves.length) + d, auto); }
+function stopReviewPlayback(render = true) {
+  if (!reviewTimer) return;
+  clearInterval(reviewTimer);
+  reviewTimer = null;
+  if (render && historyOpen) renderHistory();
+}
+function toggleReviewPlayback() {
+  if (!review) return;
+  if (reviewTimer) { stopReviewPlayback(); return; }
+  if (review.ply >= review.moves.length) reviewTo(0);
+  if (!review.moves.length) return;
+  reviewTimer = setInterval(() => {
+    if (!review || review.ply >= review.moves.length) { stopReviewPlayback(); return; }
+    reviewStep(1, true);
+    if (review && review.ply >= review.moves.length) stopReviewPlayback();
+  }, 1350);
+  renderHistory();
+}
+function reviewComment(pos) {
+  if (!pos.last) return { label: 'Starting position', detail: 'Both sides begin with their full armies. Follow each move using Next or Play.', kind: 'start' };
+  const mv = pos.last, piece = PIECE[mv.piece] || 'piece', who = SIDE[mv.color];
+  if (pos.chess.isCheckmate()) return { label: 'Checkmate', detail: who + ' delivers checkmate with ' + mv.san + '. The opposing king has no legal escape.', kind: 'mate' };
+  if (mv.promotion) return { label: 'Promotion', detail: who + ' promotes a pawn on ' + mv.to + ' to a ' + (PIECE[mv.promotion] || 'piece') + '.', kind: 'event' };
+  if (pos.chess.inCheck()) return { label: 'Check', detail: who + ' plays ' + mv.san + ', putting the opposing king in check.', kind: 'event' };
+  if (mv.flags && /[kq]/.test(mv.flags)) return { label: 'Castling', detail: who + ' castles ' + (mv.flags.includes('k') ? 'kingside' : 'queenside') + ', moving the king and rook together.', kind: 'event' };
+  if (mv.captured) return { label: 'Capture', detail: who + ' captures a ' + (PIECE[mv.captured] || 'piece') + ' on ' + mv.to + ' with a ' + piece + '.', kind: 'event' };
+  return { label: 'Move played', detail: who + ' moves the ' + piece + ' from ' + mv.from + ' to ' + mv.to + '.', kind: 'normal' };
+}
+function beginGameReview() {
+  if (!G.moves.length) return;
+  if (focusMode && !compact) setFocus(false);
+  if (!historyOpen) openHistory(true);
+  if (compact) setSheet(true);
+  startReview({ moves: G.moves.slice(), ply: 0, title: G.mode === 'cpu' ? 'Versus computer' : 'Game ' + G.n, live: true });
+}
+document.addEventListener('keydown', (e) => {
+  if (!review || e.altKey || e.ctrlKey || e.metaKey || e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); reviewStep(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); reviewStep(-1); }
+  if (e.code === 'Space' && !e.target?.closest?.('button, a')) { e.preventDefault(); toggleReviewPlayback(); }
+});
 function endReview() {
+  stopReviewPlayback(false);
   if (!review) return;
   review = null;
   syncBoard(G.pos, { animate: true, quick: true });
@@ -5233,6 +5320,7 @@ function endReview() {
 function renderHistory() {
   if (!historyOpen) return;
   const view = $('historyView');
+  const oldMoveScroll = view.querySelector('.review-move-scroll')?.scrollTop || 0;
   const frag = document.createDocumentFragment();
   const moves = review ? review.moves : G.moves;
   const sans = sanList(moves);
@@ -5243,6 +5331,33 @@ function renderHistory() {
   else if (G.mode === 'cpu') sub.textContent = `You play ${SIDE[cpu.human]} · ${LEVEL_NAME[cpu.level]}`;
   else sub.textContent = G.status === 'over' ? describeResult().line || 'Finished' : bothSeated() ? `${seatName('w')} with White, ${seatName('b')} with Black` : 'Waiting for both players';
   frag.append(h, sub);
+  if (review) {
+    const pos = review.pos, note = reviewComment(pos), total = review.moves.length;
+    const summary = el('section', 'review-summary');
+    summary.setAttribute('aria-label', 'Game replay');
+    const kicker = el('div', 'review-kicker');
+    kicker.textContent = 'GAME REVIEW';
+    const counter = el('span', 'review-counter');
+    counter.textContent = review.ply + ' / ' + total + ' half-moves';
+    kicker.append(counter);
+    const track = el('div', 'review-track'), progress = el('div', 'review-progress');
+    progress.style.width = (total ? 100 * review.ply / total : 0) + '%';
+    track.append(progress);
+    const badge = el('div', 'review-event review-event-' + note.kind);
+    const headline = el('strong');
+    headline.textContent = note.label;
+    const san = el('span', 'review-san');
+    san.textContent = review.ply ? moveLabel(review.ply, sans[review.ply - 1]) : '0. Start';
+    badge.append(headline, san);
+    const explanation = el('p', 'review-detail');
+    explanation.textContent = note.detail;
+    summary.append(kicker, track, badge, explanation);
+    frag.append(summary);
+  } else if (G.status === 'over' && sans.length) {
+    const action = button('▶ Review game', 'gold small', beginGameReview);
+    action.classList.add('review-entry');
+    frag.append(action);
+  }
   if (!sans.length) { const p = el('p', 'muted'); p.textContent = 'No moves yet.'; frag.append(p); }
   else {
     const grid = el('div', 'moves');
@@ -5256,16 +5371,31 @@ function renderHistory() {
         b.setAttribute('aria-label', `Show the board after ${moveLabel(j + 1, sans[j])}`);
         b.addEventListener('click', () => {
           if (review) reviewTo(j + 1);
-          else if (j + 1 < G.moves.length) startReview({ moves: G.moves.slice(), ply: j + 1, title: `Game ${G.n}`, live: true });
+          else if (j + 1 <= G.moves.length) startReview({ moves: G.moves.slice(), ply: j + 1, title: `Game ${G.n}`, live: true });
         });
         grid.append(b);
       }
     }
-    frag.append(grid);
-    const step = el('div', 'stepper');
-    step.append(iconBtn('first', 'Starting position', () => reviewTo(0), false), iconBtn('prev', 'Previous move', () => reviewStep(-1), false), iconBtn('next', 'Next move', () => reviewStep(1), false), iconBtn('last', 'Latest move', () => reviewTo(review ? review.moves.length : G.moves.length), false));
-    if (review) step.append(button('Back to live', 'gold small', endReview));
+    const step = el('div', 'stepper' + (review ? ' review-stepper' : ''));
+    step.append(iconBtn('first', 'Starting position', () => reviewTo(0), false), iconBtn('prev', 'Previous move', () => reviewStep(-1), false));
+    if (review) {
+      const playback = button(reviewTimer ? '❚❚ Pause' : '▶ Play', 'gold small', toggleReviewPlayback);
+      playback.classList.add('review-play-button');
+      playback.setAttribute('aria-label', reviewTimer ? 'Pause replay' : 'Play replay automatically');
+      step.append(playback);
+    }
+    step.append(iconBtn('next', 'Next move', () => reviewStep(1), false), iconBtn('last', 'Latest move', () => reviewTo(review ? review.moves.length : G.moves.length), false));
+    if (review) {
+      const back = button(G.status === 'over' ? 'Exit review' : 'Back to game', 'small', endReview);
+      back.classList.add('review-exit-button');
+      step.append(back);
+    }
     frag.append(step);
+    if (review) {
+      const wrapper = el('div', 'review-move-scroll');
+      wrapper.append(grid);
+      frag.append(wrapper);
+    } else frag.append(grid);
   }
   if (G.mode === 'live') {
     const t = el('div', 'section-title'); t.textContent = 'Past games';
@@ -5287,6 +5417,18 @@ function renderHistory() {
     }
   }
   view.replaceChildren(frag);
+  if (review) {
+    const scroller = view.querySelector('.review-move-scroll');
+    if (scroller) {
+      scroller.scrollTop = oldMoveScroll;
+      const active = scroller.querySelector('.mv.on');
+      if (active) {
+        const top = active.offsetTop - scroller.offsetTop;
+        if (top < scroller.scrollTop || top + active.offsetHeight > scroller.scrollTop + scroller.clientHeight)
+          scroller.scrollTop = Math.max(0, top - scroller.clientHeight / 2);
+      }
+    }
+  }
 }
 function archiveName(g, side) { const uid = g.seats && g.seats[side]; return (g.names && g.names[side]) || (uid && G.people[uid]) || profileFirst(uid) || SIDE[side]; }
 function archiveResult(g) { if (g.result === '1-0') return `${archiveName(g, 'w')} won`; if (g.result === '0-1') return `${archiveName(g, 'b')} won`; return 'Draw'; }
@@ -5311,7 +5453,7 @@ function openHistory(on = !historyOpen) {
   $('chatForm').hidden = on;
   $('typing').hidden = on;
   if (on) renderHistory();
-  else { if (review) endReview(); markChatRead(); }
+  else { stopReviewPlayback(false); if (review) endReview(); markChatRead(); }
 }
 
 /* ------------------------------------------------------------------ panel: chat */
@@ -5908,7 +6050,7 @@ function maybeShowEndCard() {
     else { const w = el('p', 'muted'); w.textContent = `${personLabel(chooser)} chooses the next board and colour.`; acts.append(w); }
   } else if (G.mode !== 'live') acts.append(button('Play Again', 'gold', () => rematch(false)), button('Swap colors', '', () => rematch(true)));
   acts.append(button('New game', '', () => { endDismissed = endKey(); card.hidden = true; openSetup(); }));
-  acts.append(button('Review', '', () => { endDismissed = endKey(); if (!historyOpen) openHistory(true); if (compact) setSheet(true); startReview({ moves: G.moves.slice(), ply: 0, title: G.mode === 'cpu' ? 'Versus computer' : `Game ${G.n}`, live: true }); }));
+  acts.append(button('▶ Game review', 'gold', () => { endDismissed = endKey(); beginGameReview(); }));
   acts.append(button('Close', 'quiet', () => { endDismissed = endKey(); card.hidden = true; }));
   card.hidden = false;
 }
@@ -6023,6 +6165,7 @@ function openMenu() {
   }, 'danger');
   if (m.children.length) m.append(el('hr'));
   add('Settings…', () => { closeMenu(); openSettings(); });
+  if (G.status === 'over' && G.moves.length) add('Game review ▶', () => { closeMenu(); beginGameReview(); });
   add('Move history', () => { closeMenu(); if (focusMode) setFocus(false); if (compact) setSheet(true); openHistory(); });
   add('Flip board', () => { closeMenu(); flipBoard(); });
   if (G.onlineProvider !== 'supabase' && G.mode === 'live' && mySeat && (G.moves.length === 0 || G.status === 'over')) add('Leave my seat', () => { closeMenu(); leaveSeat(); });
