@@ -1,7 +1,7 @@
 {
-  "name": "Family Chess",
+  "name": "Chess",
   "short_name": "Chess",
-  "description": "Private family chess and practice games",
+  "description": "Chess — online matches and computer practice",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
