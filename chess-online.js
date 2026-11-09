@@ -309,7 +309,7 @@
     }
   }
 
-  async function startMatch(id,mode='play') {
+  async function startMatch(id,mode='play',reviewAfterLoad=false) {
     if (!player || !pattern.test(id)) throw new Error('Sign in and choose a valid game.');
     // Keep the lobby visible if the game cannot be opened.
     for (let i=0;i<25 && pendingRead;i++) await new Promise(resolve=>setTimeout(resolve,120));
@@ -326,6 +326,7 @@
       throw new Error($('cgMessage').textContent || 'Unable to open this match.');
     }
     root.hidden = true;
+    if (reviewAfterLoad) window.familyChessNative?.openReview?.();
     subscription = api.channel('chess-match-'+id)
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'chess_games',filter:'id=eq.'+id},
         ()=>{void syncMatch();})
@@ -517,7 +518,7 @@
       const play=document.createElement('button');play.className='cgButton';play.type='button';
       play.textContent=g.status==='waiting'?'Open waiting board':g.status==='finished'?'View history':'Play board';
       play.style.marginLeft='8px';
-      play.addEventListener('click',()=>{void startMatch(g.id).catch(e=>status(e.message,true));});
+      play.addEventListener('click',()=>{void startMatch(g.id,'play',g.status==='finished').catch(e=>status(e.message,true));});
       card.append(title,description,a,button,play);games.append(card);
     }
   }
