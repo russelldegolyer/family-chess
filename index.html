@@ -22,7 +22,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 * { box-sizing: border-box; }
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
 body { margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
 button, input { font: inherit; color: inherit; }
 button:disabled { cursor: default; }
@@ -6585,6 +6585,30 @@ window.familyChessNative = {
   }
 };
 window.dispatchEvent(new Event('familyChessNativeReady'));
+
+/* iPhone installed web apps can otherwise magnify the PAGE when two rapid
+   taps confirm a move. The chess renderer uses pointerup, not synthetic click,
+   so cancelling only the second single-finger touchend preserves both taps.
+   The 2D/3D board's own pinch-and-drag controls remain unchanged. */
+for (const surface of [document.getElementById('stage'), document.getElementById('board2d')]) {
+  if (!surface) continue;
+  let lastTap = null;
+  surface.addEventListener('touchend', (e) => {
+    if (e.touches.length !== 0 || e.changedTouches.length !== 1) {
+      lastTap = null;
+      return;
+    }
+    const t = e.changedTouches[0], now = performance.now();
+    const rapid = lastTap && now - lastTap.time < 360 &&
+      Math.hypot(t.clientX - lastTap.x, t.clientY - lastTap.y) < 55;
+    lastTap = {time: now, x: t.clientX, y: t.clientY};
+    if (rapid && e.cancelable) e.preventDefault();
+  }, {passive:false});
+}
+/* Keep the board's own double-click actions but suppress browser zoom. */
+document.addEventListener('dblclick', (e) => {
+  if (e.target instanceof Element && e.target.closest('#stage, #board2d')) e.preventDefault();
+}, {capture:true, passive:false});
 </script>
 <script>
   setTimeout(function () {
