@@ -209,6 +209,44 @@ body.focus:not(.compact) .panel { display: none; }
 .review-move-scroll .mv{min-height:33px}
 .review-move-scroll .mv.on{background:rgba(232,189,84,.20);color:#f7d889;border-color:rgba(232,189,84,.48)}
 .review-entry{margin:8px 0 14px;min-height:42px}
+
+.review-analysis-head{display:flex;flex-wrap:wrap;align-items:center;gap:5px 10px;
+  padding:8px 2px;margin:4px 0 7px;color:#b9b9c0;
+  font:550 11px/1.35 var(--body)}
+.review-analysis-head>span:first-child{flex:1 1 100%;color:#d2d2d7}
+.review-side-count{border:1px solid #414146;border-radius:999px;padding:4px 8px;
+  color:#c9c9d0;background:#1f1f23;white-space:nowrap}
+.review-insight{margin:7px 0 8px;padding:12px 13px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.11);background:#202024;color:#e7e7eb}
+.review-insight-title{font:750 14px/1.3 var(--body);color:#e6e6ec}
+.review-insight-best .review-insight-title{color:#a3d4ad}
+.review-insight-inaccuracy{border-left:3px solid #d7c177}
+.review-insight-mistake{border-left:3px solid #e7a560}
+.review-insight-blunder{border-left:3px solid #e17276}
+.review-insight-uncertain{border-left:3px solid #7e899c}
+.review-insight-blunder .review-insight-title{color:#f2a0a4}
+.review-insight-mistake .review-insight-title{color:#ecc086}
+.review-teaching{margin:7px 0 0;font:400 12.5px/1.48 var(--body);color:#c8c8cd}
+.review-cost{margin-top:8px;font:500 11px/1.35 var(--body);color:#acacb4}
+.review-compare{display:block;width:100%;margin-top:10px;
+  min-height:38px!important;border:1px solid #655647!important;
+  background:#3b332c!important;color:#f4d7a8!important;font:650 12px/1.2 var(--body)!important}
+.review-compare:hover{background:#4c4135!important}
+.review-thinking,.review-engine-note{margin:5px 0 7px;color:#9898a2;
+  font:400 11px/1.45 var(--body)}
+.review-engine-note{margin:6px 0 10px}
+.review-issue-navigation{display:flex;gap:7px;margin:6px 0 10px}
+.review-issue-navigation .btn{flex:1 1 50%;min-height:34px;
+  padding:7px 8px;font-size:11.5px;white-space:normal;border-radius:9px}
+.review-move-scroll .review-flag-inaccuracy{box-shadow:inset 3px 0 #cbb766;background:rgba(203,183,102,.08)}
+.review-move-scroll .review-flag-mistake{box-shadow:inset 3px 0 #e6a25c;background:rgba(230,162,92,.10)}
+.review-move-scroll .review-flag-blunder{box-shadow:inset 3px 0 #d76e74;background:rgba(215,110,116,.12)}
+.review-move-scroll .review-flag-best{color:#b8d5c1}
+.review-move-scroll .mv.on{font-weight:750}
+body.compact .review-analysis-head{margin:3px 0 6px;padding:4px 0}
+body.compact .review-insight{padding:10px 11px;margin:6px 0}
+body.compact .review-issue-navigation .btn{min-height:34px;padding:6px}
+
 body.compact .review-summary{padding:11px 12px;margin:0 0 8px}
 body.compact .review-detail{font-size:12px;line-height:1.4}
 body.compact .review-move-scroll{max-height:18dvh}
@@ -5557,7 +5595,13 @@ function renderHistory() {
       back.classList.add('review-exit-button');
       step.append(back);
     }
-    frag.append(step);
+    if (review) {
+      // Keep transport controls immediately below the progress card on mobile.
+      const afterCard = frag.querySelector('.review-analysis-head') ||
+        frag.querySelector('.review-insight') || frag.querySelector('.review-engine-note');
+      if (afterCard) frag.insertBefore(step, afterCard);
+      else frag.append(step);
+    } else frag.append(step);
     if (review) {
       const wrapper = el('div', 'review-move-scroll');
       wrapper.append(grid);
