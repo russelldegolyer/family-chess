@@ -7,15 +7,38 @@
   const style = document.createElement('style');
   style.textContent = `
     #cgQuickDock[hidden], #cgCreatedLink[hidden] {display:none!important}
-    #cgQuickDock {position:fixed;z-index:85;top:calc(max(12px, env(safe-area-inset-top, 0px)) + 76px);
-      left:max(10px,env(safe-area-inset-left, 0px));display:flex;flex-direction:column;align-items:flex-start;gap:7px}
-    #cgQuickDock button {font:650 12px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      border:1px solid #47474a;border-radius:12px;color:#f7f7f7;background:rgba(15,15,17,.92);
-      backdrop-filter:blur(12px);min-height:34px;padding:9px 12px;
-      box-shadow:0 5px 20px #0008;cursor:pointer;white-space:nowrap}
-    #cgQuickDock button:first-child {background:linear-gradient(135deg,#9b0c19,#43070e);
-      border-color:#ad2637;color:#fff}
+    /* A single horizontal action row, separated from player header. */
+    #cgQuickDock {
+      position:fixed; z-index:85;
+      top:calc(var(--gt, 16px) + 108px);
+      left:50%; transform:translateX(-50%);
+      width:min(430px,calc(100vw - 28px));
+      display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+      align-items:stretch; gap:7px;
+      padding:0; margin:0;
+      pointer-events:auto;
+    }
+    #cgQuickDock button {
+      display:flex; align-items:center; justify-content:center;
+      min-width:0; width:100%; min-height:40px;
+      padding:8px 9px; border:1px solid #47474a; border-radius:11px;
+      background:rgba(15,15,17,.96);color:#f7f7f7;
+      font:650 12px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      text-align:center;white-space:normal;
+      box-shadow:0 5px 14px #0007;cursor:pointer;
+    }
+    #cgQuickDock button:first-child {
+      background:linear-gradient(135deg,#930f1d,#4c0911);
+      border-color:#a3283a;color:#fff;
+    }
     #cgQuickDock button:active,#cgLobbyActions button:active {transform:scale(.98)}
+    @media(max-width:899px) {
+      #cgQuickDock {top:calc(var(--gt,16px) + 73px)}
+      #cgQuickDock button{min-height:40px;font-size:11.5px;padding:8px 5px}
+      body.compact #banner:not([hidden]) {top:calc(var(--gt,16px) + 144px)!important}
+    }
+    body.compact.landscape #cgQuickDock {display:none!important}
+    body:has(.auth-account.is-open) #cgQuickDock {visibility:hidden}
     .cgLobbyActions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 20px}
     .cgLobbyActions button {min-height:65px;border-radius:12px;padding:10px 7px;color:#f5f5f5;
       border:1px solid #4a4a4e;background:#242428;font:700 12px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -29,9 +52,7 @@
     #cgProfileSettings {margin:12px 0;border-top:1px solid #343438;padding:11px 0}
     #cgProfileSettings summary {color:#aeafb6;font-size:12px;cursor:pointer}
     #cgWatchShortcut{display:none!important}
-    @media(max-width:600px){#cgQuickDock {top:calc(max(12px, env(safe-area-inset-top, 0px)) + 73px)}
-      #cgQuickDock button{min-height:32px;font-size:11.5px;padding:8px 10px}
-      .cgLobbyActions button {font-size:11.5px;padding:8px 4px}}
+    @media(max-width:600px){.cgLobbyActions button {font-size:11.5px;padding:8px 4px}}
 
     #cgLaunch {background:#f2f2f2;color:#111;border:0;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
     #cgLobby[hidden]{display:none!important}
