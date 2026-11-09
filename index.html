@@ -16,6 +16,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-online.js"></script>
+<script defer src="./chess-chat.js?v=1"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
 <script defer src="./chess-social.js?v=4"></script>
 <title>Family Chess</title>
@@ -23,6 +24,7 @@
 <style>
 * { box-sizing: border-box; }
 html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+#chatInput { font-size: 16px; }
 body { margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
 button, input { font: inherit; color: inherit; }
 button:disabled { cursor: default; }
@@ -5222,6 +5224,19 @@ function allMessages() {
 }
 function renderChat(forceBottom = false) {
   const list = $('chatList');
+  if (G.onlineProvider === 'supabase') {
+    window.familyChessChat?.render({
+      gameId: G.gid,
+      status: G.status,
+      mySeat,
+      userId: me.id,
+      whiteId: G.seats.w,
+      blackId: G.seats.b,
+      whiteName: seatName('w'),
+      blackName: seatName('b')
+    }, forceBottom);
+    return;
+  }
   if (!CAP.db) {
     const n=el('div','note chat-empty-state');
     const heading=el('strong','chat-empty-title'),detail=el('p','chat-empty-description');
@@ -5261,6 +5276,10 @@ function countUnread() {
   if (document.hidden) { document.title = '● New message · Family Chess'; titleFlag = true; }
 }
 function sendChat(raw) {
+  if (G.onlineProvider === 'supabase') {
+    void window.familyChessChat?.send(raw);
+    return;
+  }
   const text = raw.replace(/\s+/g, ' ').trim().slice(0, 400);
   if (!text || !CAP.db || !me.id) return;
   const msg = { id: rid(10), t: text, at: Date.now() };
@@ -5301,6 +5320,23 @@ function renderTyping() {
   $('typing').textContent = names.length ? `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} typing…` : '';
 }
 function updateChatEnabled() {
+  if (G.onlineProvider === 'supabase') {
+    const ok = window.familyChessChat?.canSend({
+      gameId: G.gid,
+      status: G.status,
+      mySeat,
+      userId: me.id,
+      whiteId: G.seats.w,
+      blackId: G.seats.b
+    }) === true;
+    $('chatInput').disabled = !ok;
+    $('chatSend').disabled = !ok;
+    $('chatInput').placeholder = !mySeat ? 'Player messages are private' :
+      G.status === 'waiting' ? 'Waiting for your opponent' :
+      G.status !== 'active' ? 'This match has ended' :
+      ok ? 'Type a message…' : 'Connecting chat…';
+    return;
+  }
   const ok = !!CAP.db && !!me.id && me.canWrite !== false;
   $('chatInput').disabled = !ok; $('chatSend').disabled = !ok;
   $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : !CAP.db ? 'Messaging is not connected yet' : ok ? 'Type a message…' : 'Chat is read-only for you here';
