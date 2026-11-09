@@ -3057,7 +3057,7 @@ function updateBanner() {
   if (review) {
     const sans = sanList(review.moves);
     msg = `${review.title} · ${review.ply ? moveLabel(review.ply, sans[review.ply - 1]) : 'starting position'}`;
-    acts.append(iconBtn('prev', 'Previous move', () => reviewStep(-1)), iconBtn('next', 'Next move', () => reviewStep(1)), button('Back to live', 'gold small', endReview));
+    acts.append(iconBtn('prev', 'Previous move', () => reviewStep(-1)), iconBtn('next', 'Next move', () => reviewStep(1)), button(G.status === 'over' ? 'Exit review' : 'Back to game', 'gold small', endReview));
   } else if (G.mode === 'live' && G.status === 'active' && mySeat && G.drawOffer && G.drawOffer !== mySeat) {
     msg = `${seatName(G.drawOffer)} offers a draw.`;
     acts.append(button('Decline', 'quiet small', () => answerDraw(false)), button('Accept draw', 'gold small', () => answerDraw(true)));
