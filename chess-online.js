@@ -7,38 +7,29 @@
   const style = document.createElement('style');
   style.textContent = `
     #cgQuickDock[hidden], #cgCreatedLink[hidden] {display:none!important}
-    /* A single horizontal action row, separated from player header. */
+    /* A single compact entry to online play. Actions remain in the lobby,
+       not across the chessboard where they obscure pieces and coordinates. */
     #cgQuickDock {
-      position:fixed; z-index:85;
-      top:calc(var(--gt, 16px) + 108px);
-      left:50%; transform:translateX(-50%);
-      width:min(430px,calc(100vw - 28px));
-      display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
-      align-items:stretch; gap:7px;
-      padding:0; margin:0;
+      position:fixed;
+      z-index:85;
+      top:calc(var(--gt,16px) + 4px);
+      left:max(10px,env(safe-area-inset-left,0px));
+      width:auto;
+      display:block;
       pointer-events:auto;
     }
     #cgQuickDock button {
-      display:flex; align-items:center; justify-content:center;
-      min-width:0; width:100%; min-height:40px;
-      padding:8px 9px; border:1px solid #47474a; border-radius:11px;
-      background:rgba(15,15,17,.96);color:#f7f7f7;
-      font:650 12px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      text-align:center;white-space:normal;
-      box-shadow:0 5px 14px #0007;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:5px;
+      min-height:35px;padding:8px 11px;
+      border:1px solid #9c2634;border-radius:11px;
+      color:#fff;background:linear-gradient(135deg,#740f1b,#270609);
+      font:650 12px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      box-shadow:0 3px 12px #0009;
+      cursor:pointer;touch-action:manipulation;
     }
-    #cgQuickDock button:first-child {
-      background:linear-gradient(135deg,#930f1d,#4c0911);
-      border-color:#a3283a;color:#fff;
-    }
-    #cgQuickDock button:active,#cgLobbyActions button:active {transform:scale(.98)}
-    @media(max-width:899px) {
-      #cgQuickDock {top:calc(var(--gt,16px) + 73px)}
-      #cgQuickDock button{min-height:40px;font-size:11.5px;padding:8px 5px}
-      body.compact #banner:not([hidden]) {top:calc(var(--gt,16px) + 144px)!important}
-    }
-    body.compact.landscape #cgQuickDock {display:none!important}
-    body:has(.auth-account.is-open) #cgQuickDock {visibility:hidden}
+    #cgQuickDock button:active,#cgLobbyActions button:active{transform:scale(.98)}
+    body.compact.landscape #cgQuickDock,body:not(.compact) #cgQuickDock{display:none!important}
+    body:has(.auth-account.is-open) #cgQuickDock{visibility:hidden}
     .cgLobbyActions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 20px}
     .cgLobbyActions button {min-height:65px;border-radius:12px;padding:10px 7px;color:#f5f5f5;
       border:1px solid #4a4a4e;background:#242428;font:700 12px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -175,9 +166,7 @@
   quickDock.id = 'cgQuickDock';
   quickDock.hidden = true;
   quickDock.setAttribute('aria-label','Play chess online');
-  quickDock.innerHTML = '<button id="cgQuickChallenge" type="button">♞ Challenge</button>'+
-    '<button id="cgQuickInvite" type="button">⌁ Invite link</button>'+
-    '<button id="cgQuickSpectate" type="button">◉ Spectate</button>';
+  quickDock.innerHTML = '<button id="cgQuickOnline" type="button" aria-label="Open online chess options">♞ Online</button>';
   document.body.appendChild(quickDock);
   const watchShortcut=document.createElement('button');
   watchShortcut.id='cgWatchShortcut';watchShortcut.type='button';watchShortcut.hidden=true;
@@ -245,9 +234,7 @@
       if(target) { target.scrollIntoView({block:'start',behavior:'smooth'}); }
     });
   }
-  $('cgQuickChallenge').addEventListener('click',()=>toSection('cgSocialMount'));
-  $('cgQuickInvite').addEventListener('click',()=>{show();void createInvite();});
-  $('cgQuickSpectate').addEventListener('click',()=>toSection('cgLiveGames'));
+  $('cgQuickOnline').addEventListener('click',show);
   $('cgGoChallenge').addEventListener('click',()=>toSection('cgSocialMount'));
   $('cgGoLink').addEventListener('click',()=>{void createInvite();});
   $('cgGoWatch').addEventListener('click',()=>toSection('cgLiveGames'));
