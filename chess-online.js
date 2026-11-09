@@ -136,7 +136,14 @@
           <button id="cgCopyNewInvite" class="cgButton" type="button">Copy link</button>
           <button id="cgShareNewInvite" class="cgButton" type="button">Share invite</button>
         </div>
-        <p class="cgMuted">Your family member signs in and joins as Black. You play White.</p>
+        <label class="cgLabel" for="cgInviteRecipient">Notify a family player directly (60-second challenge)</label>
+        <div class="cgRow">
+          <select id="cgInviteRecipient" class="cgInput" aria-label="Choose family player">
+            <option value="">Choose a player…</option>
+          </select>
+          <button id="cgNotifyInvite" class="cgButton" type="button">Notify</button>
+        </div>
+        <p class="cgMuted">Sending another invite closes your previous games. Only the newest link remains joinable.</p>
       </div>
       <details id="cgProfileSettings">
         <summary><span>Chess name</span><span id="cgNameValue">Loading…</span></summary>
@@ -215,7 +222,7 @@
     try { await navigator.clipboard.writeText(value); status('Invitation copied.'); }
     catch { status('Copy this link manually: ' + value); }
   }
-  function show() { if (!player) return; root.hidden=false; void refresh(); $('cgClose').focus(); }
+  function show() { if (!player) return; root.hidden=false; void refresh(); void loadInviteRecipients(); $('cgClose').focus(); }
   function close() { root.hidden=true; launch.focus(); }
   window.familyChessOpenLobby = show;
   function openNameEditor(){
@@ -257,6 +264,41 @@
     } else void copy(url);
   });
 
+  async function loadInviteRecipients(){
+    if(!player)return;
+    const selected=$('cgInviteRecipient').value;
+    const {data,error}=await api.from('chess_profiles')
+      .select('id,display_name').neq('id',player.id).order('display_name').limit(100);
+    if(error){status('Could not list family players: '+error.message,true);return;}
+    const el=$('cgInviteRecipient');
+    el.replaceChildren(new Option('Choose a player…',''));
+    for(const p of data||[])el.add(new Option(p.display_name,p.id));
+    if([...el.options].some(x=>x.value===selected))el.value=selected;
+  }
+  $('cgNotifyInvite').addEventListener('click',async()=>{
+    if(!player||!creating){
+      const gameId=$('cgNewInviteURL').href.split('game=')[1]?.split('&')[0];
+      const target=$('cgInviteRecipient').value;
+      if(!target){status('Select a family member to notify.',true);return;}
+      if(!pattern.test(gameId||'')){status('Create a new invitation first.',true);return;}
+      const button=$('cgNotifyInvite');button.disabled=true;
+      try{
+        const {data:id,error}=await api.rpc('chess_send_invite_to_player',{
+          p_game_id:gameId,p_target:target});
+        if(error)throw error;
+        const {data:push,error:pushError}=await api.functions.invoke('chess-notify-challenge',{
+          body:{challenge_id:id}});
+        if(pushError)throw new Error('Invitation sent, but the push service could not be reached.');
+        const sent=Number(push?.sent||0),failed=Number(push?.failed||0);
+        status(sent>0?'Push sent to '+sent+' device'+(sent===1?'':'s')+'.':
+          push?.configured===false?'Invitation saved, but server push is not configured.':
+          failed>0?'Invitation saved, but push delivery failed on '+failed+' device(s).':
+          'Invitation saved, but no subscribed device received the push.');
+      }catch(e){status('Could not notify player: '+(e?.message||'Unknown error'),true);}
+      finally{button.disabled=false;}
+    }
+  });
+
   // Server data is authoritative. No browser can directly update the game or move tables.
   function stopMatch() {
     matchId=null;matchMode=null;
@@ -286,7 +328,7 @@
     const id=matchId, uid=player.id, epoch=syncToken;
     try {
       const {data:g,error:gameError}=await api.from('chess_games')
-        .select('id,white_player_id,black_player_id,status,current_fen,result,created_at,updated_at')
+        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at')
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) throw new Error('This match is private or no longer available.');
@@ -495,7 +537,7 @@
     void refreshLive(false);
     const games = $('cgGames'); games.replaceChildren(); games.textContent = 'Loading…';
     const {data,error} = await api.from('chess_games')
-      .select('id,status,white_player_id,black_player_id,created_at')
+      .select('id,status,end_reason,white_player_id,black_player_id,created_at')
       .or('white_player_id.eq.'+player.id+',black_player_id.eq.'+player.id)
       .order('created_at',{ascending:false}).limit(20);
     if (!player) return;
@@ -514,12 +556,14 @@
       title.textContent=w+' vs '+b;
       const description=document.createElement('div');description.className='cgMuted';
       description.textContent=(g.white_player_id===player.id?'You play White':'You play Black')+' · '+
-        (g.status==='waiting'?'Awaiting opponent':g.status==='active'?'Playing now':'Finished');
+        (g.status==='waiting'?'Awaiting opponent':g.status==='active'?'Playing now':g.end_reason==='replaced'?'Ended · new invite created':'Finished');
       const a=document.createElement('a'); a.href=link(g.id); a.textContent=link(g.id);
-      const button=document.createElement('button');button.type='button';button.className='cgButton';button.textContent='Copy invite';
+      const button=document.createElement('button');button.type='button';button.className='cgButton';
+      button.textContent=g.status==='waiting'?'Copy invite':'Copy game link';
+      if(g.status==='finished')button.title='This match is over. The link cannot be joined.';
       button.addEventListener('click',()=>{void copy(link(g.id));});
       const play=document.createElement('button');play.className='cgButton';play.type='button';
-      play.textContent=g.status==='waiting'?'Open waiting board':'Play board';
+      play.textContent=g.status==='waiting'?'Open waiting board':g.status==='finished'?'View history':'Play board';
       play.style.marginLeft='8px';
       play.addEventListener('click',()=>{void startMatch(g.id).catch(e=>status(e.message,true));});
       card.append(title,description,a,button,play);games.append(card);
@@ -534,17 +578,18 @@
     b.disabled=true;
     try {
       status('Creating your private chess invitation…');
-      const {data,error}=await api.from('chess_games').insert({white_player_id:player.id}).select('id').single();
+      const {data:id,error}=await api.rpc('chess_create_private_game');
       if(error)throw error;
-      const url=link(data.id);
+      const url=link(id);
       const a=$('cgNewInviteURL');
       a.href=url;
       a.textContent=url;
       $('cgCreatedLink').hidden=false;
       $('cgCreatedLink').scrollIntoView({block:'nearest',behavior:'smooth'});
-      status('Invitation ready. Tap Share invite or Copy link to send it.');
+      status('Invitation ready. Earlier live games and unused invitation links have been ended.');
+      await loadInviteRecipients();
       await refresh();
-      return data.id;
+      return id;
     } catch(e) {
       status('Could not create invitation: '+(e?.message||'Try again.'),true);
     } finally {creating=false;b.disabled=false;}
