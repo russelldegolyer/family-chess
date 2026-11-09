@@ -7,7 +7,7 @@ self.addEventListener('push',event=>{
  const path=typeof payload.url==='string'&&/^\/\?challenge=[0-9a-f-]{36}$/i.test(payload.url)?
    payload.url:'/';
  event.waitUntil(self.registration.showNotification(title,{
-  body,icon:'/icon-192.jpg',badge:'/favicon.png',
+  body,icon:'/icon-192-svg-v4.png',badge:'/favicon-svg-v4.png',
   tag:String(payload.tag||'family-chess-invite').slice(0,90),
   data:{url:path},timestamp:Date.now()
  }));
