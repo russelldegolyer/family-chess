@@ -423,6 +423,23 @@ body.compact .pname { font-size: 22px; }
 body.compact .ptag { font-size: 12.5px; letter-spacing: 0.03em; text-transform: none; }
 
 body.compact .panel { height: 34%; min-height: 220px; }
+/* Conversation mode: give the message list real room while preserving
+   a proportional, fully playable 2D board above it. */
+body.compact.chat2d:not(.landscape) .panel {
+  height: 44%;
+  min-height: 285px;
+}
+body.compact.chat2d:not(.landscape) .panel-head {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+body.compact.chat2d:not(.landscape) #chatList {
+  gap: 4px;
+  padding: 8px 12px 12px;
+  overscroll-behavior: contain;
+}
+body.compact.chat2d .typing:empty { min-height: 0; padding: 0; }
+
 body.compact.chat2d .bottom-bar, body.compact.chat2d .fab, body.compact.chat2d .status, body.compact.chat2d #banner { display: none; }
 body.compact.chat2d .plate-top { top: calc(var(--gt) + 4px); }
 body.compact .brand { display: none; }
@@ -4534,8 +4551,19 @@ function layout2D() {
   if (!b2.svg) build2D();
   const W = window.innerWidth, H = window.innerHeight;
   const chat2d = document.body.classList.contains('chat2d');
-  const top = chat2d ? 70 : compact ? 96 : 44, bottom = chat2d ? Math.round(H * 0.34) + 4 : compact ? 78 : 64, left = chat2d ? 6 : compact ? 16 : 230, right = areaRight + (chat2d ? 6 : 16);
-  const s = Math.max(20, Math.min((W - left - right) / 10.04, (H - top - bottom) / 11.72));
+  // Match the actual chat panel size instead of assuming it always occupies
+  // 34% of the screen. Keep the board below the opponent card and above chat.
+  const panelHeight = chat2d ? ($('panel')?.getBoundingClientRect().height || H * 0.44) : 0;
+  const topPlateBottom = chat2d ? ($('plateTop')?.getBoundingClientRect().bottom || 112) : 0;
+  const top = chat2d ? Math.max(104, Math.ceil(topPlateBottom) + 10) : compact ? 96 : 44;
+  const bottom = chat2d ? Math.ceil(panelHeight) + 8 : compact ? 78 : 64;
+  const left = chat2d ? 6 : compact ? 16 : 230;
+  const right = areaRight + (chat2d ? 6 : 16);
+  // Small phones can reduce the board rather than allow it to overlap the chat.
+  const s = Math.max(chat2d ? 10 : 20, Math.min(
+    (W - left - right) / 10.04,
+    Math.max(12, H - top - bottom) / 11.72
+  ));
   const w = s * 10.04, h = s * 11.72;
   Object.assign(b2.svg.style, { width: w + 'px', height: h + 'px', left: Math.round(left + (W - left - right - w) / 2) + 'px', top: Math.round(top + (H - top - bottom - h) / 2) + 'px' });
 }
