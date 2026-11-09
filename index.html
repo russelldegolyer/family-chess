@@ -16,7 +16,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-online.js"></script>
-<script defer src="./chess-chat.js?v=1"></script>
+<script defer src="./chess-chat.js?v=2"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
 <script defer src="./chess-social.js?v=4"></script>
 <title>Family Chess</title>
@@ -166,6 +166,19 @@ body.focus:not(.compact) .panel { display: none; }
 .msg.black .bubble { border-color: var(--gold-line); background: var(--gold-bubble); }
 .msg.pending .bubble { opacity: 0.6; }
 .msg time { padding-bottom: 11px; white-space: nowrap; font: 400 13px/1 var(--body); font-variant-numeric: lining-nums tabular-nums; }
+/* Match chat layout is based on message ownership, never on piece colour.
+   The signed-in player's blue bubble stays right; everyone else stays left. */
+#chatList .msg.mine { grid-template-columns: minmax(0,1fr) auto; }
+#chatList .msg.mine .msg-name { grid-column:1 / -1; grid-row:1; text-align:right; justify-self:end; color:#73b5ff; }
+#chatList .msg.mine .bubble { grid-column:2; grid-row:2; justify-self:end;
+  background:#1685f7; border-color:#1685f7; color:#fff; max-width:min(78vw,540px); }
+#chatList .msg.mine time { grid-column:1; grid-row:2; justify-self:end; padding-bottom:9px; }
+#chatList .msg.mine.cont .bubble,
+#chatList .msg.mine.cont time { grid-row:1; }
+#chatList .msg.theirs .msg-name { text-align:left; justify-self:start; }
+#chatList .msg.theirs .bubble { grid-column:1; justify-self:start; background:var(--grey-bubble); color:var(--ink); }
+#chatList .msg.theirs time { grid-column:2; }
+
 .typing { min-height: 22px; padding: 0 18px 4px; font: italic 400 15px/22px var(--body); color: var(--ink-3); }
 .chat-form { display: flex; }
 .chat-form[hidden], .typing[hidden] { display: none; }
@@ -5331,7 +5344,7 @@ function updateChatEnabled() {
     }) === true;
     $('chatInput').disabled = !ok;
     $('chatSend').disabled = !ok;
-    $('chatInput').placeholder = !mySeat ? 'Player messages are private' :
+    $('chatInput').placeholder = !mySeat && window.familyChessChat?.mode()!=='watch' ? 'Player messages are private' :
       G.status === 'waiting' ? 'Waiting for your opponent' :
       G.status !== 'active' ? 'This match has ended' :
       ok ? 'Type a message…' : 'Connecting chat…';
@@ -5939,7 +5952,22 @@ $('btnFocus').addEventListener('click', () => setFocus(true));
 $('btnChatClose').addEventListener('click', () => setFocus(true));
 /* clear the chat for everyone in the room */
 $('btnChatClear').addEventListener('click', () => {
-  if (!CAP.db) { toast('Chat works in the live version.'); return; }
+  if(G.onlineProvider==='supabase'){
+    const spectator=window.familyChessChat?.mode()==='watch';
+    const title=spectator?'Delete your spectator messages?':'Clear this match chat?';
+    const explanation=spectator
+      ? 'This deletes messages you sent to spectator chat. Other spectators’ messages remain.'
+      : 'This deletes every message in this match for both players. This cannot be undone.';
+    dialog(title,[explanation],[['Keep messages','quiet',null],
+      ['Delete messages','gold',async()=>{
+        try {
+          await window.familyChessChat?.clear();
+          toast(spectator?'Your spectator messages deleted.':'Match chat cleared.');
+        } catch(e){toast('Could not delete chat: '+(e?.message||'Try again.'));}
+      }]]);
+    return;
+  }
+  if (!CAP.db) { toast('Open an online match to clear chat.'); return; }
   dialog('Clear the chat?', ['This removes every message for everyone in this room. It can\'t be undone.'], [['Keep it', 'quiet', null], ['Clear chat', 'gold', async () => {
     try { await Promise.all(chatDocs.map((d) => CAP.db.doc('chat/' + d.id).delete())); myBucket = null; chatDocs = []; renderChat(); toast('Chat cleared.'); }
     catch { toast("Couldn't clear the chat. Only messages you can edit were removed."); }
