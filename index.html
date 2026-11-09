@@ -4839,7 +4839,9 @@ function playMove(uci, opts = {}) {
     if (proposed.ply !== G.moves.length + 1) { toast('Illegal move.'); return; }
     const submit = window.familyChessSubmitMove;
     if (typeof submit !== 'function') { toast('Online move service unavailable. Refresh the page.'); return; }
-    G.onlineBusy = true; clearSelection(); updateMarkers();
+    G.onlineBusy = true; clearSelection();
+    // Cancel the unsaved preview until the server accepts the move.
+    syncBoard(G.pos, {animate:true,quick:true}); updateMarkers();
     Promise.resolve(submit(G.gid, uci)).catch(e => {
       toast(e?.message || 'Move could not be saved. Check your connection.', 4600);
     }).finally(() => {
