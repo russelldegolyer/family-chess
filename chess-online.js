@@ -383,6 +383,18 @@
 
   window.familyChessOpenMatch = (id,mode='play') => startMatch(id,mode);
   window.familyChessCurrentMatch = () => matchId;
+  // Only a signed-in player in this active shared match may resign.
+  // The database RPC validates ownership and records the winner atomically.
+  window.familyChessResign = async (id) => {
+    if(!player || !matchId || matchId !== id || matchMode !== 'play') {
+      throw new Error('Open your active online match to resign.');
+    }
+    const {data,error}=await api.rpc('chess_resign_game',{p_game_id:id});
+    if(error) throw new Error(error.message || 'Could not resign the game.');
+    await syncMatch();
+    return data;
+  };
+
   window.familyChessSubmitMove = async (id,move) => {
     if (!player || !matchId || id !== matchId || matchMode!=='play') throw new Error('Only participating players can submit moves.');
     const {data,error}=await api.functions.invoke('chess-submit-move',{
