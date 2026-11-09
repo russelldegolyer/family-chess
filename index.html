@@ -2705,6 +2705,7 @@ const LOCAL_PID = (() => { let v = store.get('sg.pid', null); if (!v) { v = 'p_'
 const me = { id: null, name: '', canWrite: null };
 const CAP = { db: null, user: null, room: null, sample: null };
 const G = {
+  onlineProvider: null, onlineBusy: false,
   mode: 'connecting', localReason: '', gid: null, n: 1, moves: [], pos: positionFrom([]),
   seats: { w: null, b: null }, names: { w: '', b: '' }, people: {},
   status: 'waiting', result: null, reason: null, drawOffer: null, turnAt: Date.now(), startedAt: null, endedAt: null, feedback: null,
@@ -2755,7 +2756,7 @@ function previewDisplay() {
 function actingSide() { return G.mode === 'local' ? G.pos.chess.turn() : G.mode === 'cpu' ? cpu.human : mySeat; }
 function inputBlocked() { return !!thinking || performance.now() < lockUntil; }
 function canAct() {
-  if (!piecesReady || review || G.status !== 'active' || inputBlocked()) return false;
+  if (!piecesReady || review || G.status !== 'active' || G.onlineBusy || inputBlocked()) return false;
   if (G.mode === 'local') return true;
   if (G.mode === 'cpu') return G.pos.chess.turn() === cpu.human;
   return G.mode === 'live' && !!mySeat && bothSeated() && G.pos.chess.turn() === mySeat;
@@ -4832,6 +4833,21 @@ function applyMove(uci, { placed = false } = {}) {
   return { after, end, now, land };
 }
 function playMove(uci, opts = {}) {
+  if (G.mode === 'live' && G.onlineProvider === 'supabase') {
+    if (!canAct() || G.onlineBusy) return;
+    const proposed = positionFrom([...G.moves, uci]);
+    if (proposed.ply !== G.moves.length + 1) { toast('Illegal move.'); return; }
+    const submit = window.familyChessSubmitMove;
+    if (typeof submit !== 'function') { toast('Online move service unavailable. Refresh the page.'); return; }
+    G.onlineBusy = true; clearSelection(); updateMarkers();
+    Promise.resolve(submit(G.gid, uci)).catch(e => {
+      toast(e?.message || 'Move could not be saved. Check your connection.', 4600);
+    }).finally(() => {
+      G.onlineBusy = false;
+      updateAll();
+    });
+    return;
+  }
   const r = applyMove(uci, opts);
   if (!r) { toast("That move isn't legal here."); syncBoard(G.pos, { quick: true }); updateMarkers(); return; }
   const { end, now } = r;
@@ -5493,7 +5509,7 @@ async function leaveSeat() {
 }
 
 /* draws, resignation, rematch */
-const canOfferDraw = () => G.mode === 'live' && !!mySeat && bothSeated() && G.status === 'active' && G.drawOffer !== mySeat && G.moves.length >= 2;
+const canOfferDraw = () => G.onlineProvider !== 'supabase' && G.mode === 'live' && !!mySeat && bothSeated() && G.status === 'active' && G.drawOffer !== mySeat && G.moves.length >= 2;
 function offerDraw() {
   if (!canOfferDraw()) return;
   G.drawOffer = mySeat; updatePlates(); updateBanner();
@@ -5513,6 +5529,7 @@ function answerDraw(accept) {
   finishGame({ status: 'over', result: '1/2-1/2', reason: 'agreement', drawOffer: null, endedAt: Date.now() });
 }
 function resign() {
+  if (G.onlineProvider === 'supabase') { toast('Online resignation will be added later.'); return; }
   const side = G.mode === 'local' ? G.pos.chess.turn() : G.mode === 'cpu' ? cpu.human : mySeat;
   if (!side || G.status !== 'active') return;
   if (pending) cancelPreview(false);
@@ -5520,6 +5537,13 @@ function resign() {
 }
 /* Fresh board for a game that lives only in this browser (two players on one screen, or the computer). */
 function resetLocalGame(mode, n) {
+  if (G.onlineProvider === 'supabase') {
+    window.familyChessOnlineStop?.();
+    G.onlineProvider = null;
+    G.onlineBusy = false;
+    const label = document.querySelector('.auth-practice');
+    if (label) label.textContent = 'Practice mode';
+  }
   cancelComputer();
   if (pending) pending = null;
   review = null; selected = null; hoverSq = null; lockUntil = 0;
@@ -5788,7 +5812,7 @@ function openMenu() {
   const m = $('menu');
   m.replaceChildren();
   const add = (label, fn, cls = '') => { const b = el('button', cls); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.textContent = label; b.addEventListener('click', fn); m.append(b); return b; };
-  const playing = G.status === 'active' && (G.mode === 'local' || G.mode === 'cpu' || (mySeat && bothSeated()));
+  const playing = G.onlineProvider !== 'supabase' && G.status === 'active' && (G.mode === 'local' || G.mode === 'cpu' || (mySeat && bothSeated()));
   if (playing && canOfferDraw()) add('Offer a draw', () => { closeMenu(); offerDraw(); });
   if (playing) add('Resign…', () => {
     m.replaceChildren();
@@ -5801,7 +5825,7 @@ function openMenu() {
   add('Settings…', () => { closeMenu(); openSettings(); });
   add('Move history', () => { closeMenu(); if (focusMode) setFocus(false); if (compact) setSheet(true); openHistory(); });
   add('Flip board', () => { closeMenu(); flipBoard(); });
-  if (G.mode === 'live' && mySeat && (G.moves.length === 0 || G.status === 'over')) add('Leave my seat', () => { closeMenu(); leaveSeat(); });
+  if (G.onlineProvider !== 'supabase' && G.mode === 'live' && mySeat && (G.moves.length === 0 || G.status === 'over')) add('Leave my seat', () => { closeMenu(); leaveSeat(); });
   if (G.mode === 'live' && !mySeat && (!G.seats.w || !G.seats.b)) add('Take a seat…', () => { closeMenu(); seatDismissed = false; maybeShowSeatDialog(); });
   if (G.mode === 'live') add('Change my name…', openNameDialog);
   placeMenu();
@@ -6438,7 +6462,67 @@ async function boot() {
   /* if the live game is slow to arrive, don't keep you waiting: start the computer game anyway */
   setTimeout(() => { if (!autoCpuDone && G.mode === 'live' && !mySeat) autoStartCpu(); }, 5000);
 }
-boot();
+
+/* Supabase match bridge: reuse the original 3D/2D board and chess.js engine. */
+const familyChessBoot = boot();
+window.familyChessNative = {
+  async present(game, moves, userId, labels = {}) {
+    await familyChessBoot;
+    if (!game || !Array.isArray(moves) || typeof userId !== 'string') throw new Error('Invalid online game');
+    if (game.white_player_id !== userId && game.black_player_id !== userId) throw new Error('You are not a player in this match');
+    const pos = positionFrom(moves);
+    if (pos.ply !== moves.length || pos.chess.fen() !== game.current_fen) throw new Error('Online position mismatch. Refresh the match.');
+    const sameGame = G.onlineProvider === 'supabase' && G.gid === game.id;
+    const sameMoves = sameGame && G.moves.length === moves.length && G.moves.every((m,i) => m === moves[i]);
+    const extension = sameGame && G.moves.length + 1 === moves.length && G.moves.every((m,i) => m === moves[i]);
+    const wasOver = G.status === 'over';
+    const priorSeat = mySeat;
+    cancelComputer();
+    me.id = userId;
+    me.canWrite = true;
+    const white = game.white_player_id, black = game.black_player_id;
+    G.mode = 'live'; G.onlineProvider = 'supabase'; G.gid = game.id;
+    G.n = 1; G.seats = {w:white,b:black};
+    G.names = {w:labels[white] || 'White',b:black ? (labels[black] || 'Black') : ''};
+    G.status = game.status === 'finished' ? 'over' : game.status;
+    G.result = game.result || null;
+    G.reason = G.status === 'over' ? pos.chess.isCheckmate() ? 'checkmate' : pos.chess.isStalemate() ? 'stalemate' : pos.chess.isInsufficientMaterial() ? 'insufficient material' : pos.chess.isThreefoldRepetition() ? 'threefold repetition' : 'the fifty-move rule' : null;
+    G.drawOffer = null; G.startedAt = new Date(game.created_at || Date.now()).getTime();
+    G.turnAt = new Date(game.updated_at || Date.now()).getTime();
+    G.moves = moves.slice(); G.pos = pos;
+    mySeat = white === userId ? 'w' : 'b';
+    const label = document.querySelector('.auth-practice');
+    if (label) label.textContent = 'Online · ' + (mySeat === 'w' ? 'White' : 'Black');
+    const seatChanged = priorSeat !== mySeat || !sameGame;
+    if (seatChanged) {flipped = false; review = null; pending = null; selected = null; lockUntil = 0;}
+    const desired = wantedSide();
+    const sideChanged = desired !== viewSide;
+    if (sideChanged) viewSide = desired;
+    if (seatChanged || !sameMoves || sideChanged) {
+      G.version++;
+      if (pending) cancelPreview(false);
+      clearSelection();
+      if (!review) {
+        if (seatChanged || sideChanged) {
+          syncBoard(pos,{animate:false,quick:true}); userCam = false; fitCamera(true);
+        } else if (extension) {
+          const land = syncBoard(pos,{animate:true,hint:pos.last});
+          fxForMove(pos.last,land,!!pos.last && pos.last.color !== mySeat);
+        } else syncBoard(pos,{animate:true,quick:true});
+      }
+      draw2D(true);
+    }
+    hide($('seatDialog'));
+    updateAll();
+    if (G.status === 'over' && !wasOver) setTimeout(() => maybeShowEndCard(), REDUCED ? 0 : 600);
+    return {mySeat,turn:pos.chess.turn(),status:G.status};
+  },
+  leaveToPractice() {
+    if (G.onlineProvider !== 'supabase') return;
+    resetLocalGame('local',1);
+  }
+};
+window.dispatchEvent(new Event('familyChessNativeReady'));
 </script>
 <script>
   setTimeout(function () {
