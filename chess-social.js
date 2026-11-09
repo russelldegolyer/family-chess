@@ -15,6 +15,7 @@
   <h3 class="cgSocialHeading">Challenges <small class="cgSocialTimer">60 seconds</small></h3>
   <div id="cgChallengeStatus" class="cgSocialNotice" role="status" aria-live="polite">Send a challenge to an online or offline family member.</div>
   <button id="cgAllowPush" class="cgButton" type="button" style="margin-top:13px;width:100%">Enable challenge notifications</button>
+  <button id="cgTestPush" class="cgButton" type="button" style="margin-top:8px;width:100%">Send a test notification to my phone</button>
   <span class="cgSocialSub" id="cgPushInfo">Offline notifications require permission. On iPhone, install this website to your Home Screen first.</span>
  </section>`;
  const alert=document.createElement('div');
@@ -289,6 +290,35 @@
    $('cgPushInfo').textContent='You can now receive a 60-second challenge while the app is closed, if server push is configured.';
   }catch(e){message('Notifications: '+(e.message||'Cannot subscribe.'));}
  });
+
+ $('cgTestPush').addEventListener('click',async()=>{
+  if(!user)return;
+  if(!supportsPush()||Notification.permission!=='granted'){
+    message('Enable challenge notifications on this installed Chess app first.');
+    return;
+  }
+  const button=$('cgTestPush');button.disabled=true;
+  message('Contacting Apple Push service for a test notification…');
+  try{
+    await restorePushSubscription();
+    const {data,error}=await api.functions.invoke('chess-notify-challenge',{
+      body:{action:'self_test'}
+    });
+    if(error)throw error;
+    if(data?.configured===false){
+      message('Server signing keys are unavailable. Please report this status.');
+    }else if(Number(data?.sent||0)>0){
+      message('Apple Push accepted the test for '+data.sent+' registered device(s). Check Notification Center. Acceptance is not proof of display.');
+    }else if(Number(data?.failed||0)>0){
+      message('Push provider rejected '+data.failed+' request(s). Code: '+(data.failureCodes||['unknown']).join(', ')+'.');
+    }else{
+      message('No registered push device found for this account. Tap Enable challenge notifications to register this phone.');
+    }
+  }catch(e){
+    message('Test push failed: '+(e?.message||'Unknown error'));
+  }finally{button.disabled=false;}
+ });
+
  window.addEventListener('familyChessMatchChanged',()=>{void refreshData()});
  api.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{void startUser(session?.user||null)},0)});
  api.auth.getSession().then(({data})=>{void startUser(data.session?.user||null)});
