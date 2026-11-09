@@ -118,8 +118,10 @@
       await native.present(g,moves.map(m=>m.move_uci),uid,labels);
       if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
       else status('Live match connected · '+moves.length+' half-moves saved.');
+      return true;
     } catch(e) {
       if (epoch === syncToken) status('Could not sync board: '+(e?.message||'Unknown error'),true);
+      return false;
     } finally {
       pendingRead = false;
       if (again) {again=false;if(matchId) void syncMatch();}
@@ -128,12 +130,19 @@
 
   async function startMatch(id) {
     if (!player || !pattern.test(id)) throw new Error('Sign in and choose a valid game.');
+    // Keep the lobby visible if the game cannot be opened.
+    for (let i=0;i<25 && pendingRead;i++) await new Promise(resolve=>setTimeout(resolve,120));
+    if (pendingRead) throw new Error('A previous game is still loading.');
     stopMatch();
     matchId = id;
-    root.hidden = true;
     status('Loading shared board…');
-    await syncMatch();
-    if (matchId !== id) return;
+    const loaded = await syncMatch();
+    if (!loaded || matchId !== id) {
+      stopMatch();
+      root.hidden = false;
+      throw new Error($('cgMessage').textContent || 'Unable to open this match.');
+    }
+    root.hidden = true;
     subscription = api.channel('chess-match-'+id)
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'chess_games',filter:'id=eq.'+id},
         ()=>{void syncMatch();})
