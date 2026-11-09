@@ -41,10 +41,16 @@ Deno.serve(async req=>{
   if(c.status!=="pending"||Date.parse(c.expires_at)<=Date.now())
    return respond(409,{error:"Challenge is not active"});
   if(c.push_sent_at)return respond(200,{configured:true,sent:0,already_sent:true});
-  const publicKey=Deno.env.get("CHESS_VAPID_PUBLIC_KEY");
-  const privateKey=Deno.env.get("CHESS_VAPID_PRIVATE_KEY");
+  let publicKey=Deno.env.get("CHESS_VAPID_PUBLIC_KEY")||"";
+  let privateKey=Deno.env.get("CHESS_VAPID_PRIVATE_KEY")||"";
+  if(!publicKey||!privateKey){
+   // This project already has Supabase Vault; keep the private signing key
+   // encrypted there and only fetch it using this service-role Edge Function.
+   const {data:keys,error:keysError}=await admin.rpc("chess_vapid_config");
+   if(!keysError){publicKey=keys?.publicKey||"";privateKey=keys?.privateKey||"";}
+  }
   if(!publicKey||!privateKey)
-   return respond(200,{configured:false,sent:0,error:"Push keys not configured"});
+   return respond(200,{configured:false,sent:0,error:"Push signing keys unavailable"});
   const {data:subs,error:subsError}=await admin.from("chess_push_subscriptions")
    .select("id,endpoint,p256dh,auth").eq("user_id",c.target_id).limit(10);
   if(subsError)return respond(500,{error:"Push subscriptions unavailable"});
