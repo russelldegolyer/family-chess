@@ -152,14 +152,16 @@
    if(error)throw error;
    message('Challenge sent to '+nameFor(targetId)+'. They have 60 seconds to respond.');
    await refreshData();
-   if(!online(targetId)){
-    // Push is best-effort; the database challenge is authoritative.
-    const response=await api.functions.invoke('chess-notify-challenge',{body:{challenge_id:id}});
-    if(response.error)message('Challenge sent, but offline push could not be delivered. The invite still expires in 60 seconds.');
-    else if(!response.data?.configured)message('Challenge saved. Offline push requires one-time server notification setup.');
-    else if(response.data?.sent===0)message('Challenge saved. This player has not enabled push notifications yet.');
-    else message('Offline challenge notification sent to '+nameFor(targetId)+'.');
-   }
+   // Always request push, even if Presence still shows the target as online.
+   // A backgrounded iPhone can retain a stale green presence indicator.
+   const response=await api.functions.invoke('chess-notify-challenge',{body:{challenge_id:id}});
+   const sent=Number(response.data?.sent||0),failed=Number(response.data?.failed||0);
+   if(response.error)message('Challenge created, but the push service could not be reached. Check the other device.');
+   else if(response.data?.configured===false)message('Challenge created. Server push credentials still need repair.');
+   else if(sent>0)message('Challenge sent to '+nameFor(targetId)+'. Push accepted for '+sent+' device'+(sent===1?'':'s')+'. They have 60 seconds.');
+   else if(failed>0)message('Challenge created, but push delivery failed for '+failed+' device(s). Re-enable notifications on that phone.');
+   else if(response.data?.already_sent)message('Challenge created. A push was already attempted for this invitation.');
+   else message('Challenge created, but the recipient has no working push subscription. They can still accept in-app within 60 seconds.');
   }catch(e){message(e.message||'Unable to send challenge.');}
   finally{requesting=false;}
  }
