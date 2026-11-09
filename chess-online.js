@@ -49,8 +49,20 @@
     .cgCreatedLink strong {font-size:14px}
     .cgCreatedLink a {font-size:12px;color:#e9e9ff;overflow-wrap:anywhere;text-decoration:underline}
     .cgCreatedLink .cgButton {flex:1}
-    #cgProfileSettings {margin:12px 0;border-top:1px solid #343438;padding:11px 0}
-    #cgProfileSettings summary {color:#aeafb6;font-size:12px;cursor:pointer}
+    /* Show account name near the top of the lobby, not below long player lists. */
+    #cgProfileSettings {margin:10px 0 16px;border:1px solid #38383c;border-radius:12px;background:#1c1c20;padding:0 12px}
+    #cgProfileSettings summary {display:flex;justify-content:space-between;align-items:center;gap:8px;
+      list-style:none;cursor:pointer;color:#f0f0f3;font-size:13px;font-weight:600;min-height:46px}
+    #cgProfileSettings summary::-webkit-details-marker{display:none}
+    #cgProfileSettings summary::after{content:"Edit";color:#f2a0a9;font-size:12px;font-weight:700}
+    #cgNameValue {color:#aaa;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%}
+    #cgProfileSettings #cgProfileForm{padding:0 0 14px}
+    #cgProfileSettings .cgLabel{margin-top:0}
+    .cgInput {font-size:16px!important}
+    #cgEditNameMenu {border:1px solid #444;background:#252525;border-radius:9px;
+      padding:9px 12px;color:white;font:600 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      cursor:pointer;touch-action:manipulation}
+    @media(max-width:600px){.auth-account #cgEditNameMenu{width:100%;min-height:44px;text-align:center}}
     #cgWatchShortcut{display:none!important}
     @media(max-width:600px){.cgLobbyActions button {font-size:11.5px;padding:8px 4px}}
 
@@ -99,6 +111,12 @@
   const accountActions = document.getElementById('authAccountActions') || account;
   const signOut = document.getElementById('authSignOut');
   accountActions.insertBefore(launch, signOut);
+  const editNameMenu = document.createElement('button');
+  editNameMenu.id = 'cgEditNameMenu';
+  editNameMenu.type = 'button';
+  editNameMenu.textContent = 'Edit chess name';
+  editNameMenu.hidden = true;
+  accountActions.insertBefore(editNameMenu, signOut);
   const root = document.createElement('div');
   root.id = 'cgLobby'; root.hidden = true; root.setAttribute('role','dialog'); root.setAttribute('aria-modal','true'); root.setAttribute('aria-label','Family game invitations');
   root.innerHTML = `
@@ -120,12 +138,14 @@
         </div>
         <p class="cgMuted">Your family member signs in and joins as Black. You play White.</p>
       </div>
-      <div id="cgSocialMount"></div>
-      <details id="cgProfileSettings"><summary>My chess display name</summary>
-        <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Your chess name</label>
-          <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" required minlength="2" maxlength="40">
+      <details id="cgProfileSettings">
+        <summary><span>Chess name</span><span id="cgNameValue">Loading…</span></summary>
+        <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Change your display name</label>
+          <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" autocomplete="nickname"
+            autocapitalize="words" required minlength="2" maxlength="40">
           <button class="cgButton" type="submit">Save</button></div></form>
       </details>
+      <div id="cgSocialMount"></div>
       <details id="cgLegacy">
         <summary>Invite with a private link (backup)</summary>
       <button id="cgCreate" class="cgButton primary" type="button">Create private match</button>
@@ -198,6 +218,18 @@
   function show() { if (!player) return; root.hidden=false; void refresh(); $('cgClose').focus(); }
   function close() { root.hidden=true; launch.focus(); }
   window.familyChessOpenLobby = show;
+  function openNameEditor(){
+    if(!player)return;
+    $('cgProfileSettings').open=true;
+    show();
+    requestAnimationFrame(()=>{
+      const field=$('cgDisplayName');
+      $('cgProfileSettings').scrollIntoView({block:'nearest'});
+      field.focus({preventScroll:true});
+      field.select();
+    });
+  }
+  editNameMenu.addEventListener('click',openNameEditor);
   const panel=()=>root.querySelector('.cgPanel');
   function toSection(id) {
     show();
@@ -360,6 +392,7 @@
     if (error) { status('Could not load chess name: '+error.message,true); return; }
     if(data){
       $('cgDisplayName').value=data.display_name;
+      $('cgNameValue').textContent=data.display_name;
       // Keep the existing account's chosen color across devices. Profiles
       // created before this feature have no piece_color yet; backfill the
       // last locally selected color without resetting their preference.
@@ -382,13 +415,23 @@
     const created = await api.from('chess_profiles').insert({id,display_name});
     if (created.error && created.error.code !== '23505') { status('Could not create chess profile: '+created.error.message,true); return; }
     $('cgDisplayName').value = display_name;
+    $('cgNameValue').textContent = display_name;
   }
   $('cgProfileForm').addEventListener('submit', async ev => {
     ev.preventDefault(); if (!player) return;
     const display_name = $('cgDisplayName').value.trim();
     if (display_name.length < 2 || display_name.length > 40) { status('Names must be 2–40 characters.',true); return; }
-    const {error} = await api.from('chess_profiles').update({display_name}).eq('id',player.id);
-    status(error ? error.message : 'Chess name saved.', !!error);
+    const saveButton=$('cgProfileForm').querySelector('button[type="submit"]');
+    saveButton.disabled=true;
+    try {
+      const {error} = await api.from('chess_profiles').update({display_name}).eq('id',player.id);
+      if(error){status('Could not save your name: '+error.message,true);return;}
+      $('cgNameValue').textContent=display_name;
+      $('cgProfileSettings').open=false;
+      status('Chess name updated to '+display_name+'.');
+      void refresh();
+      window.dispatchEvent(new Event('familyChessProfileUpdated'));
+    } finally {saveButton.disabled=false;}
   });
   const displayedName=(labels,id,fallback)=>labels[id]||fallback;
   async function refreshLive(prompt=false){
@@ -534,6 +577,7 @@
     const old = player?.id;
     player = next || null;
     launch.hidden = !player;
+    editNameMenu.hidden = !player;
     quickDock.hidden = !player;
     if (!player) {
       clearTimeout(colorSaveTimer);
