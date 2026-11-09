@@ -293,6 +293,26 @@ body.view-2d .vignette { display: none; }
 .board2d { position: fixed; inset: 0; opacity: 0; transition: opacity 0.22s ease; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0.35), rgba(0,0,0,0.55)); touch-action: none; }
 .board2d.on { opacity: 1; pointer-events: auto; }
 .board2d.on .b2svg { filter: drop-shadow(0 18px 40px rgba(0,0,0,0.7)); }
+/* Chat split view is a bounded flex area, not an absolutely-positioned SVG
+   that can drift behind the sliding chat sheet. The entire chessboard,
+   coordinate margins and all, must fit inside this reserved viewport. */
+body.compact.chat2d:not(.landscape) #board2d:not([hidden]) {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  padding:var(--chess-board-top, 100px) 5px var(--chess-board-bottom, 340px);
+  overflow:hidden;
+}
+body.compact.chat2d:not(.landscape) #board2d .b2svg {
+  position:relative;
+  left:auto!important;
+  top:auto!important;
+  flex:none;
+  margin:auto;
+  max-width:100%;
+  max-height:100%;
+}
 body.view-2d { background: transparent; }
 body:not(.compact) .status, body:not(.compact) #banner { left: 16px; right: auto; margin: 0; top: calc(var(--gt) + 64px); max-width: 200px; text-align: left; }
 body:not(.compact) #banner { top: 8px; left: 0; right: var(--area-r); margin-inline: auto; max-width: min(560px, 60vw); text-align: center; padding: 6px 14px; font-size: 14px; }
@@ -4574,34 +4594,41 @@ function layout2D() {
   if (!b2.svg) build2D();
   const W = window.innerWidth, H = window.innerHeight;
   const chat2d = document.body.classList.contains('chat2d');
+  const split = chat2d && compact && !document.body.classList.contains('landscape');
   const topCard = $('plateTop')?.getBoundingClientRect();
-  // During the 350ms slide-in, getBoundingClientRect().top includes the
-  // translateY animation. It momentarily reports the panel BELOW the screen
-  // and places the chessboard under the chat sheet. Use layout height instead:
-  // the panel is bottom-anchored at 0, so its final top is H - offsetHeight,
-  // independent of animation progress or the iPhone safe-area inset.
-  const chatPanel = $('panel');
-  const chatTop = chat2d
-    ? Math.max(0, H - (chatPanel?.offsetHeight || H * 0.40))
-    : H;
-  const top = chat2d ? Math.max(74, Math.ceil(topCard?.bottom || 90) + 5)
-    : compact ? Math.max(84,Math.ceil(topCard?.bottom || 80) + 8) : 44;
-  const bottomEdge = chat2d ? chatTop - 10 : H - (compact ? 80 : 64);
-  const left = chat2d ? 5 : compact ? 6 : 230;
-  const right = areaRight + (chat2d ? 5 : compact ? 6 : 16);
-  const freeHeight = Math.max(40,bottomEdge-top);
-  // Fill the space as much as possible, but never crop coordinates or place
-  // a playable square under the chat header.
-  const s = Math.max(3, Math.min(
-    (W - left - right) / 10.04,
-    freeHeight / 11.72
-  ));
-  const w = s * 10.04, h = s * 11.72;
-  Object.assign(b2.svg.style, {
-    width:w+'px',height:h+'px',
-    left:Math.round(left+(W-left-right-w)/2)+'px',
-    top:Math.round(top+(freeHeight-h)/2)+'px'
-  });
+  const top = split ? Math.max(72, Math.ceil(topCard?.bottom || 90) + 6)
+    : compact ? Math.max(84, Math.ceil(topCard?.bottom || 80) + 8) : 44;
+  const left = split ? 5 : compact ? 6 : 230;
+  const right = areaRight + (split ? 5 : compact ? 6 : 16);
+  const box = $('board2d');
+
+  // The chat panel animates with translateY. Its getBoundingClientRect().top
+  // changes during the animation; offsetHeight does not. Reserve its FINAL
+  // space even before the opening transition finishes.
+  const panelHeight = split ? ($('panel')?.offsetHeight || Math.min(400, H * .4)) : 0;
+  const bottom = split ? panelHeight + 10 : compact ? 80 : 64;
+  const freeHeight = Math.max(40, H - top - bottom);
+  const s = Math.max(3, Math.min((W - left - right) / 10.04, freeHeight / 11.72));
+  const w = s * 10.04, height = s * 11.72;
+
+  if (split) {
+    // Reset any pan or pinch scale when switching into the constrained view.
+    // Flexbox owns the board's POSITION; JS only supplies its intrinsic size.
+    if (Z2.s !== 1 || Z2.x || Z2.y) zoom2D(null);
+    box.style.setProperty('--chess-board-top', top + 'px');
+    box.style.setProperty('--chess-board-bottom', bottom + 'px');
+    Object.assign(b2.svg.style, {
+      width: w + 'px', height: height + 'px', left:'', top:''
+    });
+  } else {
+    box.style.removeProperty('--chess-board-top');
+    box.style.removeProperty('--chess-board-bottom');
+    Object.assign(b2.svg.style, {
+      width: w + 'px', height: height + 'px',
+      left: Math.round(left + (W - left - right - w) / 2) + 'px',
+      top: Math.round(top + (freeHeight - height) / 2) + 'px'
+    });
+  }
 }
 
 /* ------------------------------------------------------------------ camera and layout */
