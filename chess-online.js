@@ -25,6 +25,22 @@
     .cgGame a{display:block;color:#bebebe;word-break:break-all;font-size:11px;margin:8px 0}
     #cgMessage{min-height:20px;color:#ccc;font-size:12px;line-height:1.5;margin-top:12px}
     #cgMessage.error{color:#ffa7a7}
+    .cgLiveHeading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}
+    .cgLiveCount{color:#b2f1c2;font-size:12px;font-weight:600;white-space:nowrap}
+    .cgLiveList{display:flex;flex-direction:column;gap:9px}
+    .cgLiveCard{border:1px solid #343a35;border-radius:12px;padding:14px;background:linear-gradient(130deg,#1b231e,#171719)}
+    .cgLiveTitle{font-size:16px;line-height:1.3;font-weight:650;overflow-wrap:anywhere}
+    .cgLiveMeta{display:block;margin:6px 0 12px;color:#b7c3b8;font-size:12px}
+    .cgLiveTag{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.05em;color:#a6ebba;text-transform:uppercase}
+    .cgLiveTag::before{content:"";width:7px;height:7px;border-radius:50%;background:#31cf71;box-shadow:0 0 8px #31cf7177}
+    .cgWatch{width:100%;background:#e9f2eb;color:#101811;border:0;font-weight:700}
+    #cgWatchShortcut{position:fixed;z-index:70;top:max(72px,calc(env(safe-area-inset-top,0px) + 62px));left:max(12px,env(safe-area-inset-left,0px));
+      border:1px solid #3b7650;border-radius:999px;padding:10px 14px;background:#15251b;color:#d8f9e4;
+      box-shadow:0 6px 25px #0009;cursor:pointer;font:650 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    #cgSpectatorBar{position:fixed;z-index:70;top:max(72px,calc(env(safe-area-inset-top,0px) + 62px));left:max(12px,env(safe-area-inset-left,0px));
+      max-width:calc(100vw - 24px);display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:7px 8px 7px 11px;
+      border:1px solid #38443c;border-radius:12px;background:#142019;color:#def4e5;font-size:12px;box-shadow:0 8px 28px #0009}
+    #cgSpectatorBar .cgLeave{border:0;border-radius:8px;background:#303b33;color:#fff;padding:8px 11px;min-height:34px;cursor:pointer}
     @media(max-width:600px){.cgPanel{top:auto;bottom:0;left:0;transform:none;width:100%;border-radius:16px 16px 0 0;max-height:calc(100dvh - 15px);padding-bottom:max(22px,env(safe-area-inset-bottom,0px))}}
   `;
   document.head.appendChild(style);
@@ -49,10 +65,23 @@
       <div id="cgMessage" role="status" aria-live="polite"></div>
       <button id="cgPractice" class="cgButton" style="width:100%;margin:8px 0 0" type="button">Return to practice game</button>
       <hr class="cgDivider">
+      <div class="cgLiveHeading"><strong>Live games</strong><span id="cgLiveCount" class="cgLiveCount" aria-live="polite"></span></div>
+      <div id="cgLiveGames" class="cgLiveList"><span class="cgMuted">Checking for live matches…</span></div>
+      <hr class="cgDivider">
       <div class="cgHeader"><strong>My matches</strong><button class="cgButton" id="cgRefresh" type="button">Refresh</button></div>
       <div id="cgGames" class="cgMuted">No matches yet.</div>
     </section>`;
   document.body.appendChild(root);
+  const watchShortcut=document.createElement('button');
+  watchShortcut.id='cgWatchShortcut';watchShortcut.type='button';watchShortcut.hidden=true;
+  watchShortcut.textContent='● Live games';watchShortcut.addEventListener('click',show);
+  document.body.appendChild(watchShortcut);
+  const spectatorBar=document.createElement('div');
+  spectatorBar.id='cgSpectatorBar';spectatorBar.hidden=true;
+  const spectatorLabel=document.createElement('strong');
+  const leaveWatch=document.createElement('button');
+  leaveWatch.className='cgLeave';leaveWatch.type='button';leaveWatch.textContent='Exit';
+  spectatorBar.append(spectatorLabel,leaveWatch);document.body.appendChild(spectatorBar);
   const $ = id => document.getElementById(id);
   const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let player = null, invitePresented = false;
