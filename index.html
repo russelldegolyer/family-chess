@@ -5864,7 +5864,7 @@ function onGame(d, forced = false) {
   const sideChanged = want !== viewSide;
   viewSide = want;
   if (sideChanged) requestRender();
-  if (!sameGame && review) review = null;
+  if (!sameGame && review) { stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop(); review = null; }
   if (!gameFirst && sameGame) {
     if (prevStatus === 'active' && G.status === 'over' && !ext) Sound.play('end');
     if (G.drawOffer && G.drawOffer !== prevOffer && G.drawOffer !== mySeat) Sound.play('chime');
@@ -6098,6 +6098,7 @@ function resetLocalGame(mode, n) {
   }
   cancelComputer();
   if (pending) pending = null;
+  stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop();
   review = null; selected = null; hoverSq = null; lockUntil = 0;
   hide($('endCard')); endDismissed = null;
   if (!$('promoDialog').hidden) { promoCtx = null; hide($('promoDialog')); }
@@ -6128,6 +6129,7 @@ function startComputerGame(side, level) {
 }
 function enterLive() {
   cancelComputer();
+  stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop();
   review = null;
   G.mode = 'live'; G.gid = null; G.moves = []; G.version++; gameFirst = false;
   onGame(liveDoc, true);
@@ -6145,7 +6147,7 @@ async function startTwoPlayer() {
 async function rematch(swap) {
   hide($('endCard'));
   endDismissed = null;
-  if (review) review = null;
+  if (review) { stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop(); review = null; }
   if (G.mode === 'cpu') { startComputerGame(swap ? other(cpu.human) : cpu.human, cpu.level); return; }
   if (G.mode === 'local') { if (swap) { localView = other(localView); store.set('sg.orient', localView); } resetLocalGame('local', G.n + 1); return; }
   if (!mySeat) return;
@@ -7100,7 +7102,7 @@ window.familyChessNative = {
     if(label)label.textContent=watching?'Spectating · '+G.names.w+' vs '+G.names.b:
       'Online · '+(mySeat==='w'?'White':'Black');
     const seatChanged = priorSeat !== mySeat || !sameGame;
-    if (seatChanged) {flipped = false; review = null; pending = null; selected = null; lockUntil = 0;}
+    if (seatChanged) {stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop(); flipped = false; review = null; pending = null; selected = null; lockUntil = 0;}
     const desired = wantedSide();
     const sideChanged = desired !== viewSide;
     if (sideChanged) viewSide = desired;
