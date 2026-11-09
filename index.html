@@ -4,22 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="description" content="Private family chess, practice and online games.">
+<meta name="description" content="Private chess, practice and online games.">
 <link rel="icon" type="image/png" sizes="64x64" href="/favicon-svg-v4.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-svg-v4.png">
-<link rel="manifest" href="/manifest-svg-v4.webmanifest">
+<link rel="manifest" href="/manifest-svg-v4.webmanifest?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Family Chess">
+<meta name="apple-mobile-web-app-title" content="Chess">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="stylesheet" href="./auth.css">
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-online.js?v=6"></script>
-<script defer src="./chess-chat.js?v=6"></script>
+<script defer src="./chess-online.js?v=7"></script>
+<script defer src="./chess-chat.js?v=7"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
-<script defer src="./chess-social.js?v=6"></script>
-<title>Family Chess</title>
+<script defer src="./chess-social.js?v=7"></script>
+<title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 * { box-sizing: border-box; }
@@ -2927,7 +2927,7 @@ function fxForMove(mv, landMs, remote) {
   }, REDUCED ? 0 : Math.max(0, landMs - 40));
   if (remote) {
     announce(`${seatName(mv.color)} played ${spoken(mv)}`);
-    if (document.hidden) { document.title = '● Your move · Family Chess'; titleFlag = true; }
+    if (document.hidden) { document.title = '● Your move · Chess'; titleFlag = true; }
   }
 }
 
@@ -5352,7 +5352,7 @@ function renderChat(forceBottom = false) {
     heading.textContent=G.mode==='connecting'?'Connecting to chess…':G.onlineProvider==='supabase'?'Messages':'Practice game';
     detail.textContent=G.mode==='connecting'?'Setting up your chess board.':
       G.onlineProvider==='supabase'?'Private matches are live. In-game messaging is not connected yet.':
-      'Play against the computer or open Family games to invite someone to a private match.';
+      'Play against the computer or open Online games to invite someone to a private match.';
     n.append(heading,detail);list.replaceChildren(n);return;
   }
   const msgs = allMessages();
@@ -5382,7 +5382,7 @@ function countUnread() {
   chatPrimed = true;
   if (!added) return;
   if (!chatVisible()) { unread += added; updateUnread(); Sound.play('chime'); }
-  if (document.hidden) { document.title = '● New message · Family Chess'; titleFlag = true; }
+  if (document.hidden) { document.title = '● New message · Chess'; titleFlag = true; }
 }
 function sendChat(raw) {
   if (G.onlineProvider === 'supabase') {
@@ -6165,7 +6165,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') { e.preventDefault(); reviewStep(1); }
 });
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) { if (titleFlag) { document.title = 'Family Chess'; titleFlag = false; } markChatRead(); }
+  if (!document.hidden) { if (titleFlag) { document.title = 'Chess'; titleFlag = false; } markChatRead(); }
 });
 
 
@@ -6677,7 +6677,7 @@ async function boot() {
   updatePlates();
   renderChat();
   const c = window.claude;
-  if (!c || typeof c.use !== 'function') { goLocal('Practice against the computer, or use Family games to invite someone to play online.'); initProgress(); autoStartCpu(); return; }
+  if (!c || typeof c.use !== 'function') { goLocal('Practice against the computer, or use Online games to invite someone to play online.'); initProgress(); autoStartCpu(); return; }
   let caps = [null, null, null, null];
   try { caps = await Promise.all(['db', 'user', 'room', 'sample'].map((n) => Promise.resolve(c.use(n)).catch(() => null))); } catch { /* fall back below */ }
   [CAP.db, CAP.user, CAP.room, CAP.sample] = caps;
@@ -6685,7 +6685,7 @@ async function boot() {
     try { const v = await CAP.user.me(); me.id = v.id || null; me.name = v.name || ''; } catch { /* no identity */ }
     try { me.canWrite = await CAP.user.can('data.write'); } catch { me.canWrite = null; }
   }
-  if (!CAP.db) { goLocal('Online family games will be available after the multiplayer upgrade. You can practice against the computer now.'); initProgress(); autoStartCpu(); return; }
+  if (!CAP.db) { goLocal('Online online games will be available after the multiplayer upgrade. You can practice against the computer now.'); initProgress(); autoStartCpu(); return; }
   if (!me.id) me.id = LOCAL_PID;
   G.mode = 'live';
   initProgress();
@@ -6831,7 +6831,7 @@ document.addEventListener('dblclick', (e) => {
 <div id="authGate" class="auth-gate" role="dialog" aria-modal="true" aria-labelledby="authTitle">
   <main class="auth-card">
     <div class="auth-logo" aria-hidden="true"><img src="/apple-touch-icon-svg-v4.png" width="72" height="72" alt=""></div>
-    <div class="auth-kicker">FAMILY CHESS</div>
+    <div class="auth-kicker">CHESS</div>
     <h1 id="authTitle">Welcome to Chess</h1>
     <p id="authSubtitle" class="auth-subtitle">Sign in to your account to play.</p>
     <div class="auth-tabs" id="authTabs" role="group" aria-label="Account options">
@@ -6850,12 +6850,12 @@ document.addEventListener('dblclick', (e) => {
     <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
     <button type="button" id="authAux" class="auth-link">Forgot your password?</button>
     <button type="button" id="authCancel" class="auth-link" hidden>Back to sign in</button>
-    <p class="auth-footer">Family chess · Accounts required for online play</p>
+    <p class="auth-footer">Chess · Sign in for online play</p>
   </main>
 </div>
 <div id="accountControl" class="auth-account" hidden>
   <button id="authAccountToggle" class="auth-account-toggle" type="button"
-    aria-label="Account and family games" aria-expanded="false" aria-controls="authAccountActions">
+    aria-label="Account and online games" aria-expanded="false" aria-controls="authAccountActions">
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
       <circle cx="12" cy="8" r="3.3"/><path d="M5.5 20v-1.4a6.5 6.5 0 0 1 13 0V20"/>
     </svg>
