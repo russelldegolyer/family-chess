@@ -15,10 +15,10 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-online.js"></script>
+<script defer src="./chess-online.js?v=3"></script>
 <script defer src="./chess-chat.js?v=2"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
-<script defer src="./chess-social.js?v=4"></script>
+<script defer src="./chess-social.js?v=5"></script>
 <title>Family Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -5763,6 +5763,7 @@ $('btnView2d').addEventListener('click', () => {
 /* end card */
 const DRAW_TITLE = { stalemate: 'Stalemate — Draw', 'insufficient material': 'Draw — Insufficient Material', 'threefold repetition': 'Draw — Threefold Repetition', 'the fifty-move rule': 'Draw — Fifty-Move Rule', agreement: 'Draw — Agreed' };
 function describeResult() {
+  if (G.reason === 'replaced') return {title:'Game ended',line:'A player started a new game. This match has been closed.'};
   const winner = G.result === '1-0' ? 'w' : G.result === '0-1' ? 'b' : null;
   if (!winner) return { title: DRAW_TITLE[G.reason] || 'Draw', line: G.reason === 'agreement' ? 'Both sides called it even.' : '' };
   const loser = other(winner);
@@ -6604,7 +6605,10 @@ window.familyChessNative = {
     G.names = {w:labels[white] || 'White',b:black ? (labels[black] || 'Black') : ''};
     G.status = game.status === 'finished' ? 'over' : game.status;
     G.result = game.result || null;
-    G.reason = G.status === 'over' ? pos.chess.isCheckmate() ? 'checkmate' : pos.chess.isStalemate() ? 'stalemate' : pos.chess.isInsufficientMaterial() ? 'insufficient material' : pos.chess.isThreefoldRepetition() ? 'threefold repetition' : 'the fifty-move rule' : null;
+    G.reason = G.status === 'over' ?
+      (game.end_reason==='replaced'?'replaced':pos.chess.isCheckmate()?'checkmate':
+       pos.chess.isStalemate()?'stalemate':pos.chess.isInsufficientMaterial()?'insufficient material':
+       pos.chess.isThreefoldRepetition()?'threefold repetition':'the fifty-move rule') : null;
     G.drawOffer = null; G.startedAt = new Date(game.created_at || Date.now()).getTime();
     G.turnAt = new Date(game.updated_at || Date.now()).getTime();
     G.moves = moves.slice(); G.pos = pos;
