@@ -12,11 +12,6 @@
   <div id="cgPlayerList" class="cgSocialList"><div class="cgSocialEmpty">Loading players…</div></div>
  </section>
  <section class="cgSocialSection">
-  <h3 class="cgSocialHeading">Live games</h3>
-  <span class="cgSocialSub">Tap Watch to spectate either player's board. Spectators cannot move pieces.</span>
-  <div id="cgLiveGames" class="cgSocialList"><div class="cgSocialEmpty">Loading games…</div></div>
- </section>
- <section class="cgSocialSection">
   <h3 class="cgSocialHeading">Challenges <small class="cgSocialTimer">60 seconds</small></h3>
   <div id="cgChallengeStatus" class="cgSocialNotice" role="status" aria-live="polite">Send a challenge to an online or offline family member.</div>
   <button id="cgAllowPush" class="cgButton" type="button" style="margin-top:13px;width:100%">Enable challenge notifications</button>
@@ -79,24 +74,13 @@
    row.append(btn);list.append(row);
   }
  }
- function renderGames(){
-  const list=$('cgLiveGames');list.replaceChildren();
-  if(!activeGames.length){empty(list,'No live games. Challenge a player to start one.');return;}
-  for(const game of activeGames){
-   const row=node('div','cgSocialRow'),symbol=node('span','cgSocialAvatar','♞');
-   const identity=node('div','cgSocialIdentity');
-   identity.append(node('span','cgSocialName',nameFor(game.white_player_id)+' vs '+nameFor(game.black_player_id)));
-   identity.append(node('span','cgSocialMeta','Live · Spectators welcome'));
-   const btn=node('button','cgSocialAction alt','Watch');btn.type='button';
-   btn.addEventListener('click',()=>{void watch(game.id)});
-   row.append(symbol,identity,btn);list.append(row);
-  }
- }
  async function watch(id){
   try {
    if(!window.familyChessOpenMatch)throw new Error('Chess board still loading. Try again.');
    message('Opening live board…');
-   await window.familyChessOpenMatch(id);
+   const game=activeGames.find(g=>g.id===id);
+   const participant=game&&(game.white_player_id===user.id||game.black_player_id===user.id);
+   await window.familyChessOpenMatch(id,participant?'play':'watch');
    lobby.hidden=true;
    message('Now spectating the match. Flip the board to change views.');
   }catch(e){message(e.message||'Could not spectate this match.');}
@@ -137,7 +121,7 @@
    alert.hidden=true;openAlertId=null;
    if(accept){
     if(!data)throw new Error('Challenge expired.');
-    await window.familyChessOpenMatch(data);
+    await window.familyChessOpenMatch(data,'play');
     openedGameIds.add(data);
     lobby.hidden=true;message('Game started against '+nameFor(c.challenger_id)+'.');
    } else message('Challenge declined.');
@@ -182,21 +166,18 @@
    if(user?.id!==uid)return;
    if(pr.error||gm.error||ch.error)throw(pr.error||gm.error||ch.error);
    profiles=pr.data||[];activeGames=gm.data||[];challenges=ch.data||[];
-   renderPlayers();renderGames();renderAlert();tick();
+   renderPlayers();renderAlert();tick();
    // Accepting on another device also opens the challenger's board automatically.
    const accepted=challenges.find(c=>c.challenger_id===uid&&c.status==='accepted'&&c.game_id
      &&Date.now()-Date.parse(c.created_at)<120000&&!openedGameIds.has(c.game_id));
    if(accepted&&accepted.game_id&&currentMatch()!==accepted.game_id){
     openedGameIds.add(accepted.game_id);
-    try{await window.familyChessOpenMatch(accepted.game_id);lobby.hidden=true;
+    try{await window.familyChessOpenMatch(accepted.game_id,'play');lobby.hidden=true;
       message('Challenge accepted by '+nameFor(accepted.target_id)+'. Game started.');}
     catch(e){message('Challenge accepted, but board could not open: '+e.message);}
    }
-   if(offerLobby&&initialVisit&&activeGames.length&&!currentMatch()&&!incoming()){
-    initialVisit=false;
-    // When a player first opens the site, make live spectator games discoverable.
-    document.getElementById('cgLaunch')?.click();
-   }else if(offerLobby) initialVisit=false;
+   // The existing spectator lobby handles first-visit Watch Live prompts.
+   if(offerLobby)initialVisit=false;
   }catch(e){message('Lobby unavailable: '+(e.message||'Try refreshing.'));}
   finally{loading=false;}
  }
