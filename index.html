@@ -15,7 +15,7 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-online.js?v=5"></script>
+<script defer src="./chess-online.js?v=6"></script>
 <script defer src="./chess-chat.js?v=6"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
 <script defer src="./chess-social.js?v=6"></script>
@@ -441,7 +441,8 @@ body.compact .panel { height: 34%; min-height: 220px; }
 /* Conversation mode: give the message list real room while preserving
    a proportional, fully playable 2D board above it. */
 body.compact.chat2d:not(.landscape) .panel {
-  height: 44%;
+  /* Large readable board + roughly three short messages at once. */
+  height: clamp(285px, 40%, 400px);
   min-height: 285px;
 }
 body.compact.chat2d:not(.landscape) .panel-head {
