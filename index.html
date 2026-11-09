@@ -2957,6 +2957,8 @@ function updateBanner() {
   } else if (G.mode === 'live' && G.status === 'active' && mySeat && G.drawOffer && G.drawOffer !== mySeat) {
     msg = `${seatName(G.drawOffer)} offers a draw.`;
     acts.append(button('Decline', 'quiet small', () => answerDraw(false)), button('Accept draw', 'gold small', () => answerDraw(true)));
+  } else if (G.onlineProvider==='supabase' && !mySeat && bothSeated()) {
+    msg=`Spectating ${seatName('w')} vs ${seatName('b')} · read-only`;
   } else if (G.mode === 'live' && mySeat && !bothSeated() && G.status !== 'over') {
     msg = `Waiting for someone to take the ${SIDE[other(mySeat)].toLowerCase()} seat.`;
   } else if (G.mode === 'live' && !mySeat && me.canWrite === false) {
@@ -6497,10 +6499,14 @@ async function boot() {
 /* Supabase match bridge: reuse the original 3D/2D board and chess.js engine. */
 const familyChessBoot = boot();
 window.familyChessNative = {
-  async present(game, moves, userId, labels = {}, sharedColors = {}) {
+  async present(game, moves, userId, labels = {}, sharedColors = {}, options = {}) {
     await familyChessBoot;
     if (!game || !Array.isArray(moves) || typeof userId !== 'string') throw new Error('Invalid online game');
-    if (game.white_player_id !== userId && game.black_player_id !== userId) throw new Error('You are not a player in this match');
+    const isPlayer=game.white_player_id===userId||game.black_player_id===userId;
+    const watching=options.spectating===true;
+    if(!isPlayer&&!watching)throw new Error('You are not a player in this match');
+    if(watching&&(!game.black_player_id||!['active','finished'].includes(game.status)))
+      throw new Error('This match is not open for spectators');
     const pos = positionFrom(moves);
     if (pos.ply !== moves.length || pos.chess.fen() !== game.current_fen) throw new Error('Online position mismatch. Refresh the match.');
     const sameGame = G.onlineProvider === 'supabase' && G.gid === game.id;
@@ -6516,7 +6522,7 @@ window.familyChessNative = {
     const colorsChanged=oldColors!==JSON.stringify(filteredColors);
     cancelComputer();
     me.id = userId;
-    me.canWrite = true;
+    me.canWrite = !watching;
     const white = game.white_player_id, black = game.black_player_id;
     G.mode = 'live'; G.onlineProvider = 'supabase'; G.gid = game.id;
     G.n = 1; G.seats = {w:white,b:black}; G.colors=filteredColors;
@@ -6527,9 +6533,10 @@ window.familyChessNative = {
     G.drawOffer = null; G.startedAt = new Date(game.created_at || Date.now()).getTime();
     G.turnAt = new Date(game.updated_at || Date.now()).getTime();
     G.moves = moves.slice(); G.pos = pos;
-    mySeat = white === userId ? 'w' : 'b';
+    mySeat = watching ? null : white === userId ? 'w' : 'b';
     const label = document.querySelector('.auth-practice');
-    if (label) label.textContent = 'Online · ' + (mySeat === 'w' ? 'White' : 'Black');
+    if(label)label.textContent=watching?'Spectating · '+G.names.w+' vs '+G.names.b:
+      'Online · '+(mySeat==='w'?'White':'Black');
     const seatChanged = priorSeat !== mySeat || !sameGame;
     if (seatChanged) {flipped = false; review = null; pending = null; selected = null; lockUntil = 0;}
     const desired = wantedSide();

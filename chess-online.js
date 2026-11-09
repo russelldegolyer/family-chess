@@ -25,6 +25,22 @@
     .cgGame a{display:block;color:#bebebe;word-break:break-all;font-size:11px;margin:8px 0}
     #cgMessage{min-height:20px;color:#ccc;font-size:12px;line-height:1.5;margin-top:12px}
     #cgMessage.error{color:#ffa7a7}
+    .cgLiveHeading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}
+    .cgLiveCount{color:#b2f1c2;font-size:12px;font-weight:600;white-space:nowrap}
+    .cgLiveList{display:flex;flex-direction:column;gap:9px}
+    .cgLiveCard{border:1px solid #343a35;border-radius:12px;padding:14px;background:linear-gradient(130deg,#1b231e,#171719)}
+    .cgLiveTitle{font-size:16px;line-height:1.3;font-weight:650;overflow-wrap:anywhere}
+    .cgLiveMeta{display:block;margin:6px 0 12px;color:#b7c3b8;font-size:12px}
+    .cgLiveTag{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.05em;color:#a6ebba;text-transform:uppercase}
+    .cgLiveTag::before{content:"";width:7px;height:7px;border-radius:50%;background:#31cf71;box-shadow:0 0 8px #31cf7177}
+    .cgWatch{width:100%;background:#e9f2eb;color:#101811;border:0;font-weight:700}
+    #cgWatchShortcut{position:fixed;z-index:70;top:max(72px,calc(env(safe-area-inset-top,0px) + 62px));left:max(12px,env(safe-area-inset-left,0px));
+      border:1px solid #3b7650;border-radius:999px;padding:10px 14px;background:#15251b;color:#d8f9e4;
+      box-shadow:0 6px 25px #0009;cursor:pointer;font:650 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    #cgSpectatorBar{position:fixed;z-index:70;top:max(72px,calc(env(safe-area-inset-top,0px) + 62px));left:max(12px,env(safe-area-inset-left,0px));
+      max-width:calc(100vw - 24px);display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:7px 8px 7px 11px;
+      border:1px solid #38443c;border-radius:12px;background:#142019;color:#def4e5;font-size:12px;box-shadow:0 8px 28px #0009}
+    #cgSpectatorBar .cgLeave{border:0;border-radius:8px;background:#303b33;color:#fff;padding:8px 11px;min-height:34px;cursor:pointer}
     @media(max-width:600px){.cgPanel{top:auto;bottom:0;left:0;transform:none;width:100%;border-radius:16px 16px 0 0;max-height:calc(100dvh - 15px);padding-bottom:max(22px,env(safe-area-inset-bottom,0px))}}
   `;
   document.head.appendChild(style);
@@ -49,14 +65,28 @@
       <div id="cgMessage" role="status" aria-live="polite"></div>
       <button id="cgPractice" class="cgButton" style="width:100%;margin:8px 0 0" type="button">Return to practice game</button>
       <hr class="cgDivider">
+      <div class="cgLiveHeading"><strong>Live games</strong><span id="cgLiveCount" class="cgLiveCount" aria-live="polite"></span></div>
+      <div id="cgLiveGames" class="cgLiveList"><span class="cgMuted">Checking for live matches…</span></div>
+      <hr class="cgDivider">
       <div class="cgHeader"><strong>My matches</strong><button class="cgButton" id="cgRefresh" type="button">Refresh</button></div>
       <div id="cgGames" class="cgMuted">No matches yet.</div>
     </section>`;
   document.body.appendChild(root);
+  const watchShortcut=document.createElement('button');
+  watchShortcut.id='cgWatchShortcut';watchShortcut.type='button';watchShortcut.hidden=true;
+  watchShortcut.textContent='● Live games';watchShortcut.addEventListener('click',show);
+  document.body.appendChild(watchShortcut);
+  const spectatorBar=document.createElement('div');
+  spectatorBar.id='cgSpectatorBar';spectatorBar.hidden=true;
+  const spectatorLabel=document.createElement('strong');
+  const leaveWatch=document.createElement('button');
+  leaveWatch.className='cgLeave';leaveWatch.type='button';leaveWatch.textContent='Exit';
+  spectatorBar.append(spectatorLabel,leaveWatch);document.body.appendChild(spectatorBar);
   const $ = id => document.getElementById(id);
   const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let player = null, invitePresented = false;
-  let matchId = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
+  let matchId = null, matchMode = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
+  let livePromptSeen=false, liveCount=0, livePoll=null;
   let colorSaveTimer=null;
   const validColor=(v)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
   window.addEventListener('familyChessPieceColorChanged',(event)=>{
@@ -90,7 +120,9 @@
 
   // Server data is authoritative. No browser can directly update the game or move tables.
   function stopMatch() {
-    matchId = null;
+    matchId=null;matchMode=null;
+    spectatorBar.hidden=true;
+    watchShortcut.hidden=!player||liveCount===0;
     syncToken++;
     if (timer) { clearInterval(timer); timer = null; }
     if (subscription) { const old=subscription; subscription=null; void api.removeChannel(old); }
@@ -118,7 +150,12 @@
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) throw new Error('This match is private or no longer available.');
-      if (g.white_player_id !== uid && g.black_player_id !== uid) throw new Error('You are not in this game.');
+      const isPlayer=g.white_player_id===uid||g.black_player_id===uid;
+      const isWatcher=matchMode==='watch';
+      if(isWatcher){
+        if(g.status!=='active'&&g.status!=='finished')throw new Error('This game is not available to watch.');
+        if(!g.black_player_id)throw new Error('The second player has not joined yet.');
+      }else if(!isPlayer)throw new Error('You are not a player in this match. Use Watch live to spectate.');
       const {data:moves,error:movesError}=await api.from('chess_moves')
         .select('ply,move_uci').eq('game_id',id).order('ply',{ascending:true}).limit(1001);
       if (movesError) throw movesError;
@@ -132,8 +169,13 @@
         .map(p=>[p.id,p.piece_color.toLowerCase()]));
       const native=await nativeBoard();
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
-      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors);
-      if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
+      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors,{spectating:isWatcher});
+      if(isWatcher){
+        spectatorLabel.textContent=`Watching · ${labels[g.white_player_id]||'White'} vs ${labels[g.black_player_id]||'Black'}`;
+        spectatorBar.hidden=false;
+      }
+      if(isWatcher)status(`${g.status==='finished'?'Final':'Live'} · Watching ${labels[g.white_player_id]||'White'} vs ${labels[g.black_player_id]||'Black'} · read-only`);
+      else if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
       else status('Live match connected · '+moves.length+' half-moves saved.');
       return true;
     } catch(e) {
@@ -145,14 +187,15 @@
     }
   }
 
-  async function startMatch(id) {
+  async function startMatch(id,mode='play') {
     if (!player || !pattern.test(id)) throw new Error('Sign in and choose a valid game.');
     // Keep the lobby visible if the game cannot be opened.
     for (let i=0;i<25 && pendingRead;i++) await new Promise(resolve=>setTimeout(resolve,120));
     if (pendingRead) throw new Error('A previous game is still loading.');
     stopMatch();
-    matchId = id;
-    status('Loading shared board…');
+    matchId=id;matchMode=mode;
+    watchShortcut.hidden=true;
+    status(mode==='watch'?'Connecting to live spectator view…':'Loading shared board…');
     const loaded = await syncMatch();
     if (!loaded || matchId !== id) {
       stopMatch();
@@ -168,7 +211,7 @@
   }
 
   window.familyChessSubmitMove = async (id,move) => {
-    if (!player || !matchId || id !== matchId) throw new Error('Open your online game first.');
+    if (!player || !matchId || id !== matchId || matchMode!=='play') throw new Error('Only participating players can submit moves.');
     const {data,error}=await api.functions.invoke('chess-submit-move',{
       body:{game_id:id,move_uci:move}
     });
@@ -182,6 +225,13 @@
     await syncMatch();
     return data;
   };
+  function leaveSpectating(){
+    if(matchMode!=='watch')return;
+    stopMatch();
+    window.familyChessNative?.leaveToPractice();
+    show();
+  }
+  leaveWatch.addEventListener('click',leaveSpectating);
   $('cgPractice').addEventListener('click',()=>{
     window.familyChessNative?.leaveToPractice();
     stopMatch(); close();
@@ -229,8 +279,66 @@
     const {error} = await api.from('chess_profiles').update({display_name}).eq('id',player.id);
     status(error ? error.message : 'Chess name saved.', !!error);
   });
+  const displayedName=(labels,id,fallback)=>labels[id]||fallback;
+  async function refreshLive(prompt=false){
+    const uid=player?.id;
+    if(!uid)return;
+    const container=$('cgLiveGames'),counter=$('cgLiveCount');
+    const {data,error}=await api.from('chess_games')
+      .select('id,status,white_player_id,black_player_id,updated_at')
+      .eq('status','active').not('black_player_id','is',null)
+      .order('updated_at',{ascending:false}).limit(20);
+    if(player?.id!==uid)return;
+    if(error){
+      if(!root.hidden)container.textContent='Could not load live matches: '+error.message;
+      return;
+    }
+    const matches=(data||[]).filter(g=>g.white_player_id&&g.black_player_id);
+    const others=matches.filter(g=>g.white_player_id!==uid&&g.black_player_id!==uid);
+    const ids=[...new Set(matches.flatMap(g=>[g.white_player_id,g.black_player_id]))];
+    let names={};
+    if(ids.length){
+      const {data:profiles}=await api.from('chess_profiles')
+        .select('id,display_name').in('id',ids);
+      if(player?.id!==uid)return;
+      names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
+    }
+    liveCount=others.length;
+    counter.textContent=others.length?`${others.length} available to watch`:'';
+    watchShortcut.textContent=`● Watch live${others.length>1?` · ${others.length}`:''}`;
+    watchShortcut.hidden=others.length===0||!!matchId;
+    container.replaceChildren();
+    if(!matches.length){
+      const n=document.createElement('span');n.className='cgMuted';
+      n.textContent='No games are being played right now.';container.append(n);
+    }
+    for(const game of matches){
+      const card=document.createElement('div');card.className='cgLiveCard';
+      const white=displayedName(names,game.white_player_id,'White');
+      const black=displayedName(names,game.black_player_id,'Black');
+      const title=document.createElement('div');title.className='cgLiveTitle';
+      title.textContent=white+' vs '+black;
+      const subtitle=document.createElement('span');subtitle.className='cgLiveMeta';
+      subtitle.textContent='White: '+white+' · Black: '+black;
+      const badge=document.createElement('span');badge.className='cgLiveTag';badge.textContent='Live now';
+      const button=document.createElement('button');
+      button.className='cgButton cgWatch';button.type='button';
+      const participant=game.white_player_id===uid||game.black_player_id===uid;
+      button.textContent=participant?'Return to my game':'Watch live';
+      button.addEventListener('click',()=>{
+        void startMatch(game.id,participant?'play':'watch').catch(e=>status(e.message,true));
+      });
+      card.append(badge,title,subtitle,button);container.append(card);
+    }
+    if(prompt&&!livePromptSeen&&others.length&&!pattern.test(invite)&&!matchId){
+      livePromptSeen=true;
+      show();
+    }
+  }
+
   async function refresh() {
     if (!player) return;
+    void refreshLive(false);
     const games = $('cgGames'); games.replaceChildren(); games.textContent = 'Loading…';
     const {data,error} = await api.from('chess_games')
       .select('id,status,white_player_id,black_player_id,created_at')
@@ -240,11 +348,19 @@
     if (error) { games.textContent = 'Could not load matches: ' + error.message; return; }
     games.replaceChildren();
     if (!data?.length) { games.textContent='No matches yet.'; return; }
+    const players=[...new Set(data.flatMap(g=>[g.white_player_id,g.black_player_id]).filter(Boolean))];
+    const {data:profiles}=await api.from('chess_profiles').select('id,display_name').in('id',players);
+    if(!player)return;
+    const names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
     for (const g of data) {
       const card=document.createElement('div'); card.className='cgGame';
       const title=document.createElement('strong');
-      title.textContent = (g.white_player_id === player.id ? 'White · ' : 'Black · ') +
-        (g.status==='waiting'?'Waiting for opponent':g.status==='active'?'Opponent joined':'Finished');
+      const w=displayedName(names,g.white_player_id,'White');
+      const b=g.black_player_id?displayedName(names,g.black_player_id,'Black'):'Waiting for opponent';
+      title.textContent=w+' vs '+b;
+      const description=document.createElement('div');description.className='cgMuted';
+      description.textContent=(g.white_player_id===player.id?'You play White':'You play Black')+' · '+
+        (g.status==='waiting'?'Awaiting opponent':g.status==='active'?'Playing now':'Finished');
       const a=document.createElement('a'); a.href=link(g.id); a.textContent=link(g.id);
       const button=document.createElement('button');button.type='button';button.className='cgButton';button.textContent='Copy invite';
       button.addEventListener('click',()=>{void copy(link(g.id));});
@@ -252,7 +368,7 @@
       play.textContent=g.status==='waiting'?'Open waiting board':'Play board';
       play.style.marginLeft='8px';
       play.addEventListener('click',()=>{void startMatch(g.id).catch(e=>status(e.message,true));});
-      card.append(title,a,button,play);games.append(card);
+      card.append(title,description,a,button,play);games.append(card);
     }
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
@@ -272,15 +388,20 @@
     const button=$('cgJoinForm').querySelector('button');button.disabled=true;
     try {
       const {data:already}=await api.from('chess_games')
-        .select('white_player_id,black_player_id').eq('id',id).maybeSingle();
-      if (!already || (already.white_player_id!==player.id && already.black_player_id!==player.id)) {
-        const {error}=await api.rpc('chess_join_game',{p_game_id:id});
-        if (error) { status('Could not join: '+error.message,true); return; }
+        .select('white_player_id,black_player_id,status').eq('id',id).maybeSingle();
+      const participant=already&&(already.white_player_id===player.id||already.black_player_id===player.id);
+      if(['active','finished'].includes(already?.status)&&already.black_player_id&&!participant){
+        history.replaceState(null,'',location.pathname);
+        await startMatch(id,'watch');return;
       }
-      status('You joined as Black. Opening your shared board…');
+      if(!participant){
+        const {error}=await api.rpc('chess_join_game',{p_game_id:id});
+        if(error){status('Could not join: '+error.message,true);return;}
+      }
+      status('Opening your game board…');
       await refresh();
       history.replaceState(null,'',location.pathname);
-      await startMatch(id);
+      await startMatch(id,'play');
     } finally {button.disabled=false;}
   });
   async function onPlayer(next) {
@@ -290,19 +411,26 @@
     if (!player) {
       clearTimeout(colorSaveTimer);
       stopMatch();
+      if(livePoll){clearInterval(livePoll);livePoll=null;}
+      liveCount=0;livePromptSeen=false;watchShortcut.hidden=true;
       window.familyChessNative?.leaveToPractice();
       root.hidden=true; return;
     }
     if (old !== player.id) {
       if (old) { stopMatch(); window.familyChessNative?.leaveToPractice(); }
       await ensureProfile();
-      if (pattern.test(invite) && !invitePresented) {
-        invitePresented = true;
-        const {data:part} = await api.from('chess_games')
-          .select('id').eq('id',invite).maybeSingle();
-        if (part) await startMatch(invite);
-        else {show();status('Invitation found. Press Join to join as Black.');}
-      }
+      if(!livePoll)livePoll=setInterval(()=>{if(player)void refreshLive(false);},30000);
+      if(pattern.test(invite)&&!invitePresented){
+        invitePresented=true;
+        const {data:part}=await api.from('chess_games')
+          .select('id,status,white_player_id,black_player_id').eq('id',invite).maybeSingle();
+        if(part){
+          const member=part.white_player_id===player.id||part.black_player_id===player.id;
+          if(member)await startMatch(invite,'play');
+          else if(['active','finished'].includes(part.status)&&part.black_player_id)await startMatch(invite,'watch');
+          else{show();status('Invitation found. Press Join to play as Black.');}
+        }else{show();status('Invitation found. Press Join to play as Black.');}
+      }else if(!pattern.test(invite)){void refreshLive(true);}
     }
   }
   api.auth.onAuthStateChange((_event,session) => {
