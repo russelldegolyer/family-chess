@@ -4575,12 +4575,18 @@ function layout2D() {
   const W = window.innerWidth, H = window.innerHeight;
   const chat2d = document.body.classList.contains('chat2d');
   const topCard = $('plateTop')?.getBoundingClientRect();
-  // Measure the physical top of the opened chat sheet. CSS percentages and
-  // iPhone safe-area padding can make "44% of screen" inaccurate in practice.
-  const chatTop = chat2d ? ($('panel')?.getBoundingClientRect().top ?? H * 0.56) : H;
+  // During the 350ms slide-in, getBoundingClientRect().top includes the
+  // translateY animation. It momentarily reports the panel BELOW the screen
+  // and places the chessboard under the chat sheet. Use layout height instead:
+  // the panel is bottom-anchored at 0, so its final top is H - offsetHeight,
+  // independent of animation progress or the iPhone safe-area inset.
+  const chatPanel = $('panel');
+  const chatTop = chat2d
+    ? Math.max(0, H - (chatPanel?.offsetHeight || H * 0.40))
+    : H;
   const top = chat2d ? Math.max(74, Math.ceil(topCard?.bottom || 90) + 5)
     : compact ? Math.max(84,Math.ceil(topCard?.bottom || 80) + 8) : 44;
-  const bottomEdge = chat2d ? chatTop - 8 : H - (compact ? 80 : 64);
+  const bottomEdge = chat2d ? chatTop - 10 : H - (compact ? 80 : 64);
   const left = chat2d ? 5 : compact ? 6 : 230;
   const right = areaRight + (chat2d ? 5 : compact ? 6 : 16);
   const freeHeight = Math.max(40,bottomEdge-top);
@@ -6085,8 +6091,7 @@ function setSheet(open) {
   const was = document.body.classList.contains('chat2d');
   document.body.classList.toggle('chat2d', open && compact);
   if (open && compact) {
-    // A prior manual pinch zoom must not carry into the smaller split-screen
-    // viewport, where it would cover the chat header or crop a board edge.
+    // Reset previous pan/zoom before fitting the whole board into chat mode.
     if (!was) zoom2D(null);
     applyView('2d', false);
     requestAnimationFrame(() => {
