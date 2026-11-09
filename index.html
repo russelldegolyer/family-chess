@@ -3067,7 +3067,8 @@ function updateBanner() {
   let msg = '';
   if (review) {
     const sans = sanList(review.moves);
-    msg = `${review.title} · ${review.ply ? moveLabel(review.ply, sans[review.ply - 1]) : 'starting position'}`;
+    msg = `${review.title} · ${review.ply ? moveLabel(review.ply, sans[review.ply - 1]) : 'starting position'}` +
+      (review.alternative ? ' · recommended alternative' : '');
     acts.append(iconBtn('prev', 'Previous move', () => reviewStep(-1)), iconBtn('next', 'Next move', () => reviewStep(1)), button(G.status === 'over' ? 'Exit review' : 'Back to game', 'gold small', endReview));
   } else if (G.mode === 'live' && G.status === 'active' && mySeat && G.drawOffer && G.drawOffer !== mySeat) {
     msg = `${seatName(G.drawOffer)} offers a draw.`;
@@ -5413,7 +5414,12 @@ function renderHistory() {
   else sub.textContent = G.status === 'over' ? describeResult().line || 'Finished' : bothSeated() ? `${seatName('w')} with White, ${seatName('b')} with Black` : 'Waiting for both players';
   frag.append(h, sub);
   if (review) {
-    const pos = review.pos, note = reviewComment(pos), total = review.moves.length;
+    const pos = review.pos, total = review.moves.length;
+    const best = teachingBest(review.ply);
+    const verdict = window.ChessReviewAnalyzer?.get(review.ply);
+    const note = review.alternative && best
+      ? {label:'Suggested alternative',detail:best.who + ' could have played ' + best.san + '. ' + best.why,kind:'event'}
+      : reviewComment(pos);
     const summary = el('section', 'review-summary');
     summary.setAttribute('aria-label', 'Game replay');
     const kicker = el('div', 'review-kicker');
@@ -5434,6 +5440,80 @@ function renderHistory() {
     explanation.textContent = note.detail;
     summary.append(kicker, track, badge, explanation);
     frag.append(summary);
+    const analyzer = window.ChessReviewAnalyzer;
+    const engineState = analyzer?.status();
+    if (engineState) {
+      const engineHead = el('div', 'review-analysis-head');
+      const line = el('span');
+      line.textContent = engineState.error || (engineState.complete
+        ? 'Engine review complete · both players'
+        : 'Checking both sides · ' + engineState.done + '/' + engineState.total + ' moves');
+      engineHead.append(line);
+      const counts = analyzer.counts();
+      for (const side of ['w', 'b']) {
+        const n = counts[side], missed = n.inaccuracy + n.mistake + n.blunder;
+        const item = el('span', 'review-side-count');
+        item.textContent = (side === 'w' ? 'White' : 'Black') + ': ' + missed + ' flagged';
+        engineHead.append(item);
+      }
+      frag.append(engineHead);
+    }
+    if (review.ply && verdict) {
+      const who = review.ply % 2 === 1 ? 'White' : 'Black';
+      const relative = (G.mode === 'cpu' ? cpu.human : G.mode === 'live' ? mySeat : null);
+      const actor = relative ? (relative === (review.ply % 2 === 1 ? 'w' : 'b') ? 'Your move' : "Opponent's move") : who + ' move';
+      const insight = el('section', 'review-insight review-insight-' + verdict.kind);
+      const title = el('div', 'review-insight-title');
+      title.textContent = actor + ' · ' + verdict.label;
+      insight.append(title);
+      if (best && ['inaccuracy','mistake','blunder','uncertain'].includes(verdict.kind)) {
+        const actualSan = sans[review.ply - 1] || review.moves[review.ply - 1];
+        const text = el('p', 'review-teaching');
+        text.textContent = who + ' played ' + actualSan + ', but ' + best.san +
+          ' was the stronger choice in this search. ' + best.why;
+        insight.append(text);
+        if (verdict.kind !== 'uncertain' && Number.isFinite(verdict.loss) && verdict.loss < 90000) {
+          const cost = el('div', 'review-cost');
+          cost.textContent = 'Estimated advantage lost: ~' + (verdict.loss / 100).toFixed(1) +
+            ' pawn equivalents · depth ' + verdict.depth;
+          insight.append(cost);
+        }
+        const compare = button(review.alternative ? '↩ Return to actual move'
+          : '↗ Show ' + best.san + ' on board', 'small', toggleTeachingMove);
+        compare.classList.add('review-compare');
+        insight.append(compare);
+      } else if (verdict.kind === 'best') {
+        const p = el('p', 'review-teaching');
+        p.textContent = 'The engine chose this move too. No stronger alternative was found at this search depth.';
+        insight.append(p);
+      } else if (verdict.kind === 'unknown') {
+        const p = el('p', 'review-teaching');
+        p.textContent = 'The current search could not confidently evaluate this position.';
+        insight.append(p);
+      }
+      frag.append(insight);
+    } else if (review.ply && engineState?.busy) {
+      const p = el('p', 'review-thinking');
+      p.textContent = 'Checking this move and the opponent’s alternatives…';
+      frag.append(p);
+    }
+    if (engineState) {
+      const note = el('p', 'review-engine-note');
+      note.textContent = 'Quick offline engine estimates; deeper tactics may change the verdict.';
+      frag.append(note);
+      const issues = analyzer.issues();
+      if (issues.length) {
+        const earlier = issues.filter(x => x.ply < review.ply).pop();
+        const later = issues.find(x => x.ply > review.ply);
+        const nav = el('div', 'review-issue-navigation');
+        const prev = button('← Previous missed chance', 'small', () => earlier && reviewTo(earlier.ply));
+        prev.disabled = !earlier;
+        const next = button('Next missed chance →', 'small', () => later && reviewTo(later.ply));
+        next.disabled = !later;
+        nav.append(prev, next);
+        frag.append(nav);
+      }
+    }
   } else if (G.status === 'over' && sans.length) {
     const action = button('▶ Review game', 'gold small', beginGameReview);
     action.classList.add('review-entry');
@@ -5449,7 +5529,13 @@ function renderHistory() {
         if (j >= sans.length) { grid.append(el('span')); continue; }
         const b = el('button', 'mv' + (cur === j + 1 ? ' on' : ''));
         b.type = 'button'; b.textContent = sans[j];
-        b.setAttribute('aria-label', `Show the board after ${moveLabel(j + 1, sans[j])}`);
+        const grade = review ? window.ChessReviewAnalyzer?.get(j + 1) : null;
+        if (grade && ['inaccuracy','mistake','blunder','best'].includes(grade.kind)) {
+          b.classList.add('review-flag-' + grade.kind);
+          b.title = (j % 2 ? 'Black' : 'White') + ': ' + grade.label;
+        }
+        b.setAttribute('aria-label', `Show the board after ${moveLabel(j + 1, sans[j])}` +
+          (grade ? ' · ' + grade.label : ''));
         b.addEventListener('click', () => {
           if (review) reviewTo(j + 1);
           else if (j + 1 <= G.moves.length) startReview({ moves: G.moves.slice(), ply: j + 1, title: `Game ${G.n}`, live: true });
