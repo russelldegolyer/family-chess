@@ -53,15 +53,18 @@
     <div class="cgShade"></div><section class="cgPanel">
       <div class="cgHeader"><div><h2>Family games</h2><span class="cgMuted">Private invitations</span></div>
         <button class="cgButton" id="cgClose" type="button" aria-label="Close">Close</button></div>
-      <p class="cgMuted">Create a match, send the link, and play on the same live board from two devices.</p>
+      <p class="cgMuted">Watch family games, challenge players directly, or use a private link.</p>
       <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Your chess name</label>
         <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" required minlength="2" maxlength="40">
         <button class="cgButton" type="submit">Save</button></div></form>
-      <hr class="cgDivider">
+      <div id="cgSocialMount"></div>
+      <details id="cgLegacy">
+        <summary>Invite with a private link (backup)</summary>
       <button id="cgCreate" class="cgButton primary" type="button">Create private match</button>
       <form id="cgJoinForm"><label class="cgLabel" for="cgJoinId">Join an invitation</label>
         <div class="cgRow"><input id="cgJoinId" class="cgInput" type="text" placeholder="Paste a game link or game ID" required>
         <button class="cgButton" type="submit">Join</button></div></form>
+      </details>
       <div id="cgMessage" role="status" aria-live="polite"></div>
       <button id="cgPractice" class="cgButton" style="width:100%;margin:8px 0 0" type="button">Return to practice game</button>
       <hr class="cgDivider">
@@ -121,6 +124,7 @@
   // Server data is authoritative. No browser can directly update the game or move tables.
   function stopMatch() {
     matchId=null;matchMode=null;
+    window.dispatchEvent(new CustomEvent('familyChessMatchChanged',{detail:{id:null}}));
     spectatorBar.hidden=true;
     watchShortcut.hidden=!player||liveCount===0;
     syncToken++;
@@ -194,6 +198,7 @@
     if (pendingRead) throw new Error('A previous game is still loading.');
     stopMatch();
     matchId=id;matchMode=mode;
+    window.dispatchEvent(new CustomEvent('familyChessMatchChanged',{detail:{id,mode}}));
     watchShortcut.hidden=true;
     status(mode==='watch'?'Connecting to live spectator view…':'Loading shared board…');
     const loaded = await syncMatch();
@@ -210,6 +215,8 @@
     timer = setInterval(()=>{if(matchId===id) void syncMatch();},3000);
   }
 
+  window.familyChessOpenMatch = (id,mode='play') => startMatch(id,mode);
+  window.familyChessCurrentMatch = () => matchId;
   window.familyChessSubmitMove = async (id,move) => {
     if (!player || !matchId || id !== matchId || matchMode!=='play') throw new Error('Only participating players can submit moves.');
     const {data,error}=await api.functions.invoke('chess-submit-move',{
