@@ -1,8 +1,8 @@
-/* Push alerts for directly invited Family Chess players. No credentials live here. */
+/* Push alerts for directly invited Chess players. No credentials live here. */
 self.addEventListener('push',event=>{
  let payload={};
  try{payload=event.data?.json()||{}}catch{payload={}}
- const title=String(payload.title||'Family Chess challenge').slice(0,90);
+ const title=String(payload.title||'Chess challenge').slice(0,90);
  const body=String(payload.body||'You have a new 60-second chess invitation.').slice(0,180);
  const path=typeof payload.url==='string'&&/^\/\?challenge=[0-9a-f-]{36}$/i.test(payload.url)?
    payload.url:'/';
