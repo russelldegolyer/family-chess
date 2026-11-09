@@ -1093,15 +1093,18 @@ function Engine() {
 
   function uci(m) { return sqName(m.f) + sqName(m.t) + (m.pr ? ' nbrq'[m.pr - 1] : ''); }
 
-  function think(fen, lvl, budget, rnd = Math.random) {
+  function think(fen, lvl, budget, rnd = Math.random, analysisMove = '') {
     load(fen);
     level = lvl; nodes = 0; stopped = false; killers.length = 0; hist.fill(0);
     const start = performance.now();
     deadline = start + budget;
     const root = gen([], false).filter((m) => { if (!make(m)) return false; unmake(); return true; });
     if (!root.length) return null;
-    if (root.length === 1) return { move: uci(root[0]), depth: 0, nodes: 0 };
-    const maxDepth = lvl === 1 ? 2 : lvl === 2 ? 4 : 64;
+    if (root.length === 1) return {
+      move: uci(root[0]), depth: 0, nodes: 0,
+      ...(analysisMove ? { bestScore: 0, playedScore: uci(root[0]) === analysisMove ? 0 : null, forced: true } : {})
+    };
+    const maxDepth = analysisMove ? 6 : lvl === 1 ? 2 : lvl === 2 ? 4 : 64;
     let best = root[0], bestScores = null, done = 0;
     for (let d = 1; d <= maxDepth; d++) {
       const scores = [];
@@ -1109,7 +1112,7 @@ function Engine() {
       order(root, 0, best);
       for (const m of root) {
         make(m);
-        const narrow = lvl === 3;
+        const narrow = lvl === 3 && !analysisMove;
         let v = -search(d - 1, -MATE * 2, narrow ? -alpha : MATE * 2, 1);
         unmake();
         if (stopped) break;
@@ -1117,13 +1120,20 @@ function Engine() {
         scores.push([m, v]);
         if (v > alpha) alpha = v;
       }
-      if (stopped && scores.length < root.length) { if (scores.length && d > 1) { scores.sort((x, y) => y[1] - x[1]); if (scores[0][1] > bestScores[0][1]) best = scores[0][0]; } break; }
+      if (stopped && scores.length < root.length) { if (!analysisMove && bestScores && scores.length && d > 1) { scores.sort((x, y) => y[1] - x[1]); if (scores[0][1] > bestScores[0][1]) best = scores[0][0]; } break; }
       scores.sort((x, y) => y[1] - x[1]);
       bestScores = scores; best = scores[0][0]; done = d;
       if (Math.abs(scores[0][1]) > MATE - 200) break;
       if (performance.now() > start + budget * 0.55) break;
     }
     if (!bestScores) return { move: uci(best), depth: done, nodes };
+    if (analysisMove) {
+      const playedEntry = bestScores.find(([m]) => uci(m) === analysisMove);
+      return {
+        move: uci(bestScores[0][0]), depth: done, nodes,
+        bestScore: bestScores[0][1], playedScore: playedEntry ? playedEntry[1] : null
+      };
+    }
     let pick = best;
     if (lvl === 1) {
       const top = bestScores[0][1];
@@ -1145,9 +1155,9 @@ function Engine() {
 if (typeof self !== 'undefined' && typeof self.postMessage === 'function' && typeof window === 'undefined') {
   const eng = Engine();
   self.onmessage = (e) => {
-    const { id, fen, level, budget } = e.data || {};
+    const { id, fen, level, budget, analysisMove } = e.data || {};
     let res = null;
-    try { res = eng.think(fen, level, budget); } catch (err) { res = { error: String(err) }; }
+    try { res = eng.think(fen, level, budget, Math.random, analysisMove || ''); } catch (err) { res = { error: String(err) }; }
     self.postMessage({ id, ...(res || { move: null }) });
   };
 }
