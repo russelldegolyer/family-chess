@@ -7,10 +7,26 @@
   const sendButton = document.getElementById('chatSend');
   if (!db || !list || !input || !sendButton) return;
 
+
+  const css=document.createElement('style');
+  css.textContent=
+    '#chatList .fc-day{align-self:center;flex:none;color:#888993;font:500 11px -apple-system,sans-serif;margin:15px auto 12px}' +
+    '#chatList .fc-row{display:flex;flex:none;flex-direction:column;align-items:flex-start;gap:3px;width:100%;padding:6px 12px;box-sizing:border-box}' +
+    '#chatList .fc-row.own{align-items:flex-end}#chatList .fc-row.grouped{padding-top:0}' +
+    '#chatList .fc-name{font:500 11px -apple-system,sans-serif;color:#b8b8c2;padding:0 7px}' +
+    '#chatList .fc-row.own .fc-name{color:#76b7ff}' +
+    '#chatList .fc-bubble{box-sizing:border-box;display:inline-block;max-width:min(78%,560px);width:max-content;padding:10px 14px;' +
+    'border-radius:17px 17px 17px 5px;background:#333338;color:#f5f5f6;white-space:pre-wrap;overflow-wrap:anywhere;font:400 16px/1.36 -apple-system,sans-serif}' +
+    '#chatList .fc-row.own .fc-bubble{background:#1686ef;color:white;border-radius:17px 17px 5px 17px}' +
+    '#chatList .fc-row.pending .fc-bubble{opacity:.65}' +
+    '#chatList .fc-time{display:block;font:400 10px -apple-system,sans-serif;color:#898993;padding:1px 7px 0}' +
+    '#chatList .fc-error{font-size:13px;color:#ff9797;padding:14px 12px}';
+  document.head.append(css);
+
   const state = {
     id: null, mode: null, view: null, messages: [], pending: [],
     loaded: false, error: '', generation: 0, channel: null, poll: null,
-    sending: false, readBusy: false, reread: false, seen: new Set(), names: {}, clearing:false
+    sending: false, readBusy: false, reread: false, seen: new Set(), names: {}, clearing:false, readAt:'1970-01-01T00:00:00Z', readReady:false, unread:0, marking:false, paintKey:''
   };
 
   const visible = () => {
@@ -58,63 +74,64 @@
     wrapper.append(head,p);
     return wrapper;
   }
+
   function paint(forceBottom=false) {
     updateInput();
-    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 96;
-    if (!state.id) {
-      list.replaceChildren(note('Messages', 'Open a private game to message your opponent.'));
-      return;
-    }
-    if (state.mode==='play' && state.view?.mySeat == null) {
-      list.replaceChildren(note('Private chat','Only the two chess players can read this conversation.'));
-      return;
-    }
-    const frag=document.createDocumentFragment();
-    const entries=[...state.messages,...state.pending]
+    const entries=[...new Map(state.messages.map(m=>[m.id,m])).values()]
       .sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at) || String(a.id).localeCompare(String(b.id)))
       .slice(-100);
-    if (!entries.length) frag.append(note(state.mode==='watch'?'Spectator chat':'Messages',state.loaded
-      ? (state.mode==='watch'?'No spectator messages yet. Say hello to everyone watching.':'No messages yet. Say hello to your opponent.')
-      : 'Loading messages from this match…'));
-    let previous=null;
-    for (const msg of entries) {
-      const mine = msg.sender_id === state.view?.userId;
-      const side = msg.sender_id === state.view?.whiteId ? 'white'
-        : msg.sender_id === state.view?.blackId ? 'black' : 'guest';
-      const stamp=Date.parse(msg.created_at) || 0;
-      const consecutive = previous && previous.sender_id === msg.sender_id &&
-        stamp - (Date.parse(previous.created_at)||0) < 180000;
-      const row = document.createElement('div');
-      row.className = 'msg '+side+(mine?' mine':' theirs')+
-        (consecutive?' cont':'')+(msg.pending?' pending':'');
-      if (!consecutive) {
-        const label = document.createElement('div');
-        label.className='msg-name';
-        label.textContent = mine ? 'You' : state.mode==='watch'
-          ? (state.names[msg.sender_id] || 'Spectator')
-          : side === 'white' ? (state.view?.whiteName || 'White')
-          : side === 'black' ? (state.view?.blackName || 'Black') : 'Player';
+    const pending=state.pending.filter(m=>!entries.some(x=>x.id===m.id))
+      .sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at));
+    entries.push(...pending);
+    const sig=JSON.stringify({game:state.id,mode:state.mode,error:state.error,loaded:state.loaded,
+      names:state.names, white:state.view?.whiteName,black:state.view?.blackName,
+      entries:entries.map(m=>[m.id,m.sender_id,m.body,m.created_at,!!m.pending])});
+    if(sig===state.paintKey){
+      if(forceBottom)list.scrollTop=list.scrollHeight;
+      return;
+    }
+    const nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<88;
+    const priorScroll=list.scrollTop,priorHeight=list.scrollHeight;
+    state.paintKey=sig;
+    const frag=document.createDocumentFragment();
+    if(!state.id)frag.append(note('Messages','Open a family match to chat.'));
+    else if(state.mode==='play'&&state.view?.mySeat==null)
+      frag.append(note('Private chat','Only the two players can view game messages.'));
+    else if(!entries.length)frag.append(note(state.mode==='watch'?'Spectator chat':'Messages',
+      state.loaded?'No messages yet. Say hello.':'Loading messages…'));
+    let previous=null,lastDay='';
+    for(const m of entries){
+      const date=new Date(m.created_at);
+      const day=Number.isNaN(date.getTime())?'':date.toLocaleDateString([],{month:'short',day:'numeric'});
+      if(day!==lastDay){
+        const dayEl=document.createElement('div');dayEl.className='fc-day';
+        dayEl.textContent=day;frag.append(dayEl);lastDay=day;previous=null;
+      }
+      const mine=m.sender_id===state.view?.userId;
+      const grouped=previous?.sender_id===m.sender_id &&
+        Date.parse(m.created_at)-Date.parse(previous.created_at)<180000;
+      const row=document.createElement('div');
+      row.className='fc-row '+(mine?'own':'other')+(grouped?' grouped':'')+(m.pending?' pending':'');
+      if(!grouped){
+        const label=document.createElement('div');label.className='fc-name';
+        label.textContent=mine?'You':state.mode==='watch'
+          ? state.names[m.sender_id]||'Spectator'
+          : m.sender_id===state.view?.whiteId?(state.view?.whiteName||'White')
+          : m.sender_id===state.view?.blackId?(state.view?.blackName||'Black'):'Player';
         row.append(label);
       }
-      const bubble=document.createElement('div');
-      bubble.className='bubble';
-      bubble.textContent=msg.body;
-      const t=document.createElement('time');
-      t.dateTime=msg.created_at;
-      t.textContent=msg.pending?'Sending…':timeLabel(msg.created_at);
-      row.append(bubble,t);
-      frag.append(row);
-      previous=msg;
+      const bubble=document.createElement('div');bubble.className='fc-bubble';bubble.textContent=m.body;
+      const time=document.createElement('time');time.className='fc-time';time.dateTime=m.created_at;
+      time.textContent=m.pending?'Sending…':timeLabel(m.created_at);
+      row.append(bubble,time);frag.append(row);
+      previous=m;
     }
-    if (state.error) {
-      const p=document.createElement('p');
-      p.className='note';
-      p.style.color='#ff9898';
-      p.textContent=state.error;
-      frag.append(p);
+    if(state.error){
+      const p=document.createElement('div');p.className='fc-error';p.textContent=state.error;frag.append(p);
     }
     list.replaceChildren(frag);
-    if (forceBottom || nearBottom) list.scrollTop = list.scrollHeight;
+    if(forceBottom||nearBottom)list.scrollTop=list.scrollHeight;
+    else list.scrollTop=Math.max(0,priorScroll+list.scrollHeight-priorHeight);
   }
 
   function accept(rows, forceBottom=false, replace=false) {
