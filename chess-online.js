@@ -91,6 +91,7 @@
   // Server data is authoritative. No browser can directly update the game or move tables.
   function stopMatch() {
     matchId = null;
+    window.dispatchEvent(new CustomEvent('familyChessMatchChanged',{detail:{id:null}}));
     syncToken++;
     if (timer) { clearInterval(timer); timer = null; }
     if (subscription) { const old=subscription; subscription=null; void api.removeChannel(old); }
@@ -118,7 +119,9 @@
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) throw new Error('This match is private or no longer available.');
-      if (g.white_player_id !== uid && g.black_player_id !== uid) throw new Error('You are not in this game.');
+      const spectating=g.white_player_id!==uid&&g.black_player_id!==uid;
+      if(spectating&&(g.status!=='active'&&g.status!=='finished'||!g.black_player_id))
+        throw new Error('This game is not available to spectate.');
       const {data:moves,error:movesError}=await api.from('chess_moves')
         .select('ply,move_uci').eq('game_id',id).order('ply',{ascending:true}).limit(1001);
       if (movesError) throw movesError;
@@ -132,9 +135,9 @@
         .map(p=>[p.id,p.piece_color.toLowerCase()]));
       const native=await nativeBoard();
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
-      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors);
+      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors,spectating);
       if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
-      else status('Live match connected · '+moves.length+' half-moves saved.');
+      else status((spectating?'Spectating':'Match connected')+' · '+moves.length+' half-moves saved.');
       return true;
     } catch(e) {
       if (epoch === syncToken) status('Could not sync board: '+(e?.message||'Unknown error'),true);
@@ -152,6 +155,7 @@
     if (pendingRead) throw new Error('A previous game is still loading.');
     stopMatch();
     matchId = id;
+    window.dispatchEvent(new CustomEvent('familyChessMatchChanged',{detail:{id}}));
     status('Loading shared board…');
     const loaded = await syncMatch();
     if (!loaded || matchId !== id) {
@@ -167,6 +171,8 @@
     timer = setInterval(()=>{if(matchId===id) void syncMatch();},3000);
   }
 
+  window.familyChessOpenMatch = async (id) => startMatch(id);
+  window.familyChessCurrentMatch = () => matchId;
   window.familyChessSubmitMove = async (id,move) => {
     if (!player || !matchId || id !== matchId) throw new Error('Open your online game first.');
     const {data,error}=await api.functions.invoke('chess-submit-move',{
