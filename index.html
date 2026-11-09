@@ -16,6 +16,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-online.js"></script>
+<link rel="stylesheet" href="./chess-social.css?v=1">
+<script defer src="./chess-social.js?v=1"></script>
 <title>Family Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -2959,8 +2961,10 @@ function updateBanner() {
     acts.append(button('Decline', 'quiet small', () => answerDraw(false)), button('Accept draw', 'gold small', () => answerDraw(true)));
   } else if (G.mode === 'live' && mySeat && !bothSeated() && G.status !== 'over') {
     msg = `Waiting for someone to take the ${SIDE[other(mySeat)].toLowerCase()} seat.`;
+  } else if (G.onlineProvider === 'supabase' && G.mode === 'live' && !mySeat && bothSeated()) {
+    msg = 'Spectating '+seatName('w')+' vs '+seatName('b')+' · View only';
   } else if (G.mode === 'live' && !mySeat && me.canWrite === false) {
-    msg = 'You can watch here. To play, the owner shares this page with you as an Editor.';
+    msg = 'Spectator mode · You can watch without making moves.';
   } else if (G.mode === 'live' && !mySeat && bothSeated()) {
     const others = watcherIds().filter((u) => u !== me.id).map(watcherName);
     msg = `Watching ${seatName('w')} and ${seatName('b')}${others.length ? ` · also watching: ${others.join(', ')}` : ''}.`;
@@ -6497,10 +6501,13 @@ async function boot() {
 /* Supabase match bridge: reuse the original 3D/2D board and chess.js engine. */
 const familyChessBoot = boot();
 window.familyChessNative = {
-  async present(game, moves, userId, labels = {}, sharedColors = {}) {
+  async present(game, moves, userId, labels = {}, sharedColors = {}, spectating = false) {
     await familyChessBoot;
     if (!game || !Array.isArray(moves) || typeof userId !== 'string') throw new Error('Invalid online game');
-    if (game.white_player_id !== userId && game.black_player_id !== userId) throw new Error('You are not a player in this match');
+    const participating=game.white_player_id===userId||game.black_player_id===userId;
+    if(!participating&&!(spectating && game.black_player_id &&
+      (game.status==='active'||game.status==='finished')))
+      throw new Error('You do not have permission to watch this game');
     const pos = positionFrom(moves);
     if (pos.ply !== moves.length || pos.chess.fen() !== game.current_fen) throw new Error('Online position mismatch. Refresh the match.');
     const sameGame = G.onlineProvider === 'supabase' && G.gid === game.id;
@@ -6516,7 +6523,7 @@ window.familyChessNative = {
     const colorsChanged=oldColors!==JSON.stringify(filteredColors);
     cancelComputer();
     me.id = userId;
-    me.canWrite = true;
+    me.canWrite = participating;
     const white = game.white_player_id, black = game.black_player_id;
     G.mode = 'live'; G.onlineProvider = 'supabase'; G.gid = game.id;
     G.n = 1; G.seats = {w:white,b:black}; G.colors=filteredColors;
@@ -6529,7 +6536,7 @@ window.familyChessNative = {
     G.moves = moves.slice(); G.pos = pos;
     mySeat = white === userId ? 'w' : 'b';
     const label = document.querySelector('.auth-practice');
-    if (label) label.textContent = 'Online · ' + (mySeat === 'w' ? 'White' : 'Black');
+    if (label) label.textContent = !participating ? 'Spectating · Read only' : 'Online · '+(mySeat === 'w' ? 'White' : 'Black');
     const seatChanged = priorSeat !== mySeat || !sameGame;
     if (seatChanged) {flipped = false; review = null; pending = null; selected = null; lockUntil = 0;}
     const desired = wantedSide();
