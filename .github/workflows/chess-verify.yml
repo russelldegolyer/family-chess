@@ -1,7 +1,7 @@
 name: Family Chess verification
 on:
   push:
-    branches: [main, fix/chat-layout-shared-player-colors]
+    branches: [main, "feat/lobby-spectators-challenges-push"]
   pull_request:
     branches: [main]
 jobs:
@@ -16,5 +16,7 @@ jobs:
         run: |
           node --check auth-gate.js
           node --check chess-online.js
+          node --check chess-social.js
+          node --check chess-sw.js
       - name: Test shared player colors and mobile chat layout
-        run: node --test tests/chess-ui.test.mjs
+        run: node --test tests/*.test.mjs
