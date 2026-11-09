@@ -17,7 +17,7 @@
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-online.js?v=7"></script>
 <script defer src="./chess-chat.js?v=7"></script>
-<script defer src="./chess-review-analysis.js?v=1"></script>
+<script defer src="./chess-review-analysis.js?v=2"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
 <script defer src="./chess-social.js?v=7"></script>
 <title>Chess</title>
@@ -5507,8 +5507,27 @@ function renderHistory() {
       if (best && ['inaccuracy','mistake','blunder','uncertain'].includes(verdict.kind)) {
         const actualSan = sans[review.ply - 1] || review.moves[review.ply - 1];
         const text = el('p', 'review-teaching');
-        text.textContent = who + ' played ' + actualSan + ', but ' + best.san +
-          ' was the stronger choice in this search. ' + best.why;
+        let lesson = who + ' played ' + actualSan + ', but ' + best.san +
+          ' was the stronger choice in this search. ';
+        if (verdict.label === 'Allowed checkmate') {
+          lesson += 'The played move lets the opponent force checkmate. ' +
+            best.san + ' avoids that mating threat in the engine search.';
+        } else if (verdict.label === 'Missed checkmate') {
+          lesson += best.san + ' would have delivered a forced mate instead.';
+        } else {
+          lesson += best.why;
+          const next = review.ply < review.moves.length
+            ? positionFrom(review.moves, review.ply + 1).last : null;
+          if (next && next.color !== (review.ply % 2 === 1 ? 'w' : 'b')) {
+            if (next.captured && verdict.kind !== 'uncertain') {
+              lesson += ' In the game, the opponent replied ' + next.san +
+                ' and captured your ' + (PIECE[next.captured] || 'piece') + '.';
+            } else if (next.san?.endsWith('#')) {
+              lesson += ' The opponent followed with ' + next.san + ', checkmate.';
+            }
+          }
+        }
+        text.textContent = lesson;
         insight.append(text);
         if (verdict.kind !== 'uncertain' && Number.isFinite(verdict.loss) && verdict.loss < 90000) {
           const cost = el('div', 'review-cost');
