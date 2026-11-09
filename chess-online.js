@@ -37,7 +37,7 @@
     <div class="cgShade"></div><section class="cgPanel">
       <div class="cgHeader"><div><h2>Family games</h2><span class="cgMuted">Private invitations</span></div>
         <button class="cgButton" id="cgClose" type="button" aria-label="Close">Close</button></div>
-      <p class="cgMuted">Create or join a private match. Real-time board moves are not connected yet, so this is the invitation setup only.</p>
+      <p class="cgMuted">Create a match, send the link, and play on the same live board from two devices.</p>
       <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Your chess name</label>
         <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" required minlength="2" maxlength="40">
         <button class="cgButton" type="submit">Save</button></div></form>
@@ -47,6 +47,7 @@
         <div class="cgRow"><input id="cgJoinId" class="cgInput" type="text" placeholder="Paste a game link or game ID" required>
         <button class="cgButton" type="submit">Join</button></div></form>
       <div id="cgMessage" role="status" aria-live="polite"></div>
+      <button id="cgPractice" class="cgButton" style="width:100%;margin:8px 0 0" type="button">Return to practice game</button>
       <hr class="cgDivider">
       <div class="cgHeader"><strong>My matches</strong><button class="cgButton" id="cgRefresh" type="button">Refresh</button></div>
       <div id="cgGames" class="cgMuted">No matches yet.</div>
@@ -55,6 +56,7 @@
   const $ = id => document.getElementById(id);
   const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let player = null, invitePresented = false;
+  let matchId = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
   const invite = new URL(location.href).searchParams.get('game') || '';
   if (pattern.test(invite)) $('cgJoinId').value = invite;
   const status = (s, bad=false) => { $('cgMessage').textContent = s; $('cgMessage').classList.toggle('error', bad); };
@@ -70,6 +72,95 @@
   }
   function show() { if (!player) return; root.hidden=false; void refresh(); $('cgClose').focus(); }
   function close() { root.hidden=true; launch.focus(); }
+
+  // Server data is authoritative. No browser can directly update the game or move tables.
+  function stopMatch() {
+    matchId = null;
+    syncToken++;
+    if (timer) { clearInterval(timer); timer = null; }
+    if (subscription) { const old=subscription; subscription=null; void api.removeChannel(old); }
+  }
+  window.familyChessOnlineStop = stopMatch;
+
+  async function nativeBoard() {
+    if (window.familyChessNative) return window.familyChessNative;
+    await new Promise(resolve=>{
+      window.addEventListener('familyChessNativeReady',resolve,{once:true});
+      setTimeout(resolve,15000);
+    });
+    if (!window.familyChessNative) throw new Error('The chess board did not load. Refresh the page.');
+    return window.familyChessNative;
+  }
+
+  async function syncMatch() {
+    if (!matchId || !player) return;
+    if (pendingRead) { again = true; return; }
+    pendingRead = true;
+    const id=matchId, uid=player.id, epoch=syncToken;
+    try {
+      const {data:g,error:gameError}=await api.from('chess_games')
+        .select('id,white_player_id,black_player_id,status,current_fen,result,created_at,updated_at')
+        .eq('id',id).maybeSingle();
+      if (gameError) throw gameError;
+      if (!g) throw new Error('This match is private or no longer available.');
+      if (g.white_player_id !== uid && g.black_player_id !== uid) throw new Error('You are not in this game.');
+      const {data:moves,error:movesError}=await api.from('chess_moves')
+        .select('ply,move_uci').eq('game_id',id).order('ply',{ascending:true}).limit(1001);
+      if (movesError) throw movesError;
+      if (!moves || moves.length > 1000 || moves.some((m,i)=>m.ply!==i+1)) throw new Error('Move history is inconsistent.');
+      if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
+      const ids=[g.white_player_id,g.black_player_id].filter(Boolean);
+      const {data:profiles}=await api.from('chess_profiles').select('id,display_name').in('id',ids);
+      if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
+      const labels=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
+      const native=await nativeBoard();
+      if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
+      await native.present(g,moves.map(m=>m.move_uci),uid,labels);
+      if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
+      else status('Live match connected · '+moves.length+' half-moves saved.');
+    } catch(e) {
+      if (epoch === syncToken) status('Could not sync board: '+(e?.message||'Unknown error'),true);
+    } finally {
+      pendingRead = false;
+      if (again) {again=false;if(matchId) void syncMatch();}
+    }
+  }
+
+  async function startMatch(id) {
+    if (!player || !pattern.test(id)) throw new Error('Sign in and choose a valid game.');
+    stopMatch();
+    matchId = id;
+    root.hidden = true;
+    status('Loading shared board…');
+    await syncMatch();
+    if (matchId !== id) return;
+    subscription = api.channel('chess-match-'+id)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'chess_games',filter:'id=eq.'+id},
+        ()=>{void syncMatch();})
+      .subscribe();
+    timer = setInterval(()=>{if(matchId===id) void syncMatch();},3000);
+  }
+
+  window.familyChessSubmitMove = async (id,move) => {
+    if (!player || !matchId || id !== matchId) throw new Error('Open your online game first.');
+    const {data,error}=await api.functions.invoke('chess-submit-move',{
+      body:{game_id:id,move_uci:move}
+    });
+    if (error) {
+      let message = error.message || 'Move was not saved.';
+      try { const details=await error.context?.json(); if(details?.error)message=details.error; } catch {}
+      await syncMatch();
+      throw new Error(message);
+    }
+    if (!data?.ok) {await syncMatch();throw new Error(data?.error||'Move was not saved.');}
+    await syncMatch();
+    return data;
+  };
+  $('cgPractice').addEventListener('click',()=>{
+    window.familyChessNative?.leaveToPractice();
+    stopMatch(); close();
+  });
+
   launch.addEventListener('click', show);
   $('cgClose').addEventListener('click', close);
   root.querySelector('.cgShade').addEventListener('click', close);
@@ -112,7 +203,11 @@
       const a=document.createElement('a'); a.href=link(g.id); a.textContent=link(g.id);
       const button=document.createElement('button');button.type='button';button.className='cgButton';button.textContent='Copy invite';
       button.addEventListener('click',()=>{void copy(link(g.id));});
-      card.append(title,a,button);games.append(card);
+      const play=document.createElement('button');play.className='cgButton';play.type='button';
+      play.textContent=g.status==='waiting'?'Open waiting board':'Play board';
+      play.style.marginLeft='8px';
+      play.addEventListener('click',()=>{void startMatch(g.id).catch(e=>status(e.message,true));});
+      card.append(title,a,button,play);games.append(card);
     }
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
@@ -131,21 +226,36 @@
     if (!pattern.test(id)) { status('Enter a valid game invitation link or ID.',true); return; }
     const button=$('cgJoinForm').querySelector('button');button.disabled=true;
     try {
-      const {error}=await api.rpc('chess_join_game',{p_game_id:id});
-      if (error) { status('Could not join: '+error.message,true); return; }
-      status('You joined as Black. Online move synchronization is the next step.'); await refresh();
+      const {data:already}=await api.from('chess_games')
+        .select('white_player_id,black_player_id').eq('id',id).maybeSingle();
+      if (!already || (already.white_player_id!==player.id && already.black_player_id!==player.id)) {
+        const {error}=await api.rpc('chess_join_game',{p_game_id:id});
+        if (error) { status('Could not join: '+error.message,true); return; }
+      }
+      status('You joined as Black. Opening your shared board…');
+      await refresh();
       history.replaceState(null,'',location.pathname);
+      await startMatch(id);
     } finally {button.disabled=false;}
   });
   async function onPlayer(next) {
     const old = player?.id;
     player = next || null;
     launch.hidden = !player;
-    if (!player) { root.hidden=true; return; }
+    if (!player) {
+      stopMatch();
+      window.familyChessNative?.leaveToPractice();
+      root.hidden=true; return;
+    }
     if (old !== player.id) {
+      if (old) { stopMatch(); window.familyChessNative?.leaveToPractice(); }
       await ensureProfile();
       if (pattern.test(invite) && !invitePresented) {
-        invitePresented=true; show(); status('Invitation detected. Press Join to accept it.');
+        invitePresented = true;
+        const {data:part} = await api.from('chess_games')
+          .select('id').eq('id',invite).maybeSingle();
+        if (part) await startMatch(invite);
+        else {show();status('Invitation found. Press Join to join as Black.');}
       }
     }
   }
