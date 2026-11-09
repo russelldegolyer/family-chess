@@ -94,7 +94,7 @@
     const priorScroll=list.scrollTop,priorHeight=list.scrollHeight;
     state.paintKey=sig;
     const frag=document.createDocumentFragment();
-    if(!state.id)frag.append(note('Messages','Open a family match to chat.'));
+    if(!state.id)frag.append(note('Messages','Open an online match to chat.'));
     else if(state.mode==='play'&&state.view?.mySeat==null)
       frag.append(note('Private chat','Only the two players can view game messages.'));
     else if(!entries.length)frag.append(note(state.mode==='watch'?'Spectator chat':'Messages',
