@@ -51,3 +51,42 @@
  .auth-account #cgLaunch,.auth-account #authSignOut{width:100%;min-height:44px;
    padding:11px 13px;text-align:center;border-radius:10px}
 }
+
+/* Desktop layout: keep the signed-in toolbar in its own lane above chat.
+   The chat panel starts below it rather than rendering controls underneath. */
+@media (min-width: 601px) {
+  .auth-account {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: var(--gr, 16px);
+    width: min(var(--panel-w, 380px), calc(100vw - 32px));
+    max-width: min(var(--panel-w, 380px), calc(100vw - 32px));
+    min-height: 48px;
+    padding: 7px 9px;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
+  .auth-account-actions {
+    flex: 1 1 auto;
+    width: 100%;
+    gap: 7px;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+  .auth-account #authAccountName {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+  .auth-account .auth-practice { flex: none; white-space: nowrap; }
+  .auth-account #cgLaunch,
+  .auth-account #authSignOut {
+    flex: none;
+    white-space: nowrap;
+  }
+  body:not(.compact) #panel {
+    top: calc(var(--gt, 16px) + 76px);
+  }
+}
+@media (min-width: 601px) and (max-width: 1050px) {
+  .auth-account .auth-practice { display: none; }
+}
