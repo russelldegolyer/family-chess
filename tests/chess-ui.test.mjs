@@ -80,7 +80,7 @@ test('spectator mode never submits a move, changes seats or joins games',()=>{
  assert.match(html,/me\.canWrite = !watching/);
  assert.match(html,/Spectating \$\{seatName\('w'\)\} vs \$\{seatName\('b'\)\} · read-only/);
  assert.match(online,/leaveWatch\.addEventListener\('click',leaveSpectating\)/);
- assert.match(online,/else if\(part\.status==='active'&&part\.black_player_id\)await startMatch\(invite,'watch'\)/);
+ assert.match(online,/else if\(\['active','finished'\]\.includes\(part\.status\)&&part\.black_player_id\)await startMatch\(invite,'watch'\)/);
 });
 test('RLS permits authenticated spectators to read live games and moves, not to edit or view waiting games',()=>{
  const sql=read('database/chess-spectator-access.sql');
