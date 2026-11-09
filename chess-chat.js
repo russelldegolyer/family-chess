@@ -270,7 +270,7 @@
   function render(view,forceBottom=false){
     state.view=view;
     const title=document.querySelector('#panel .chat-title');
-    if(title) title.textContent=state.mode==='watch'?'Spectator chat':'Chat';
+    if(title) title.textContent=state.mode==='watch'?'Spectators':'Chat';
     const badge=document.getElementById('unread');
     if(visible()&&badge && badge.dataset.supChatUnread!=='0') {
       badge.dataset.supChatUnread='0';badge.hidden=true;
