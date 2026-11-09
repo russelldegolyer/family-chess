@@ -5492,8 +5492,9 @@ function renderHistory() {
     frag.append(summary);
     const analyzer = window.ChessReviewAnalyzer;
     const engineState = analyzer?.status();
+    let engineHead = null;
     if (engineState) {
-      const engineHead = el('div', 'review-analysis-head');
+      engineHead = el('div', 'review-analysis-head');
       const line = el('span');
       line.textContent = engineState.error || (engineState.complete
         ? 'Engine review complete · both players'
@@ -5506,7 +5507,6 @@ function renderHistory() {
         item.textContent = (side === 'w' ? 'White' : 'Black') + ': ' + missed + ' flagged';
         engineHead.append(item);
       }
-      frag.append(engineHead);
     }
     if (review.ply && verdict) {
       const who = review.ply % 2 === 1 ? 'White' : 'Black';
@@ -5566,9 +5566,10 @@ function renderHistory() {
       p.textContent = 'Checking this move and the opponent’s alternatives…';
       frag.append(p);
     }
+    if (engineHead) frag.append(engineHead);
     if (engineState) {
       const note = el('p', 'review-engine-note');
-      note.textContent = 'Quick offline engine estimates; deeper tactics may change the verdict.';
+      note.textContent = 'Quick offline estimates; deeper analysis may differ.';
       frag.append(note);
       const issues = analyzer.issues();
       if (issues.length) {
@@ -5612,34 +5613,49 @@ function renderHistory() {
         grid.append(b);
       }
     }
-    const step = el('div', 'stepper' + (review ? ' review-stepper' : ''));
-    step.append(iconBtn('first', 'Starting position', () => reviewTo(0), false), iconBtn('prev', 'Previous move', () => reviewStep(-1), false));
+    const step = el('div', review ? 'review-stepper' : 'stepper');
+    const first = iconBtn('first', 'Beginning of game', () => reviewTo(0), false);
+    const prev = iconBtn('prev', 'Previous move', () => reviewStep(-1), false);
+    const next = iconBtn('next', 'Next move', () => reviewStep(1), false);
+    const last = iconBtn('last', 'Final move', () => reviewTo(review ? review.moves.length : G.moves.length), false);
+    if (review) {
+      first.disabled = prev.disabled = review.ply <= 0;
+      next.disabled = last.disabled = review.ply >= review.moves.length;
+    }
+    step.append(first, prev);
     if (review) {
       const playback = button(reviewTimer ? '❚❚ Pause' : '▶ Play', 'gold small', toggleReviewPlayback);
       playback.classList.add('review-play-button');
       playback.setAttribute('aria-label', reviewTimer ? 'Pause replay' : 'Play replay automatically');
       step.append(playback);
     }
-    step.append(iconBtn('next', 'Next move', () => reviewStep(1), false), iconBtn('last', 'Latest move', () => reviewTo(review ? review.moves.length : G.moves.length), false));
+    step.append(next, last);
     if (review) {
-      const back = button(G.status === 'over' ? 'Exit review' : 'Back to game', 'small', endReview);
-      back.classList.add('review-exit-button');
-      step.append(back);
+      const exit = button('Done', 'small', endReview);
+      exit.classList.add('review-exit-button');
+      exit.setAttribute('aria-label', 'Exit review');
+      step.append(exit);
+      dock.replaceChildren(step);
+      const toggleMoves = button(reviewMovesExpanded
+        ? '− Hide full move list'
+        : '+ View all moves (' + sans.length + ')', 'small', () => {
+          reviewMovesExpanded = !reviewMovesExpanded;
+          renderHistory();
+        });
+      toggleMoves.classList.add('review-move-toggle');
+      toggleMoves.setAttribute('aria-expanded', String(reviewMovesExpanded));
+      frag.append(toggleMoves);
+      if (reviewMovesExpanded) {
+        const wrapper = el('div', 'review-move-scroll');
+        wrapper.append(grid);
+        frag.append(wrapper);
+      }
+    } else {
+      dock.replaceChildren();
+      frag.append(step, grid);
     }
-    if (review) {
-      // Keep transport controls immediately below the progress card on mobile.
-      const afterCard = frag.querySelector('.review-analysis-head') ||
-        frag.querySelector('.review-insight') || frag.querySelector('.review-engine-note');
-      if (afterCard) frag.insertBefore(step, afterCard);
-      else frag.append(step);
-    } else frag.append(step);
-    if (review) {
-      const wrapper = el('div', 'review-move-scroll');
-      wrapper.append(grid);
-      frag.append(wrapper);
-    } else frag.append(grid);
   }
-  if (G.mode === 'live') {
+  if (G.mode === 'live' && !review) {
     const t = el('div', 'section-title'); t.textContent = 'Past games';
     frag.append(t);
     if (!archive.length) { const p = el('p', 'muted'); p.textContent = 'Finished games collect here, with every move kept.'; frag.append(p); }
@@ -5696,7 +5712,15 @@ function openHistory(on = !historyOpen) {
   $('chatForm').hidden = on;
   $('typing').hidden = on;
   if (on) renderHistory();
-  else { stopReviewPlayback(false); if (review) endReview(); markChatRead(); }
+  else {
+    stopReviewPlayback(false);
+    if (review) endReview();
+    $('panel').classList.remove('reviewing');
+    $('reviewDock').hidden = true;
+    $('reviewDock').replaceChildren();
+    document.querySelector('#panel .chat-title').textContent = 'Chat';
+    markChatRead();
+  }
 }
 
 /* ------------------------------------------------------------------ panel: chat */
