@@ -85,7 +85,8 @@
   const $ = id => document.getElementById(id);
   const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let player = null, invitePresented = false;
-  let matchId = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
+  let matchId = null, matchMode = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
+  let livePromptSeen=false, liveCount=0, livePoll=null;
   let colorSaveTimer=null;
   const validColor=(v)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
   window.addEventListener('familyChessPieceColorChanged',(event)=>{
@@ -119,7 +120,9 @@
 
   // Server data is authoritative. No browser can directly update the game or move tables.
   function stopMatch() {
-    matchId = null;
+    matchId=null;matchMode=null;
+    spectatorBar.hidden=true;
+    watchShortcut.hidden=!player||liveCount===0;
     syncToken++;
     if (timer) { clearInterval(timer); timer = null; }
     if (subscription) { const old=subscription; subscription=null; void api.removeChannel(old); }
@@ -147,7 +150,12 @@
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) throw new Error('This match is private or no longer available.');
-      if (g.white_player_id !== uid && g.black_player_id !== uid) throw new Error('You are not in this game.');
+      const isPlayer=g.white_player_id===uid||g.black_player_id===uid;
+      const isWatcher=matchMode==='watch';
+      if(isWatcher){
+        if(g.status!=='active'&&g.status!=='finished')throw new Error('This game is not available to watch.');
+        if(!g.black_player_id)throw new Error('The second player has not joined yet.');
+      }else if(!isPlayer)throw new Error('You are not a player in this match. Use Watch live to spectate.');
       const {data:moves,error:movesError}=await api.from('chess_moves')
         .select('ply,move_uci').eq('game_id',id).order('ply',{ascending:true}).limit(1001);
       if (movesError) throw movesError;
@@ -161,8 +169,13 @@
         .map(p=>[p.id,p.piece_color.toLowerCase()]));
       const native=await nativeBoard();
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
-      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors);
-      if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
+      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors,{spectating:isWatcher});
+      if(isWatcher){
+        spectatorLabel.textContent=`Watching · ${labels[g.white_player_id]||'White'} vs ${labels[g.black_player_id]||'Black'}`;
+        spectatorBar.hidden=false;
+      }
+      if(isWatcher)status(`${g.status==='finished'?'Final':'Live'} · Watching ${labels[g.white_player_id]||'White'} vs ${labels[g.black_player_id]||'Black'} · read-only`);
+      else if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
       else status('Live match connected · '+moves.length+' half-moves saved.');
       return true;
     } catch(e) {
@@ -174,14 +187,15 @@
     }
   }
 
-  async function startMatch(id) {
+  async function startMatch(id,mode='play') {
     if (!player || !pattern.test(id)) throw new Error('Sign in and choose a valid game.');
     // Keep the lobby visible if the game cannot be opened.
     for (let i=0;i<25 && pendingRead;i++) await new Promise(resolve=>setTimeout(resolve,120));
     if (pendingRead) throw new Error('A previous game is still loading.');
     stopMatch();
-    matchId = id;
-    status('Loading shared board…');
+    matchId=id;matchMode=mode;
+    watchShortcut.hidden=true;
+    status(mode==='watch'?'Connecting to live spectator view…':'Loading shared board…');
     const loaded = await syncMatch();
     if (!loaded || matchId !== id) {
       stopMatch();
@@ -197,7 +211,7 @@
   }
 
   window.familyChessSubmitMove = async (id,move) => {
-    if (!player || !matchId || id !== matchId) throw new Error('Open your online game first.');
+    if (!player || !matchId || id !== matchId || matchMode!=='play') throw new Error('Only participating players can submit moves.');
     const {data,error}=await api.functions.invoke('chess-submit-move',{
       body:{game_id:id,move_uci:move}
     });
@@ -211,6 +225,13 @@
     await syncMatch();
     return data;
   };
+  function leaveSpectating(){
+    if(matchMode!=='watch')return;
+    stopMatch();
+    window.familyChessNative?.leaveToPractice();
+    show();
+  }
+  leaveWatch.addEventListener('click',leaveSpectating);
   $('cgPractice').addEventListener('click',()=>{
     window.familyChessNative?.leaveToPractice();
     stopMatch(); close();
