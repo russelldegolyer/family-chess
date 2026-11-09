@@ -301,6 +301,21 @@ body:not(.compact) .plate-top { left: var(--gl); right: auto; margin: 0; }
 #btnResign { color: #e8a0a0; }
 body.compact #btnResign span { display: none; }
 .chat-clear { margin-left: auto; }
+/* Red X is a deliberate, confirmed game resignation, not a close-chat control. */
+#btnChatResign[hidden]{display:none!important}
+#btnChatResign{
+  flex:none;display:grid;place-items:center;
+  width:40px;height:40px;min-width:40px;
+  background:#7e1422;color:#fff;border:1px solid #bb3849;border-radius:50%;
+  box-shadow:inset 0 1px 0 #ffffff20;
+}
+#btnChatResign:active{background:#a21d2d;transform:scale(.96)}
+@media(max-width:420px) {
+  body.compact .panel-head{gap:5px!important}
+  body.compact .panel-head .icon-btn{width:38px;height:38px;flex-shrink:0}
+  body.compact .panel-head #btnChatResign{width:38px;height:38px;min-width:38px}
+  body.compact .panel-head .chat-title{font-size:16px}
+}
 .chat-close { margin-left: 4px !important; }
 .exit-focus { padding: 11px 16px; border-radius: 12px; font: 500 16px/1 var(--body); top: auto; bottom: var(--gb); right: var(--gr); }
 body.focus:not(.compact) .bottom-bar { right: calc(var(--gr) + 150px); }
@@ -671,6 +686,13 @@ body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); 
       <button class="icon-btn chat-view" id="btnChatView" type="button" aria-label="Reset view" title="Reset view"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button class="icon-btn chat-new" id="btnChatNew" type="button" aria-label="New game" title="New game"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button class="icon-btn chat-clear" id="btnChatClear" type="button" aria-label="Clear chat" title="Clear chat"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
+      <button class="icon-btn chat-resign" id="btnChatResign" type="button"
+        aria-label="Resign game" title="Resign game" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
+            stroke-width="2.7" stroke-linecap="round"/>
+        </svg>
+      </button>
       <button class="icon-btn chat-close" id="btnChatClose" type="button" aria-label="Close chat" title="Close chat"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button class="icon-btn sheet-close" id="btnSheetClose" type="button" aria-label="Close chat"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
@@ -4551,21 +4573,28 @@ function layout2D() {
   if (!b2.svg) build2D();
   const W = window.innerWidth, H = window.innerHeight;
   const chat2d = document.body.classList.contains('chat2d');
-  // Match the actual chat panel size instead of assuming it always occupies
-  // 34% of the screen. Keep the board below the opponent card and above chat.
-  const panelHeight = chat2d ? ($('panel')?.getBoundingClientRect().height || H * 0.44) : 0;
-  const topPlateBottom = chat2d ? ($('plateTop')?.getBoundingClientRect().bottom || 112) : 0;
-  const top = chat2d ? Math.max(104, Math.ceil(topPlateBottom) + 10) : compact ? 96 : 44;
-  const bottom = chat2d ? Math.ceil(panelHeight) + 8 : compact ? 78 : 64;
-  const left = chat2d ? 6 : compact ? 16 : 230;
-  const right = areaRight + (chat2d ? 6 : 16);
-  // Small phones can reduce the board rather than allow it to overlap the chat.
-  const s = Math.max(chat2d ? 10 : 20, Math.min(
+  const topCard = $('plateTop')?.getBoundingClientRect();
+  // Measure the physical top of the opened chat sheet. CSS percentages and
+  // iPhone safe-area padding can make "44% of screen" inaccurate in practice.
+  const chatTop = chat2d ? ($('panel')?.getBoundingClientRect().top ?? H * 0.56) : H;
+  const top = chat2d ? Math.max(74, Math.ceil(topCard?.bottom || 90) + 5)
+    : compact ? Math.max(84,Math.ceil(topCard?.bottom || 80) + 8) : 44;
+  const bottomEdge = chat2d ? chatTop - 8 : H - (compact ? 80 : 64);
+  const left = chat2d ? 5 : compact ? 6 : 230;
+  const right = areaRight + (chat2d ? 5 : compact ? 6 : 16);
+  const freeHeight = Math.max(40,bottomEdge-top);
+  // Fill the space as much as possible, but never crop coordinates or place
+  // a playable square under the chat header.
+  const s = Math.max(3, Math.min(
     (W - left - right) / 10.04,
-    Math.max(12, H - top - bottom) / 11.72
+    freeHeight / 11.72
   ));
   const w = s * 10.04, h = s * 11.72;
-  Object.assign(b2.svg.style, { width: w + 'px', height: h + 'px', left: Math.round(left + (W - left - right - w) / 2) + 'px', top: Math.round(top + (H - top - bottom - h) / 2) + 'px' });
+  Object.assign(b2.svg.style, {
+    width:w+'px',height:h+'px',
+    left:Math.round(left+(W-left-right-w)/2)+'px',
+    top:Math.round(top+(freeHeight-h)/2)+'px'
+  });
 }
 
 /* ------------------------------------------------------------------ camera and layout */
@@ -5650,7 +5679,17 @@ function answerDraw(accept) {
   finishGame({ status: 'over', result: '1/2-1/2', reason: 'agreement', drawOffer: null, endedAt: Date.now() });
 }
 function resign() {
-  if (G.onlineProvider === 'supabase') { toast('Online resignation will be added later.'); return; }
+  if (G.onlineProvider === 'supabase') {
+    if (!mySeat || G.status !== 'active' || !G.gid || G.onlineBusy) return;
+    G.onlineBusy = true;
+    const id = G.gid;
+    if (pending) cancelPreview(false);
+    Promise.resolve(window.familyChessResign?.(id) ??
+      Promise.reject(new Error('Online resignation is unavailable. Reload the app.')))
+      .catch(e => toast(e?.message || 'Could not resign this game. Try again.', 4200))
+      .finally(() => { G.onlineBusy = false; updateAll(); });
+    return;
+  }
   const side = G.mode === 'local' ? G.pos.chess.turn() : G.mode === 'cpu' ? cpu.human : mySeat;
   if (!side || G.status !== 'active') return;
   if (pending) cancelPreview(false);
@@ -6022,10 +6061,19 @@ function plateColor(side) {
 }
 $('plateTop').addEventListener('click', () => plateColor(other(viewSide)));
 $('plateBottom').addEventListener('click', () => plateColor(viewSide));
-$('btnResign').addEventListener('click', () => {
-  dialog('Resign this game?', ['Your opponent will be given the win.'], [['Keep playing', 'quiet', null], ['Resign', 'gold', () => resign()]]);
-});
-function updateResignBtn() { const playing = G.status === 'active' && (G.mode === 'local' || G.mode === 'cpu' || (mySeat && bothSeated())) ; $('btnResign').hidden = !playing; }
+function askToResign() {
+  if(G.status !== 'active' || (G.onlineProvider === 'supabase' && !mySeat))return;
+  dialog('Resign this game?', ['Your opponent will be given the win. This cannot be undone.'],
+    [['Keep playing','quiet',null],['Resign','gold',()=>resign()]]);
+}
+$('btnResign').addEventListener('click',askToResign);
+$('btnChatResign').addEventListener('click',askToResign);
+function updateResignBtn() {
+  const playing = G.status === 'active' &&
+    (G.mode === 'local' || G.mode === 'cpu' || (mySeat && bothSeated()));
+  $('btnResign').hidden = !playing;
+  $('btnChatResign').hidden = !playing;
+}
 $('exitFocus').addEventListener('click', () => setFocus(false));
 function setSheet(open) {
   sheetOpen = open;
@@ -6035,7 +6083,15 @@ function setSheet(open) {
   window.familyChessChat?.opened?.();
   const was = document.body.classList.contains('chat2d');
   document.body.classList.toggle('chat2d', open && compact);
-  if (open && compact) applyView('2d', false);
+  if (open && compact) {
+    // A prior manual pinch zoom must not carry into the smaller split-screen
+    // viewport, where it would cover the chat header or crop a board edge.
+    if (!was) zoom2D(null);
+    applyView('2d', false);
+    requestAnimationFrame(() => {
+      if (sheetOpen && compact && VIEW === '2d') layout2D();
+    });
+  }
   /* closing the chat keeps the flat board up, full size; a tap on the empty space around it goes back to 3D */
   else if (was) { zoom2D(null); applyView('2d', false); }
 }
@@ -6635,7 +6691,8 @@ window.familyChessNative = {
     G.status = game.status === 'finished' ? 'over' : game.status;
     G.result = game.result || null;
     G.reason = G.status === 'over' ?
-      (game.end_reason==='replaced'?'replaced':pos.chess.isCheckmate()?'checkmate':
+      (game.end_reason==='replaced'?'replaced':game.end_reason==='resignation'?'resignation':
+       pos.chess.isCheckmate()?'checkmate':
        pos.chess.isStalemate()?'stalemate':pos.chess.isInsufficientMaterial()?'insufficient material':
        pos.chess.isThreefoldRepetition()?'threefold repetition':'the fifty-move rule') : null;
     G.drawOffer = null; G.startedAt = new Date(game.created_at || Date.now()).getTime();
