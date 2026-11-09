@@ -2,7 +2,8 @@
 .auth-gate { position: fixed; z-index: 200; inset: 0; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: max(18px,env(safe-area-inset-top, 0px)) 18px max(18px,env(safe-area-inset-bottom, 0px)); background: #070707; color: #fafafa; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
 .auth-card { width: 100%; max-width: 390px; margin: auto; display: flex; flex-direction: column; align-items: stretch; }
 .auth-logo { margin: 0 auto 18px; height: 68px; width: 68px; border: 1px solid #292929; border-radius: 17px; display:grid; place-items: center; background:linear-gradient(135deg,#1b1b1b,#080808); box-shadow:0 4px 32px #0007; }
-.auth-logo span { font-size: 41px; color: #e5e5e5; line-height: 1; }
+.auth-logo { height: 74px; width: 74px; border: 0; background: transparent; box-shadow: none; border-radius: 19px; overflow: hidden; }
+.auth-logo img { display: block; height: 100%; width: 100%; object-fit: contain; }
 .auth-kicker { text-align: center; color: #a1a1aa; font-size: 11px; font-weight: 650; letter-spacing: .26em; }
 .auth-card h1 { margin: 11px 0 7px; font-size: 29px; font-weight: 660; letter-spacing: -.035em; text-align: center; }
 .auth-subtitle { text-align: center; font-size: 14px; line-height: 1.55; color: #aaa; margin: 0 0 24px; }
