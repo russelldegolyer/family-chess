@@ -388,15 +388,20 @@
     const button=$('cgJoinForm').querySelector('button');button.disabled=true;
     try {
       const {data:already}=await api.from('chess_games')
-        .select('white_player_id,black_player_id').eq('id',id).maybeSingle();
-      if (!already || (already.white_player_id!==player.id && already.black_player_id!==player.id)) {
-        const {error}=await api.rpc('chess_join_game',{p_game_id:id});
-        if (error) { status('Could not join: '+error.message,true); return; }
+        .select('white_player_id,black_player_id,status').eq('id',id).maybeSingle();
+      const participant=already&&(already.white_player_id===player.id||already.black_player_id===player.id);
+      if(already?.status==='active'&&already.black_player_id&&!participant){
+        history.replaceState(null,'',location.pathname);
+        await startMatch(id,'watch');return;
       }
-      status('You joined as Black. Opening your shared board…');
+      if(!participant){
+        const {error}=await api.rpc('chess_join_game',{p_game_id:id});
+        if(error){status('Could not join: '+error.message,true);return;}
+      }
+      status('Opening your game board…');
       await refresh();
       history.replaceState(null,'',location.pathname);
-      await startMatch(id);
+      await startMatch(id,'play');
     } finally {button.disabled=false;}
   });
   async function onPlayer(next) {
