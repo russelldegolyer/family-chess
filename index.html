@@ -513,6 +513,20 @@ body.compact .bottom-bar .ctl, body.compact .bottom-bar .icon-btn.round { border
 .send:disabled { filter: grayscale(0.7) brightness(0.7); background: var(--fill); color: var(--ink-3); }
 .chat-form { gap: 8px; padding: 8px 12px 10px; border-top: 0.5px solid var(--line-2); align-items: center; }
 
+/* Compact, readable chat state rather than oversized italic overlay text. */
+.chat-list>.chat-empty-state{
+  align-self:center;flex:none;width:min(100%,320px);max-width:calc(100% - 12px);
+  margin:auto;padding:22px 18px;border:1px solid rgba(255,255,255,.13);
+  border-radius:16px;background:#222225;text-align:center;font-style:normal;
+  box-shadow:0 8px 24px #0004;pointer-events:none;
+}
+.chat-empty-title{display:block;margin:0 0 8px;color:#f2f2f5;
+  font:650 16px/1.25 var(--body);letter-spacing:-.025em}
+.chat-empty-description{margin:0;color:#aaaab1;font:400 13px/1.55 var(--body)}
+@media(max-width:600px){
+  body.compact .chat-list{padding:14px 12px;min-height:0}
+  body.compact .chat-list>.chat-empty-state{padding:14px 12px;border-radius:13px}
+}
 /* chat = Messages */
 .panel { border: 0; background: var(--mat-thick); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 body.compact .panel { border-radius: 22px 22px 0 0; background: var(--mat-thick); box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4); }
@@ -4004,9 +4018,9 @@ const lum = (h) => { const [r, g, b] = hexRgb(h).map((v) => { v /= 255; return v
 const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 const mixHex = (a, b, t) => { const A = hexRgb(a), B = hexRgb(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
 /* ------------------------------------------------------------------ player piece colours
-   A colour belongs to a player, not to White or Black. Saved locally and on the player's record;
-   a live game stores each seated player's colour (by player id) when they sit, so a later change
-   applies from their next match and both screens agree. */
+   A colour belongs to a player, not to White or Black. In private Supabase
+   games it is synchronized through each player's chess_profiles.piece_color
+   and repainted on both devices when either player changes it. */
 const COLOR_DEF = { mine: '#c60018', opp: '#141414' };
 const hsv2hex = (h, s, v) => { const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return '#' + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join(''); };
 const hex2hsv = (hex) => { const [r, g, b] = hexRgb(hex).map((x) => x / 255), M = Math.max(r, g, b), m = Math.min(r, g, b), d = M - m; let h = 0; if (d) h = M === r ? ((g - b) / d) % 6 : M === g ? (b - r) / d + 2 : (r - g) / d + 4; return [(h * 60 + 360) % 360, M ? d / M : 0, M]; };
@@ -4022,7 +4036,15 @@ const myColor = () => { const c = store.get('sg.myColor', null); return chromaOk
 const oppColor = () => { const c = store.get('sg.oppColor', null); return chromaOk(c) ? c : COLOR_DEF.opp; };
 /* each new game against the computer gives it a fresh, lively colour, clearly apart from yours */
 let CPU_COLOR = null;
-function setMyColor(hex) { store.set('sg.myColor', hex); if (PROG.ready) savePlayer((p) => { p.color = hex; }); applySideColors(true); }
+function setMyColor(hex) {
+  if (!chromaOk(hex)) return;
+  const changed=myColor().toLowerCase()!==hex.toLowerCase();
+  store.set('sg.myColor',hex);
+  if (PROG.ready) savePlayer((p)=>{p.color=hex;});
+  applySideColors(true);
+  if (G.onlineProvider==='supabase') draw2D(true);
+  if (changed) window.dispatchEvent(new CustomEvent('familyChessPieceColorChanged',{detail:{color:hex.toLowerCase()}}));
+}
 function setOppColor(hex) { store.set('sg.oppColor', hex); applySideColors(true); }
 /* the colour shown for each logical side in the current game */
 function sideColors() {
@@ -4219,7 +4241,8 @@ function piece2D(type, color, scale = 1, halo = false) {
   const g = sv('g', { class: 'p2' });
   if (PREF2D.pieces === 'letters') {
     /* letters: a team-coloured disc with the piece's notation letter, readable on any square colour */
-    const fillD = W ? C2.wp : C2.bp, ink = lum(fillD) > 0.3 ? '#161616' : '#f5f2ea';
+    const shared=G.onlineProvider==='supabase' ? sideColors() : null;
+    const fillD=shared ? shared[color] : (W ? C2.wp : C2.bp), ink = lum(fillD) > 0.3 ? '#161616' : '#f5f2ea';
     sv('circle', { r: 0.36 * scale, fill: fillD, stroke: ink, 'stroke-width': 0.035 * scale, 'stroke-opacity': 0.55 }, g);
     const t = sv('text', { 'text-anchor': 'middle', dy: '0.35em', y: 0.02 * scale, 'font-size': 0.46 * scale, 'font-weight': 700, fill: ink, 'font-family': 'Quicksand, Nunito, system-ui, sans-serif' }, g);
     t.textContent = LETTER[type];
@@ -4233,7 +4256,8 @@ function piece2D(type, color, scale = 1, halo = false) {
   /* shading: each piece is lit softly from above, a little lighter at the top and deeper at the foot, so it
      reads as a turned, solid piece rather than a flat cut-out. The inner carving lines are drawn as a quiet
      tone of the piece's own colour (lighter on dark pieces, darker on light ones) instead of stark white */
-  const base = W ? C2.wp : C2.bp, dark = lum(base) < 0.3;
+  const shared=G.onlineProvider==='supabase' ? sideColors() : null;
+  const base=shared ? shared[color] : (W ? C2.wp : C2.bp), dark=lum(base)<0.3;
   const id = 'p2g' + (piece2D.n = (piece2D.n || 0) + 1);
   const gr = sv('linearGradient', { id, x1: 0, y1: 0, x2: 0.35, y2: 1 }, sv('defs', {}, inner));
   sv('stop', { offset: 0, 'stop-color': mixHex(base, '#ffffff', dark ? 0.22 : 0.35) }, gr);
@@ -5186,8 +5210,13 @@ function allMessages() {
 function renderChat(forceBottom = false) {
   const list = $('chatList');
   if (!CAP.db) {
-    const n = el('p', 'note'); n.textContent = G.mode === 'connecting' ? 'Connecting…' : G.localReason || 'Online chat will become available in the multiplayer update.';
-    list.replaceChildren(n); return;
+    const n=el('div','note chat-empty-state');
+    const heading=el('strong','chat-empty-title'),detail=el('p','chat-empty-description');
+    heading.textContent=G.mode==='connecting'?'Connecting to chess…':G.onlineProvider==='supabase'?'Messages':'Practice game';
+    detail.textContent=G.mode==='connecting'?'Setting up your chess board.':
+      G.onlineProvider==='supabase'?'Private matches are live. In-game messaging is not connected yet.':
+      'Play against the computer or open Family games to invite someone to a private match.';
+    n.append(heading,detail);list.replaceChildren(n);return;
   }
   const msgs = allMessages();
   const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 90;
@@ -5261,7 +5290,7 @@ function renderTyping() {
 function updateChatEnabled() {
   const ok = !!CAP.db && !!me.id && me.canWrite !== false;
   $('chatInput').disabled = !ok; $('chatSend').disabled = !ok;
-  $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : !CAP.db ? 'Chat works in the live version' : ok ? 'Type a message…' : 'Chat is read-only for you here';
+  $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : !CAP.db ? 'Messaging is not connected yet' : ok ? 'Type a message…' : 'Chat is read-only for you here';
 }
 
 /* ------------------------------------------------------------------ live sync */
@@ -6442,7 +6471,7 @@ async function boot() {
   updatePlates();
   renderChat();
   const c = window.claude;
-  if (!c || typeof c.use !== 'function') { goLocal('This copy is running on its own, so moves stay on this screen and chat is off. Online play is coming soon. In the meantime, practice here against the computer.'); initProgress(); autoStartCpu(); return; }
+  if (!c || typeof c.use !== 'function') { goLocal('Practice against the computer, or use Family games to invite someone to play online.'); initProgress(); autoStartCpu(); return; }
   let caps = [null, null, null, null];
   try { caps = await Promise.all(['db', 'user', 'room', 'sample'].map((n) => Promise.resolve(c.use(n)).catch(() => null))); } catch { /* fall back below */ }
   [CAP.db, CAP.user, CAP.room, CAP.sample] = caps;
@@ -6468,7 +6497,7 @@ async function boot() {
 /* Supabase match bridge: reuse the original 3D/2D board and chess.js engine. */
 const familyChessBoot = boot();
 window.familyChessNative = {
-  async present(game, moves, userId, labels = {}) {
+  async present(game, moves, userId, labels = {}, sharedColors = {}) {
     await familyChessBoot;
     if (!game || !Array.isArray(moves) || typeof userId !== 'string') throw new Error('Invalid online game');
     if (game.white_player_id !== userId && game.black_player_id !== userId) throw new Error('You are not a player in this match');
@@ -6479,12 +6508,18 @@ window.familyChessNative = {
     const extension = sameGame && G.moves.length + 1 === moves.length && G.moves.every((m,i) => m === moves[i]);
     const wasOver = G.status === 'over';
     const priorSeat = mySeat;
+    const oldColors=JSON.stringify(G.colors||{});
+    const filteredColors={};
+    for(const [uid,hex] of Object.entries(sharedColors||{})){
+      if(typeof uid==='string'&&chromaOk(hex))filteredColors[uid]=hex.toLowerCase();
+    }
+    const colorsChanged=oldColors!==JSON.stringify(filteredColors);
     cancelComputer();
     me.id = userId;
     me.canWrite = true;
     const white = game.white_player_id, black = game.black_player_id;
     G.mode = 'live'; G.onlineProvider = 'supabase'; G.gid = game.id;
-    G.n = 1; G.seats = {w:white,b:black};
+    G.n = 1; G.seats = {w:white,b:black}; G.colors=filteredColors;
     G.names = {w:labels[white] || 'White',b:black ? (labels[black] || 'Black') : ''};
     G.status = game.status === 'finished' ? 'over' : game.status;
     G.result = game.result || null;
@@ -6500,6 +6535,10 @@ window.familyChessNative = {
     const desired = wantedSide();
     const sideChanged = desired !== viewSide;
     if (sideChanged) viewSide = desired;
+    if(colorsChanged){
+      applySideColors(true);
+      if(VIEW==='2d')draw2D(true);
+    }
     if (seatChanged || !sameMoves || sideChanged) {
       G.version++;
       if (pending) cancelPreview(false);
@@ -6518,6 +6557,13 @@ window.familyChessNative = {
     updateAll();
     if (G.status === 'over' && !wasOver) setTimeout(() => maybeShowEndCard(), REDUCED ? 0 : 600);
     return {mySeat,turn:pos.chess.turn(),status:G.status};
+  },
+  getAccountColor(){return myColor();},
+  setAccountColor(hex){
+    if(!chromaOk(hex))return;
+    store.set('sg.myColor',hex.toLowerCase());
+    applySideColors(true);updatePlates();
+    if(VIEW==='2d')draw2D(true);
   },
   leaveToPractice() {
     if (G.onlineProvider !== 'supabase') return;
@@ -6564,8 +6610,16 @@ window.dispatchEvent(new Event('familyChessNativeReady'));
   </main>
 </div>
 <div id="accountControl" class="auth-account" hidden>
-  <span id="authAccountName"></span><span class="auth-practice">Practice mode</span>
-  <button id="authSignOut" type="button">Sign out</button>
+  <button id="authAccountToggle" class="auth-account-toggle" type="button"
+    aria-label="Account and family games" aria-expanded="false" aria-controls="authAccountActions">
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="12" cy="8" r="3.3"/><path d="M5.5 20v-1.4a6.5 6.5 0 0 1 13 0V20"/>
+    </svg>
+  </button>
+  <div id="authAccountActions" class="auth-account-actions">
+    <span id="authAccountName"></span><span class="auth-practice">Practice mode</span>
+    <button id="authSignOut" type="button">Sign out</button>
+  </div>
 </div>
 
 </body>

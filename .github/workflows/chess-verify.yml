@@ -1,0 +1,20 @@
+name: Family Chess verification
+on:
+  push:
+    branches: [main, fix/chat-layout-shared-player-colors]
+  pull_request:
+    branches: [main]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check external JavaScript syntax
+        run: |
+          node --check auth-gate.js
+          node --check chess-online.js
+      - name: Test shared player colors and mobile chat layout
+        run: node --test tests/chess-ui.test.mjs

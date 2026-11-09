@@ -6,6 +6,12 @@
   const submit = $('authSubmit'), tabs = $('authTabs'), siTab = $('authSignInTab'), suTab = $('authSignUpTab');
   const msg = $('authMessage'), subtitle = $('authSubtitle'), aux = $('authAux'), cancel = $('authCancel');
   const acc = $('accountControl'), accName = $('authAccountName');
+  const accToggle=$('authAccountToggle'),accActions=$('authAccountActions');
+  function closeAccountMenu(){acc.classList.remove('is-open');accToggle.setAttribute('aria-expanded','false');}
+  accToggle.addEventListener('click',(event)=>{event.stopPropagation();const open=acc.classList.toggle('is-open');accToggle.setAttribute('aria-expanded',String(open));});
+  document.addEventListener('pointerdown',(event)=>{if(!acc.contains(event.target))closeAccountMenu();});
+  document.addEventListener('keydown',(event)=>{if(event.key==='Escape'&&acc.classList.contains('is-open')){closeAccountMenu();accToggle.focus();}});
+  accActions.addEventListener('click',(event)=>{if(event.target.closest('button'))closeAccountMenu();});
   const config = window.CHESS_SUPABASE || {};
   let mode = 'signin';
   let recovering = false;
@@ -16,6 +22,7 @@
     if (recovering) return;
     gate.hidden = !!user;
     acc.hidden = !user;
+    if(!user)closeAccountMenu();
     accName.textContent = user?.email || '';
     if (user) setMessage('');
   };
