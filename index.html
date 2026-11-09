@@ -513,6 +513,20 @@ body.compact .bottom-bar .ctl, body.compact .bottom-bar .icon-btn.round { border
 .send:disabled { filter: grayscale(0.7) brightness(0.7); background: var(--fill); color: var(--ink-3); }
 .chat-form { gap: 8px; padding: 8px 12px 10px; border-top: 0.5px solid var(--line-2); align-items: center; }
 
+/* Compact, readable chat state rather than oversized italic overlay text. */
+.chat-list>.chat-empty-state{
+  align-self:center;flex:none;width:min(100%,320px);max-width:calc(100% - 12px);
+  margin:auto;padding:22px 18px;border:1px solid rgba(255,255,255,.13);
+  border-radius:16px;background:#222225;text-align:center;font-style:normal;
+  box-shadow:0 8px 24px #0004;pointer-events:none;
+}
+.chat-empty-title{display:block;margin:0 0 8px;color:#f2f2f5;
+  font:650 16px/1.25 var(--body);letter-spacing:-.025em}
+.chat-empty-description{margin:0;color:#aaaab1;font:400 13px/1.55 var(--body)}
+@media(max-width:600px){
+  body.compact .chat-list{padding:14px 12px;min-height:0}
+  body.compact .chat-list>.chat-empty-state{padding:14px 12px;border-radius:13px}
+}
 /* chat = Messages */
 .panel { border: 0; background: var(--mat-thick); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 body.compact .panel { border-radius: 22px 22px 0 0; background: var(--mat-thick); box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4); }
@@ -5186,8 +5200,13 @@ function allMessages() {
 function renderChat(forceBottom = false) {
   const list = $('chatList');
   if (!CAP.db) {
-    const n = el('p', 'note'); n.textContent = G.mode === 'connecting' ? 'Connecting…' : G.localReason || 'Online chat will become available in the multiplayer update.';
-    list.replaceChildren(n); return;
+    const n=el('div','note chat-empty-state');
+    const heading=el('strong','chat-empty-title'),detail=el('p','chat-empty-description');
+    heading.textContent=G.mode==='connecting'?'Connecting to chess…':G.onlineProvider==='supabase'?'Messages':'Practice game';
+    detail.textContent=G.mode==='connecting'?'Setting up your chess board.':
+      G.onlineProvider==='supabase'?'Private matches are live. In-game messaging is not connected yet.':
+      'Play against the computer or open Family games to invite someone to a private match.';
+    n.append(heading,detail);list.replaceChildren(n);return;
   }
   const msgs = allMessages();
   const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 90;
@@ -5261,7 +5280,7 @@ function renderTyping() {
 function updateChatEnabled() {
   const ok = !!CAP.db && !!me.id && me.canWrite !== false;
   $('chatInput').disabled = !ok; $('chatSend').disabled = !ok;
-  $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : !CAP.db ? 'Chat works in the live version' : ok ? 'Type a message…' : 'Chat is read-only for you here';
+  $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : !CAP.db ? 'Messaging is not connected yet' : ok ? 'Type a message…' : 'Chat is read-only for you here';
 }
 
 /* ------------------------------------------------------------------ live sync */
@@ -6442,7 +6461,7 @@ async function boot() {
   updatePlates();
   renderChat();
   const c = window.claude;
-  if (!c || typeof c.use !== 'function') { goLocal('This copy is running on its own, so moves stay on this screen and chat is off. Online play is coming soon. In the meantime, practice here against the computer.'); initProgress(); autoStartCpu(); return; }
+  if (!c || typeof c.use !== 'function') { goLocal('Practice against the computer, or use Family games to invite someone to play online.'); initProgress(); autoStartCpu(); return; }
   let caps = [null, null, null, null];
   try { caps = await Promise.all(['db', 'user', 'room', 'sample'].map((n) => Promise.resolve(c.use(n)).catch(() => null))); } catch { /* fall back below */ }
   [CAP.db, CAP.user, CAP.room, CAP.sample] = caps;
@@ -6564,8 +6583,16 @@ window.dispatchEvent(new Event('familyChessNativeReady'));
   </main>
 </div>
 <div id="accountControl" class="auth-account" hidden>
-  <span id="authAccountName"></span><span class="auth-practice">Practice mode</span>
-  <button id="authSignOut" type="button">Sign out</button>
+  <button id="authAccountToggle" class="auth-account-toggle" type="button"
+    aria-label="Account and family games" aria-expanded="false" aria-controls="authAccountActions">
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <circle cx="12" cy="8" r="3.3"/><path d="M5.5 20v-1.4a6.5 6.5 0 0 1 13 0V20"/>
+    </svg>
+  </button>
+  <div id="authAccountActions" class="auth-account-actions">
+    <span id="authAccountName"></span><span class="auth-practice">Practice mode</span>
+    <button id="authSignOut" type="button">Sign out</button>
+  </div>
 </div>
 
 </body>
