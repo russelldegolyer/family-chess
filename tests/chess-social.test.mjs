@@ -15,7 +15,7 @@ test('family spectator feature remains intact while adding direct challenges',()
  assert.match(online,/id="cgSocialMount"/);
  assert.match(online,/<details id="cgLegacy">/);
  assert.doesNotMatch(social,/id="cgLiveGames"/);
- assert.match(page,/chess-social\.js\?v=3/);
+ assert.match(page,/chess-social\.js\?v=4/);
 });
 test('online availability and user names are based on authenticated profiles and presence',()=>{
  assert.match(social,/api\.from\('chess_profiles'\)\.select\('id,display_name'\)/);
@@ -60,4 +60,13 @@ test('offline challenge links prioritize the intended invite and explain expiry'
  assert.match(social,/available\.find\(c=>c\.id===deepLink\)\|\|available\[0\]/);
  assert.match(social,/url\.searchParams\.delete\('challenge'\)/);
  assert.match(social,/That invitation has expired or was already answered/);
+});
+
+test('players in active games can still receive separate direct challenges',()=>{
+ assert.match(social,/if\(game\)\{\s*const watchBtn=node/);
+ assert.match(social,/const challengeBtn=node\('button','cgSocialAction'/);
+ const sql=read('database/chess-allow-challenges-during-existing-games.sql');
+ assert.doesNotMatch(sql,/Finish your current game before sending another challenge/);
+ assert.doesNotMatch(sql,/A player is already in an active match/);
+ assert.match(sql,/The newly accepted game does not alter other active matches/);
 });

@@ -72,12 +72,18 @@
    row.append(node('span','cgSocialAvatar',avatar(p.display_name)));
    const identity=node('div','cgSocialIdentity'),n=node('span','cgSocialName',p.display_name);
    const status=node('span','cgSocialMeta'),dot=node('i','cgSocialDot'+(online(p.id)?' online':''));
-   dot.setAttribute('aria-hidden','true');status.append(dot,document.createTextNode(game?'In game':online(p.id)?'Online':'Offline'));
+   dot.setAttribute('aria-hidden','true');
+   status.append(dot,document.createTextNode((online(p.id)?'Online':'Offline')+(game?' · In game':'')));
    identity.append(n,status);row.append(identity);
-   const btn=node('button','cgSocialAction'+(game?' alt':''),game?'Watch':online(p.id)?'Challenge':'Invite');
-   btn.type='button';
-   btn.addEventListener('click',()=>{if(game)void watch(game.id);else void sendChallenge(p.id);});
-   row.append(btn);list.append(row);
+   if(game){
+     const watchBtn=node('button','cgSocialAction alt','Watch');watchBtn.type='button';
+     watchBtn.addEventListener('click',()=>{void watch(game.id);});
+     row.append(watchBtn);
+   }
+   const challengeBtn=node('button','cgSocialAction',online(p.id)?'Challenge':'Invite');
+   challengeBtn.type='button';
+   challengeBtn.addEventListener('click',()=>{void sendChallenge(p.id);});
+   row.append(challengeBtn);list.append(row);
   }
  }
  async function watch(id){
