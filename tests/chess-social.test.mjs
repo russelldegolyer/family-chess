@@ -10,7 +10,7 @@ test('family spectator feature remains intact while adding direct challenges',()
  assert.match(online,/function refreshLive\(prompt=false\)/);
  assert.match(online,/startMatch\(game.id,participant\?'play':'watch'\)/);
  assert.match(online,/spectatorBar\.hidden=false/);
- assert.match(online,/if\(!player \|\| !matchId \|\| id !== matchId \|\| matchMode!=='play'\)/);
+ assert.match(online,/if\s*\(!player \|\| !matchId \|\| id !== matchId \|\| matchMode!=='play'\)/);
  assert.match(online,/window\.familyChessOpenMatch = \(id,mode='play'\) => startMatch\(id,mode\)/);
  assert.match(online,/id="cgSocialMount"/);
  assert.match(online,/<details id="cgLegacy">/);
