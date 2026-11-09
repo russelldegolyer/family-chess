@@ -6555,6 +6555,9 @@ window.familyChessNative = {
     }
     hide($('seatDialog'));
     updateAll();
+    // The original practice renderer initializes before Supabase connects.
+    // Refresh the empty/chat state as soon as a private match is displayed.
+    renderChat();
     if (G.status === 'over' && !wasOver) setTimeout(() => maybeShowEndCard(), REDUCED ? 0 : 600);
     return {mySeat,turn:pos.chess.turn(),status:G.status};
   },
@@ -6568,6 +6571,8 @@ window.familyChessNative = {
   leaveToPractice() {
     if (G.onlineProvider !== 'supabase') return;
     resetLocalGame('local',1);
+    renderChat();
+    updateChatEnabled();
   }
 };
 window.dispatchEvent(new Event('familyChessNativeReady'));

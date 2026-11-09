@@ -50,6 +50,11 @@ test('live game reads both seated players colors, including changes to their cur
  assert.match(html,/G\.onlineProvider==='supabase' \? sideColors\(\) : null/);
  assert.match(html,/setAccountColor\(hex\)/);
 });
+test('joining and leaving a private match updates the chat empty-state text',()=>{
+ assert.match(html,/updateAll\(\);\s*\/\/ The original practice renderer initializes before Supabase connects\./);
+ assert.match(html,/\/\/ Refresh the empty\/chat state as soon as a private match is displayed\./);
+ assert.match(html,/resetLocalGame\('local',1\);\s*renderChat\(\);\s*updateChatEnabled\(\);/);
+});
 test('database field uses player-own RLS and hex constraint',()=>{
  const migration=read('database/chess-profile-colors.sql');
  assert.match(migration,/alter table public\.chess_profiles/);
