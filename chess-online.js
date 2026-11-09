@@ -199,11 +199,22 @@
     if (error) { status('Could not load chess name: '+error.message,true); return; }
     if(data){
       $('cgDisplayName').value=data.display_name;
-      if(validColor(data.piece_color)){
-        void nativeBoard().then(native=>{
-          if(player?.id===id)native.setAccountColor?.(data.piece_color);
-        }).catch(()=>{});
-      }
+      // Keep the existing account's chosen color across devices. Profiles
+      // created before this feature have no piece_color yet; backfill the
+      // last locally selected color without resetting their preference.
+      void nativeBoard().then(async native=>{
+        if(player?.id!==id)return;
+        if(validColor(data.piece_color)){
+          native.setAccountColor?.(data.piece_color);
+        } else {
+          const locallyChosen=native.getAccountColor?.();
+          if(validColor(locallyChosen)){
+            const {error:saveError}=await api.from('chess_profiles')
+              .update({piece_color:locallyChosen.toLowerCase()}).eq('id',id);
+            if(saveError)status('Could not sync your saved piece color: '+saveError.message,true);
+          }
+        }
+      }).catch(()=>{});
       return;
     }
     const display_name = 'Player ' + id.slice(0,6);
