@@ -6,6 +6,33 @@
   if (!api || !account) return;
   const style = document.createElement('style');
   style.textContent = `
+    #cgQuickDock[hidden], #cgCreatedLink[hidden] {display:none!important}
+    #cgQuickDock {position:fixed;z-index:85;top:calc(max(12px, env(safe-area-inset-top, 0px)) + 76px);
+      left:max(10px,env(safe-area-inset-left, 0px));display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+    #cgQuickDock button {font:650 12px/1.15 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      border:1px solid #47474a;border-radius:12px;color:#f7f7f7;background:rgba(15,15,17,.92);
+      backdrop-filter:blur(12px);min-height:34px;padding:9px 12px;
+      box-shadow:0 5px 20px #0008;cursor:pointer;white-space:nowrap}
+    #cgQuickDock button:first-child {background:linear-gradient(135deg,#9b0c19,#43070e);
+      border-color:#ad2637;color:#fff}
+    #cgQuickDock button:active,#cgLobbyActions button:active {transform:scale(.98)}
+    .cgLobbyActions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 20px}
+    .cgLobbyActions button {min-height:65px;border-radius:12px;padding:10px 7px;color:#f5f5f5;
+      border:1px solid #4a4a4e;background:#242428;font:700 12px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      cursor:pointer}
+    .cgLobbyActions button:first-child {background:#5b0e18;border-color:#a52537}
+    .cgCreatedLink {border:1px solid #55585d;background:#202024;border-radius:12px;padding:12px;
+      display:flex;flex-direction:column;gap:11px;margin:0 0 16px}
+    .cgCreatedLink strong {font-size:14px}
+    .cgCreatedLink a {font-size:12px;color:#e9e9ff;overflow-wrap:anywhere;text-decoration:underline}
+    .cgCreatedLink .cgButton {flex:1}
+    #cgProfileSettings {margin:12px 0;border-top:1px solid #343438;padding:11px 0}
+    #cgProfileSettings summary {color:#aeafb6;font-size:12px;cursor:pointer}
+    #cgWatchShortcut{display:none!important}
+    @media(max-width:600px){#cgQuickDock {top:calc(max(12px, env(safe-area-inset-top, 0px)) + 73px)}
+      #cgQuickDock button{min-height:32px;font-size:11.5px;padding:8px 10px}
+      .cgLobbyActions button {font-size:11.5px;padding:8px 4px}}
+
     #cgLaunch {background:#f2f2f2;color:#111;border:0;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
     #cgLobby[hidden]{display:none!important}
     #cgLobby{position:fixed;inset:0;z-index:180;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f5f5f5}
@@ -46,18 +73,38 @@
   document.head.appendChild(style);
   const launch = document.createElement('button');
   launch.id = 'cgLaunch'; launch.type = 'button'; launch.textContent = 'Family games'; launch.hidden = true;
-  account.insertBefore(launch, document.getElementById('authSignOut'));
+  // The account controls were moved into a nested actions panel; inserting
+  // against the outer account div aborts initialization on mobile.
+  const accountActions = document.getElementById('authAccountActions') || account;
+  const signOut = document.getElementById('authSignOut');
+  accountActions.insertBefore(launch, signOut);
   const root = document.createElement('div');
   root.id = 'cgLobby'; root.hidden = true; root.setAttribute('role','dialog'); root.setAttribute('aria-modal','true'); root.setAttribute('aria-label','Family game invitations');
   root.innerHTML = `
     <div class="cgShade"></div><section class="cgPanel">
       <div class="cgHeader"><div><h2>Family games</h2><span class="cgMuted">Private invitations</span></div>
         <button class="cgButton" id="cgClose" type="button" aria-label="Close">Close</button></div>
-      <p class="cgMuted">Watch family games, challenge players directly, or use a private link.</p>
-      <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Your chess name</label>
-        <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" required minlength="2" maxlength="40">
-        <button class="cgButton" type="submit">Save</button></div></form>
+      <p class="cgMuted">Challenge someone, share an invite, or spectate live.</p>
+      <div id="cgLobbyActions" class="cgLobbyActions" aria-label="Online chess options">
+        <button id="cgGoChallenge" type="button">Challenge a player</button>
+        <button id="cgGoLink" type="button">Send game link</button>
+        <button id="cgGoWatch" type="button">Spectate live</button>
+      </div>
+      <div id="cgCreatedLink" class="cgCreatedLink" hidden>
+        <strong>Your invitation is ready</strong>
+        <a id="cgNewInviteURL" href="#" rel="nofollow" target="_blank"></a>
+        <div class="cgRow">
+          <button id="cgCopyNewInvite" class="cgButton" type="button">Copy link</button>
+          <button id="cgShareNewInvite" class="cgButton" type="button">Share invite</button>
+        </div>
+        <p class="cgMuted">Your family member signs in and joins as Black. You play White.</p>
+      </div>
       <div id="cgSocialMount"></div>
+      <details id="cgProfileSettings"><summary>My chess display name</summary>
+        <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Your chess name</label>
+          <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" required minlength="2" maxlength="40">
+          <button class="cgButton" type="submit">Save</button></div></form>
+      </details>
       <details id="cgLegacy">
         <summary>Invite with a private link (backup)</summary>
       <button id="cgCreate" class="cgButton primary" type="button">Create private match</button>
@@ -75,6 +122,15 @@
       <div id="cgGames" class="cgMuted">No matches yet.</div>
     </section>`;
   document.body.appendChild(root);
+  // Top-level entry point, independent of the compact profile dropdown.
+  const quickDock = document.createElement('nav');
+  quickDock.id = 'cgQuickDock';
+  quickDock.hidden = true;
+  quickDock.setAttribute('aria-label','Play chess online');
+  quickDock.innerHTML = '<button id="cgQuickChallenge" type="button">♞ Challenge</button>'+
+    '<button id="cgQuickInvite" type="button">⌁ Invite link</button>'+
+    '<button id="cgQuickSpectate" type="button">◉ Spectate</button>';
+  document.body.appendChild(quickDock);
   const watchShortcut=document.createElement('button');
   watchShortcut.id='cgWatchShortcut';watchShortcut.type='button';watchShortcut.hidden=true;
   watchShortcut.textContent='● Live games';watchShortcut.addEventListener('click',show);
@@ -120,6 +176,33 @@
   }
   function show() { if (!player) return; root.hidden=false; void refresh(); $('cgClose').focus(); }
   function close() { root.hidden=true; launch.focus(); }
+  window.familyChessOpenLobby = show;
+  const panel=()=>root.querySelector('.cgPanel');
+  function toSection(id) {
+    show();
+    requestAnimationFrame(()=>{
+      const target=$(id);
+      if(target) { target.scrollIntoView({block:'start',behavior:'smooth'}); }
+    });
+  }
+  $('cgQuickChallenge').addEventListener('click',()=>toSection('cgSocialMount'));
+  $('cgQuickInvite').addEventListener('click',()=>{show();void createInvite();});
+  $('cgQuickSpectate').addEventListener('click',()=>toSection('cgLiveGames'));
+  $('cgGoChallenge').addEventListener('click',()=>toSection('cgSocialMount'));
+  $('cgGoLink').addEventListener('click',()=>{void createInvite();});
+  $('cgGoWatch').addEventListener('click',()=>toSection('cgLiveGames'));
+  $('cgCopyNewInvite').addEventListener('click',()=>{
+    const url=$('cgNewInviteURL').href;
+    if(url&&url!=='#')void copy(url);
+  });
+  $('cgShareNewInvite').addEventListener('click',async()=>{
+    const url=$('cgNewInviteURL').href;
+    if(!url||url==='#')return;
+    if(navigator.share) {
+      try {await navigator.share({title:'Family Chess invitation',text:'Join me for a chess game.',url});}
+      catch(e){if(e?.name!=='AbortError')status('Unable to share: '+e.message,true);}
+    } else void copy(url);
+  });
 
   // Server data is authoritative. No browser can directly update the game or move tables.
   function stopMatch() {
@@ -379,15 +462,30 @@
     }
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
-  $('cgCreate').addEventListener('click', async () => {
-    if (!player) return;
-    const button=$('cgCreate'); button.disabled=true;
+  let creating = false;
+  async function createInvite() {
+    if(!player || creating) return;
+    creating = true;
+    const b=$('cgCreate');
+    b.disabled=true;
     try {
+      status('Creating your private chess invitation…');
       const {data,error}=await api.from('chess_games').insert({white_player_id:player.id}).select('id').single();
-      if (error) { status('Could not create match: '+error.message,true); return; }
-      status('Match created. Copy the invitation link below.'); await refresh();
-    } finally { button.disabled=false; }
-  });
+      if(error)throw error;
+      const url=link(data.id);
+      const a=$('cgNewInviteURL');
+      a.href=url;
+      a.textContent=url;
+      $('cgCreatedLink').hidden=false;
+      $('cgCreatedLink').scrollIntoView({block:'nearest',behavior:'smooth'});
+      status('Invitation ready. Tap Share invite or Copy link to send it.');
+      await refresh();
+      return data.id;
+    } catch(e) {
+      status('Could not create invitation: '+(e?.message||'Try again.'),true);
+    } finally {creating=false;b.disabled=false;}
+  }
+  $('cgCreate').addEventListener('click',()=>{void createInvite();});
   $('cgJoinForm').addEventListener('submit', async ev => {
     ev.preventDefault(); if (!player) return;
     const id=getId($('cgJoinId').value);
@@ -415,6 +513,7 @@
     const old = player?.id;
     player = next || null;
     launch.hidden = !player;
+    quickDock.hidden = !player;
     if (!player) {
       clearTimeout(colorSaveTimer);
       stopMatch();
