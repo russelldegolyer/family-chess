@@ -15,7 +15,7 @@ test('family spectator feature remains intact while adding direct challenges',()
  assert.match(online,/id="cgSocialMount"/);
  assert.match(online,/<details id="cgLegacy">/);
  assert.doesNotMatch(social,/id="cgLiveGames"/);
- assert.match(page,/chess-social\.js\?v=2/);
+ assert.match(page,/chess-social\.js\?v=3/);
 });
 test('online availability and user names are based on authenticated profiles and presence',()=>{
  assert.match(social,/api\.from\('chess_profiles'\)\.select\('id,display_name'\)/);
@@ -54,4 +54,10 @@ test('offline push is opt-in, encrypted, service-role-only and expiry-limited',(
  assert.match(edge,/admin\.rpc\("chess_vapid_config"\)/);
  assert.match(edge,/webpush\.sendNotification/);
  assert.match(read('database/chess-vapid-vault-access.sql'),/grant execute on function public\.chess_vapid_config\(\) to service_role/);
+});
+
+test('offline challenge links prioritize the intended invite and explain expiry',()=>{
+ assert.match(social,/available\.find\(c=>c\.id===deepLink\)\|\|available\[0\]/);
+ assert.match(social,/url\.searchParams\.delete\('challenge'\)/);
+ assert.match(social,/That invitation has expired or was already answered/);
 });

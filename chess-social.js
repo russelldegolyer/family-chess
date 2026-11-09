@@ -39,6 +39,12 @@
  const nameFor=id=>profiles.find(p=>p.id===id)?.display_name||'Family player';
  const message=(msg)=>{$('cgChallengeStatus').textContent=msg;};
  const remaining=c=>Math.max(0,Math.ceil((Date.parse(c.expires_at)-Date.now())/1000));
+ const deepLink=new URL(location.href).searchParams.get('challenge');
+ const clearDeepLink=()=>{
+  if(!deepLink)return;
+  const url=new URL(location.href);url.searchParams.delete('challenge');
+  history.replaceState(null,'',url.pathname+url.search+url.hash);
+ };
  const currentMatch=()=>window.familyChessCurrentMatch?.()||null;
  const avatar=(name)=>name.trim().split(/\s+/).map(n=>n[0]||'').slice(0,2).join('').toUpperCase();
  const node=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x;};
@@ -90,7 +96,8 @@
   if(mine)message('Waiting for '+nameFor(mine.target_id)+' · '+remaining(mine)+'s remaining. They can accept or decline.');
  }
  function incoming(){
-  return challenges.find(c=>c.target_id===user?.id&&c.status==='pending'&&remaining(c)>0)||null;
+  const available=challenges.filter(c=>c.target_id===user?.id&&c.status==='pending'&&remaining(c)>0);
+  return available.find(c=>c.id===deepLink)||available[0]||null;
  }
  function renderAlert(){
   const c=incoming();
@@ -118,7 +125,7 @@
   try{
    const {data,error}=await api.rpc('chess_respond_challenge',{p_id:c.id,p_accept:accept});
    if(error)throw error;
-   alert.hidden=true;openAlertId=null;
+   alert.hidden=true;openAlertId=null;clearDeepLink();
    if(accept){
     if(!data)throw new Error('Challenge expired.');
     await window.familyChessOpenMatch(data,'play');
@@ -167,6 +174,11 @@
    if(pr.error||gm.error||ch.error)throw(pr.error||gm.error||ch.error);
    profiles=pr.data||[];activeGames=gm.data||[];challenges=ch.data||[];
    renderPlayers();renderAlert();tick();
+   if(deepLink&&!incoming()){
+    const linked=challenges.find(c=>c.id===deepLink&&c.target_id===uid);
+    if(linked&&(linked.status!=='pending'||remaining(linked)===0))
+      message('That invitation has expired or was already answered. Ask the player to send another.');
+   }
    // Accepting on another device also opens the challenger's board automatically.
    const accepted=challenges.find(c=>c.challenger_id===uid&&c.status==='accepted'&&c.game_id
      &&Date.now()-Date.parse(c.created_at)<120000&&!openedGameIds.has(c.game_id));
