@@ -16,7 +16,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-online.js?v=4"></script>
-<script defer src="./chess-chat.js?v=3"></script>
+<script defer src="./chess-chat.js?v=5"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
 <script defer src="./chess-social.js?v=5"></script>
 <title>Family Chess</title>
@@ -6004,6 +6004,7 @@ function setSheet(open) {
   $('panel').classList.toggle('open', open);
   $('chatFab').setAttribute('aria-expanded', String(open));
   if (open) { markChatRead(); renderChat(true); } else closeMenu();
+  window.familyChessChat?.opened?.();
   const was = document.body.classList.contains('chat2d');
   document.body.classList.toggle('chat2d', open && compact);
   if (open && compact) applyView('2d', false);
