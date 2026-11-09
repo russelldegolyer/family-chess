@@ -276,7 +276,8 @@
     if([...el.options].some(x=>x.value===selected))el.value=selected;
   }
   $('cgNotifyInvite').addEventListener('click',async()=>{
-    if(!player||!creating){
+    if(!player||creating)return;
+    {
       const gameId=$('cgNewInviteURL').href.split('game=')[1]?.split('&')[0];
       const target=$('cgInviteRecipient').value;
       if(!target){status('Select a family member to notify.',true);return;}
@@ -290,7 +291,7 @@
           body:{challenge_id:id}});
         if(pushError)throw new Error('Invitation sent, but the push service could not be reached.');
         const sent=Number(push?.sent||0),failed=Number(push?.failed||0);
-        status(sent>0?'Push sent to '+sent+' device'+(sent===1?'':'s')+'.':
+        status(sent>0?'Push accepted by '+sent+' device endpoint'+(sent===1?'':'s')+'.':
           push?.configured===false?'Invitation saved, but server push is not configured.':
           failed>0?'Invitation saved, but push delivery failed on '+failed+' device(s).':
           'Invitation saved, but no subscribed device received the push.');
