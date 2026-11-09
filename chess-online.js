@@ -37,15 +37,18 @@
     <div class="cgShade"></div><section class="cgPanel">
       <div class="cgHeader"><div><h2>Family games</h2><span class="cgMuted">Private invitations</span></div>
         <button class="cgButton" id="cgClose" type="button" aria-label="Close">Close</button></div>
-      <p class="cgMuted">Create a match, send the link, and play on the same live board from two devices.</p>
+      <p class="cgMuted">Play together, challenge someone directly, or watch family matches in progress.</p>
       <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Your chess name</label>
         <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" required minlength="2" maxlength="40">
         <button class="cgButton" type="submit">Save</button></div></form>
-      <hr class="cgDivider">
+      <div id="cgSocialMount"></div>
+      <details id="cgLegacy">
+        <summary>Invite with a private link (backup)</summary>
       <button id="cgCreate" class="cgButton primary" type="button">Create private match</button>
       <form id="cgJoinForm"><label class="cgLabel" for="cgJoinId">Join an invitation</label>
         <div class="cgRow"><input id="cgJoinId" class="cgInput" type="text" placeholder="Paste a game link or game ID" required>
         <button class="cgButton" type="submit">Join</button></div></form>
+      </details>
       <div id="cgMessage" role="status" aria-live="polite"></div>
       <button id="cgPractice" class="cgButton" style="width:100%;margin:8px 0 0" type="button">Return to practice game</button>
       <hr class="cgDivider">
