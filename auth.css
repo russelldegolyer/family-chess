@@ -27,3 +27,27 @@
 .auth-practice { color:#999; }
 #authSignOut { border:1px solid #444; background:#252525; border-radius:7px; padding:7px 8px; color:white; font-size:12px; cursor:pointer; }
 @media (max-width:600px) { .auth-account { top:auto; right:max(9px,env(safe-area-inset-right,0px)); bottom:calc(max(80px,env(safe-area-inset-bottom,0px) + 65px)); max-width: 94vw; } .auth-practice{display:none;} #authAccountName{max-width:110px;} .auth-card h1{font-size:26px;} }
+
+/* A compact account menu lives above the game, never on top of chat. */
+.auth-account-toggle{display:none;flex:none;width:40px;height:40px;border:1px solid #4a4a4c;border-radius:50%;background:#202023;color:#f5f5f5;place-items:center;cursor:pointer}
+.auth-account-toggle svg{width:21px;height:21px}
+.auth-account-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:9px;min-width:0}
+@media(max-width:600px){
+ .auth-account{top:max(9px,env(safe-area-inset-top,0px))!important;bottom:auto!important;
+   right:max(10px,env(safe-area-inset-right,0px));left:auto;
+   width:44px;max-width:44px;min-height:44px;padding:2px;
+   display:flex;justify-content:center;align-items:center;
+   border-radius:999px;background:#161619;box-shadow:0 8px 24px #0008}
+ .auth-account-toggle{display:grid}
+ .auth-account-actions{display:none;position:absolute;right:0;top:calc(100% + 9px);
+   width:min(288px,calc(100vw - 22px));max-height:calc(100dvh - 95px);overflow:auto;
+   flex-direction:column;align-items:stretch;gap:8px;padding:14px;
+   border:1px solid #48484a;border-radius:16px;background:#19191c;
+   box-shadow:0 18px 55px #000a;backdrop-filter:none}
+ .auth-account.is-open .auth-account-actions{display:flex}
+ #authAccountName{display:block;max-width:100%;overflow-wrap:anywhere;white-space:normal;
+   text-overflow:clip;color:#a7a7ae;line-height:1.5;padding:0 2px 5px}
+ .auth-account .auth-practice{display:block;color:#aaa;padding:0 2px;font-size:12px}
+ .auth-account #cgLaunch,.auth-account #authSignOut{width:100%;min-height:44px;
+   padding:11px 13px;text-align:center;border-radius:10px}
+}
