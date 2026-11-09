@@ -4407,6 +4407,11 @@ function build2D() {
 /* zoom and pan the flat board: wheel or pinch to zoom about the pointer, drag empty space (or two fingers) to move it */
 const Z2 = { s: 1, x: 0, y: 0, pts: new Map(), pinch: null, pan: null };
 function zoom2D(z) {
+  // In mobile chat split view, zoom/pan would push squares behind the chat
+  // panel. Keep the complete board visible; full-screen 2D still supports
+  // normal pinch zoom and panning.
+  if (z && compact && document.body.classList.contains('chat2d')
+    && !document.body.classList.contains('landscape')) return;
   if (!z) { Z2.s = 1; Z2.x = 0; Z2.y = 0; } else Object.assign(Z2, z);
   Z2.s = Math.min(4, Math.max(0.6, Z2.s));
   if (b2.svg) { b2.svg.style.transformOrigin = '0 0'; b2.svg.style.transform = Z2.s === 1 && !Z2.x && !Z2.y ? '' : `translate(${Z2.x}px, ${Z2.y}px) scale(${Z2.s})`; }
@@ -6128,6 +6133,11 @@ function setSheet(open) {
   /* closing the chat keeps the flat board up, full size; a tap on the empty space around it goes back to 3D */
   else if (was) { zoom2D(null); applyView('2d', false); }
 }
+// Recalculate when the mobile sheet has actually finished sliding in.
+// CSS keeps the board confined even during the transition.
+$('panel').addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'transform' && VIEW === '2d' && compact) layout2D();
+});
 $('chatFab').addEventListener('click', () => setSheet(!sheetOpen));
 $('btnSheetClose').addEventListener('click', () => setSheet(false));
 $('chatForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('chatInput').value; if (!v.trim()) return; $('chatInput').value = ''; sendChat(v); });
