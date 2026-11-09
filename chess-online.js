@@ -390,7 +390,7 @@
       const {data:already}=await api.from('chess_games')
         .select('white_player_id,black_player_id,status').eq('id',id).maybeSingle();
       const participant=already&&(already.white_player_id===player.id||already.black_player_id===player.id);
-      if(already?.status==='active'&&already.black_player_id&&!participant){
+      if(['active','finished'].includes(already?.status)&&already.black_player_id&&!participant){
         history.replaceState(null,'',location.pathname);
         await startMatch(id,'watch');return;
       }
@@ -427,7 +427,7 @@
         if(part){
           const member=part.white_player_id===player.id||part.black_player_id===player.id;
           if(member)await startMatch(invite,'play');
-          else if(part.status==='active'&&part.black_player_id)await startMatch(invite,'watch');
+          else if(['active','finished'].includes(part.status)&&part.black_player_id)await startMatch(invite,'watch');
           else{show();status('Invitation found. Press Join to play as Black.');}
         }else{show();status('Invitation found. Press Join to play as Black.');}
       }else if(!pattern.test(invite)){void refreshLive(true);}
