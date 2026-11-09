@@ -642,6 +642,11 @@
         const {data:part}=await api.from('chess_games')
           .select('id,status,white_player_id,black_player_id').eq('id',invite).maybeSingle();
         if(part){
+          if(part.status==='finished' && !part.black_player_id){
+            show();
+            status('This invitation expired because a newer game was created. Ask for a fresh link.',true);
+            return;
+          }
           const member=part.white_player_id===player.id||part.black_player_id===player.id;
           if(member)await startMatch(invite,'play');
           else if(['active','finished'].includes(part.status)&&part.black_player_id)await startMatch(invite,'watch');
