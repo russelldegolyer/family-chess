@@ -17,6 +17,7 @@
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-online.js?v=7"></script>
 <script defer src="./chess-chat.js?v=7"></script>
+<script defer src="./chess-review-analysis.js?v=1"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
 <script defer src="./chess-social.js?v=7"></script>
 <title>Chess</title>
@@ -5255,10 +5256,11 @@ function startReview(r) {
   if (pending) cancelPreview(false);
   clearSelection();
   const ply = clamp(r.ply, 0, r.moves.length);
-  review = { ...r, ply, pos: positionFrom(r.moves, ply) };
+  review = { ...r, ply, pos: positionFrom(r.moves, ply), alternative: false };
   syncBoard(review.pos, { animate: true, quick: true });
   hide($('endCard'));
   updateAll();
+  startTeachingAnalysis();
 }
 function reviewTo(ply, auto = false) {
   if (!auto) stopReviewPlayback(false);
@@ -5268,9 +5270,12 @@ function reviewTo(ply, auto = false) {
     return;
   }
   const p = clamp(ply, 0, review.moves.length);
-  if (p === review.ply) return;
-  const forward = p === review.ply + 1;
-  review.ply = p; review.pos = positionFrom(review.moves, p);
+  if (p === review.ply && !review.alternative) return;
+  const wasAlternative = review.alternative;
+  const forward = !wasAlternative && p === review.ply + 1;
+  review.ply = p; review.alternative = false;
+  review.pos = positionFrom(review.moves, p);
+  window.ChessReviewAnalyzer?.focus(p);
   const land = syncBoard(review.pos, { animate: true, quick: !forward, hint: forward ? review.pos.last : null });
   if (forward) fxForMove(review.pos.last, land, false);
   updateAll();
@@ -5304,6 +5309,71 @@ function reviewComment(pos) {
   if (mv.captured) return { label: 'Capture', detail: who + ' captures a ' + (PIECE[mv.captured] || 'piece') + ' on ' + mv.to + ' with a ' + piece + '.', kind: 'event' };
   return { label: 'Move played', detail: who + ' moves the ' + piece + ' from ' + mv.from + ' to ' + mv.to + '.', kind: 'normal' };
 }
+
+/* Both sides are analysed from their own point of view, before each actual move.
+   These are limited-depth estimates, not claims of perfect or exhaustive chess play. */
+function startTeachingAnalysis() {
+  const analyzer = window.ChessReviewAnalyzer;
+  if (!review || !analyzer) return;
+  const engineText = $('engineSrc')?.textContent;
+  if (!engineText) return;
+  try {
+    const chess = new Chess(), steps = [];
+    for (const move of review.moves) {
+      if (!UCI.test(move)) throw new Error('Invalid historical move');
+      steps.push({ fen: chess.fen(), move });
+      chess.move({ from:move.slice(0, 2), to:move.slice(2, 4),
+        ...(move.length === 5 ? { promotion:move[4] } : {}) });
+    }
+    analyzer.start(steps, engineText, () => {
+      if (review && historyOpen) renderHistory();
+    });
+    analyzer.focus(review.ply);
+  } catch (_) {
+    // Move playback remains available even if a historical game cannot be analysed.
+    analyzer.stop();
+  }
+}
+function teachingBest(ply) {
+  if (!review || ply < 1) return null;
+  const r = window.ChessReviewAnalyzer?.get(ply);
+  if (!r || !r.move || r.move === r.played) return null;
+  try {
+    const chess = positionFrom(review.moves, ply - 1).chess;
+    const spec = { from:r.move.slice(0, 2), to:r.move.slice(2, 4) };
+    if (r.move[4]) spec.promotion = r.move[4];
+    const move = chess.move(spec);
+    if (!move) return null;
+    let why;
+    if (chess.isCheckmate()) why = 'This delivers checkmate immediately.';
+    else if (move.promotion) why = 'This promotes a pawn to a stronger piece.';
+    else if (chess.inCheck()) why = 'This puts the opposing king in check.';
+    else if (move.captured) why = 'This captures the opposing ' + (PIECE[move.captured] || 'piece') + '.';
+    else if (/[kq]/.test(move.flags || '')) why = 'This castles and moves the king to a safer square.';
+    else why = 'This keeps a stronger position in the engine’s search. Try the alternative on the board and compare.';
+    return { ...r, san:move.san, why, who:ply % 2 === 1 ? 'White' : 'Black' };
+  } catch (_) { return null; }
+}
+function toggleTeachingMove() {
+  if (!review || !review.ply) return;
+  stopReviewPlayback(false);
+  if (review.alternative) {
+    review.alternative = false;
+    review.pos = positionFrom(review.moves, review.ply);
+  } else {
+    const suggestion = teachingBest(review.ply);
+    if (!suggestion) return;
+    const alternate = review.moves.slice(0, review.ply - 1).concat(suggestion.move);
+    const pos = positionFrom(alternate);
+    if (pos.ply !== review.ply) return;
+    review.pos = pos;
+    review.alternative = true;
+  }
+  const land = syncBoard(review.pos, { animate: true, quick: false, hint: review.pos.last });
+  if (review.alternative) fxForMove(review.pos.last, land, false);
+  updateAll();
+}
+
 function beginGameReview() {
   if (!G.moves.length) return;
   if (focusMode && !compact) setFocus(false);
@@ -5319,6 +5389,7 @@ document.addEventListener('keydown', (e) => {
 });
 function endReview() {
   stopReviewPlayback(false);
+  window.ChessReviewAnalyzer?.stop();
   if (!review) return;
   review = null;
   syncBoard(G.pos, { animate: true, quick: true });
