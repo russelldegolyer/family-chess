@@ -279,8 +279,66 @@
     const {error} = await api.from('chess_profiles').update({display_name}).eq('id',player.id);
     status(error ? error.message : 'Chess name saved.', !!error);
   });
+  const displayedName=(labels,id,fallback)=>labels[id]||fallback;
+  async function refreshLive(prompt=false){
+    const uid=player?.id;
+    if(!uid)return;
+    const container=$('cgLiveGames'),counter=$('cgLiveCount');
+    const {data,error}=await api.from('chess_games')
+      .select('id,status,white_player_id,black_player_id,updated_at')
+      .eq('status','active').not('black_player_id','is',null)
+      .order('updated_at',{ascending:false}).limit(20);
+    if(player?.id!==uid)return;
+    if(error){
+      if(!root.hidden)container.textContent='Could not load live matches: '+error.message;
+      return;
+    }
+    const matches=(data||[]).filter(g=>g.white_player_id&&g.black_player_id);
+    const others=matches.filter(g=>g.white_player_id!==uid&&g.black_player_id!==uid);
+    const ids=[...new Set(matches.flatMap(g=>[g.white_player_id,g.black_player_id]))];
+    let names={};
+    if(ids.length){
+      const {data:profiles}=await api.from('chess_profiles')
+        .select('id,display_name').in('id',ids);
+      if(player?.id!==uid)return;
+      names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
+    }
+    liveCount=others.length;
+    counter.textContent=others.length?`${others.length} available to watch`:'';
+    watchShortcut.textContent=`● Watch live${others.length>1?` · ${others.length}`:''}`;
+    watchShortcut.hidden=others.length===0||!!matchId;
+    container.replaceChildren();
+    if(!matches.length){
+      const n=document.createElement('span');n.className='cgMuted';
+      n.textContent='No games are being played right now.';container.append(n);
+    }
+    for(const game of matches){
+      const card=document.createElement('div');card.className='cgLiveCard';
+      const white=displayedName(names,game.white_player_id,'White');
+      const black=displayedName(names,game.black_player_id,'Black');
+      const title=document.createElement('div');title.className='cgLiveTitle';
+      title.textContent=white+' vs '+black;
+      const subtitle=document.createElement('span');subtitle.className='cgLiveMeta';
+      subtitle.textContent='White: '+white+' · Black: '+black;
+      const badge=document.createElement('span');badge.className='cgLiveTag';badge.textContent='Live now';
+      const button=document.createElement('button');
+      button.className='cgButton cgWatch';button.type='button';
+      const participant=game.white_player_id===uid||game.black_player_id===uid;
+      button.textContent=participant?'Return to my game':'Watch live';
+      button.addEventListener('click',()=>{
+        void startMatch(game.id,participant?'play':'watch').catch(e=>status(e.message,true));
+      });
+      card.append(badge,title,subtitle,button);container.append(card);
+    }
+    if(prompt&&!livePromptSeen&&others.length&&!pattern.test(invite)&&!matchId){
+      livePromptSeen=true;
+      show();
+    }
+  }
+
   async function refresh() {
     if (!player) return;
+    void refreshLive(false);
     const games = $('cgGames'); games.replaceChildren(); games.textContent = 'Loading…';
     const {data,error} = await api.from('chess_games')
       .select('id,status,white_player_id,black_player_id,created_at')
@@ -290,11 +348,19 @@
     if (error) { games.textContent = 'Could not load matches: ' + error.message; return; }
     games.replaceChildren();
     if (!data?.length) { games.textContent='No matches yet.'; return; }
+    const players=[...new Set(data.flatMap(g=>[g.white_player_id,g.black_player_id]).filter(Boolean))];
+    const {data:profiles}=await api.from('chess_profiles').select('id,display_name').in('id',players);
+    if(!player)return;
+    const names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
     for (const g of data) {
       const card=document.createElement('div'); card.className='cgGame';
       const title=document.createElement('strong');
-      title.textContent = (g.white_player_id === player.id ? 'White · ' : 'Black · ') +
-        (g.status==='waiting'?'Waiting for opponent':g.status==='active'?'Opponent joined':'Finished');
+      const w=displayedName(names,g.white_player_id,'White');
+      const b=g.black_player_id?displayedName(names,g.black_player_id,'Black'):'Waiting for opponent';
+      title.textContent=w+' vs '+b;
+      const description=document.createElement('div');description.className='cgMuted';
+      description.textContent=(g.white_player_id===player.id?'You play White':'You play Black')+' · '+
+        (g.status==='waiting'?'Awaiting opponent':g.status==='active'?'Playing now':'Finished');
       const a=document.createElement('a'); a.href=link(g.id); a.textContent=link(g.id);
       const button=document.createElement('button');button.type='button';button.className='cgButton';button.textContent='Copy invite';
       button.addEventListener('click',()=>{void copy(link(g.id));});
@@ -302,7 +368,7 @@
       play.textContent=g.status==='waiting'?'Open waiting board':'Play board';
       play.style.marginLeft='8px';
       play.addEventListener('click',()=>{void startMatch(g.id).catch(e=>status(e.message,true));});
-      card.append(title,a,button,play);games.append(card);
+      card.append(title,description,a,button,play);games.append(card);
     }
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
@@ -340,19 +406,26 @@
     if (!player) {
       clearTimeout(colorSaveTimer);
       stopMatch();
+      if(livePoll){clearInterval(livePoll);livePoll=null;}
+      liveCount=0;livePromptSeen=false;watchShortcut.hidden=true;
       window.familyChessNative?.leaveToPractice();
       root.hidden=true; return;
     }
     if (old !== player.id) {
       if (old) { stopMatch(); window.familyChessNative?.leaveToPractice(); }
       await ensureProfile();
-      if (pattern.test(invite) && !invitePresented) {
-        invitePresented = true;
-        const {data:part} = await api.from('chess_games')
-          .select('id').eq('id',invite).maybeSingle();
-        if (part) await startMatch(invite);
-        else {show();status('Invitation found. Press Join to join as Black.');}
-      }
+      if(!livePoll)livePoll=setInterval(()=>{if(player)void refreshLive(false);},30000);
+      if(pattern.test(invite)&&!invitePresented){
+        invitePresented=true;
+        const {data:part}=await api.from('chess_games')
+          .select('id,status,white_player_id,black_player_id').eq('id',invite).maybeSingle();
+        if(part){
+          const member=part.white_player_id===player.id||part.black_player_id===player.id;
+          if(member)await startMatch(invite,'play');
+          else if(part.status==='active'&&part.black_player_id)await startMatch(invite,'watch');
+          else{show();status('Invitation found. Press Join to play as Black.');}
+        }else{show();status('Invitation found. Press Join to play as Black.');}
+      }else if(!pattern.test(invite)){void refreshLive(true);}
     }
   }
   api.auth.onAuthStateChange((_event,session) => {
