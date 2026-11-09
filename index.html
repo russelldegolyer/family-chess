@@ -6919,6 +6919,12 @@ window.familyChessNative = {
     if (G.status === 'over' && !wasOver) setTimeout(() => maybeShowEndCard(), REDUCED ? 0 : 600);
     return {mySeat,turn:pos.chess.turn(),status:G.status};
   },
+  openReview() {
+    if (G.status !== 'over' || !G.moves.length) return false;
+    endDismissed = endKey();
+    beginGameReview();
+    return true;
+  },
   getAccountColor(){return myColor();},
   setAccountColor(hex){
     if(!chromaOk(hex))return;
