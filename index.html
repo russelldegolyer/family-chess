@@ -697,6 +697,75 @@ body.compact .panel { border-radius: 22px 22px 0 0; background: var(--mat-thick)
 body.compact .bottom-bar { padding: 4px; border-radius: 999px; background: var(--mat); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); align-items: center; }
 body.compact .bottom-bar .ctl, body.compact .bottom-bar .icon-btn.round { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); }
+
+/* Game Review v3 — transport is fixed in the panel, separate from scrollable lessons. */
+.review-dock{flex:0 0 auto;min-height:60px;display:flex;align-items:center;justify-content:center;
+  padding:7px 12px 9px;border-top:1px solid rgba(255,255,255,.12);
+  background:#202023;z-index:2}
+.review-dock[hidden]{display:none!important}
+.review-dock .review-stepper{display:flex;align-items:center;justify-content:space-between;
+  gap:6px;width:100%;margin:0}
+.review-dock .review-stepper .icon-btn{display:grid;place-items:center;
+  flex:1 1 0;min-width:0;width:auto;height:42px;border-radius:12px;
+  background:#343439;color:#f4f4f6}
+.review-dock .review-stepper .icon-btn svg{width:19px;height:19px}
+.review-dock .review-stepper .icon-btn:disabled{opacity:.3;cursor:default}
+.review-dock .review-play-button{flex:1.8 1 0;min-width:74px!important;
+  height:42px;min-height:42px;border-radius:12px;padding:0 7px;
+  background:#0a84ff;color:#fff;font:700 14px/1 var(--body)}
+.review-dock .review-exit-button{flex:1 1 0!important;min-width:0;
+  margin:0;height:42px;min-height:42px;padding:0 5px;border-radius:12px;
+  color:#e1e1e5;background:#35353a;font:600 12px/1 var(--body)}
+.panel.reviewing .review-move-toggle{width:100%;min-height:34px;
+  padding:7px 10px;border-radius:10px;margin:2px 0 8px;
+  background:#29292e;color:#b8b8bf;font:600 12px/1.2 var(--body)}
+.panel.reviewing .hist{overscroll-behavior:contain}
+.panel.reviewing .review-move-scroll{margin-bottom:8px}
+.panel.reviewing .panel-head .chat-title{font-weight:700}
+.panel.reviewing .panel-head .chat-view,
+.panel.reviewing .panel-head .chat-new,
+.panel.reviewing .panel-head .chat-clear,
+.panel.reviewing .panel-head .chat-resign{display:none!important}
+@media(max-width:899px){
+  body.compact .review-dock{min-height:54px;padding:5px 10px 7px;
+    padding-bottom:max(7px,env(safe-area-inset-bottom,0px))}
+  body.compact.chat2d:not(.landscape) .panel.reviewing{
+    height:clamp(290px,46dvh,435px);min-height:0}
+  body.compact .panel.reviewing .hist{padding:9px 12px 7px}
+  body.compact .panel.reviewing .hist h3{display:none}
+  body.compact .panel.reviewing .hist .sub{
+    margin:0 0 7px;font:500 11px/1.25 var(--body);color:#9999a1}
+  body.compact .review-summary{padding:9px 11px;margin:0 0 6px;
+    border-radius:11px;background:#26262a}
+  body.compact .review-kicker{font-size:10px;line-height:1.2}
+  body.compact .review-counter{font-size:12px;color:#d8d8dd}
+  body.compact .review-track{height:3px;margin:7px 0 0}
+  body.compact .review-summary .review-event{margin-top:7px}
+  body.compact .review-event strong{font-size:13px}
+  body.compact .review-san{font-size:11px}
+  body.compact .review-detail{margin-top:4px;font-size:11px;line-height:1.35}
+  body.compact .review-insight{margin:4px 0 5px;padding:10px 11px;border-radius:11px}
+  body.compact .review-insight-title{font-size:14px;line-height:1.25}
+  body.compact .review-teaching{font-size:12px;line-height:1.4;margin-top:5px}
+  body.compact .review-cost{margin-top:5px;font-size:10.5px}
+  body.compact .review-compare{min-height:35px!important;margin-top:7px;
+    padding:7px 9px;font-size:12px!important}
+  body.compact .review-analysis-head{margin:3px 0 6px;padding:2px 0;
+    gap:3px 6px;font-size:10px;line-height:1.25}
+  body.compact .review-analysis-head>span:first-child{font-size:10.5px}
+  body.compact .review-side-count{padding:3px 7px;font-size:10px}
+  body.compact .review-engine-note{margin:3px 0 7px;font-size:10px}
+  body.compact .review-issue-navigation{gap:6px;margin:4px 0 6px}
+  body.compact .review-issue-navigation .btn{min-height:30px;padding:5px;
+    font-size:10.5px}
+  body.compact .review-move-scroll{max-height:18dvh}
+}
+@media(max-width:340px){
+  body.compact .review-dock .review-stepper{gap:4px}
+  body.compact .review-dock .review-play-button{min-width:67px!important;font-size:12px}
+  body.compact .review-dock .review-exit-button{font-size:11px}
+}
+
 </style>
 
 </head>
