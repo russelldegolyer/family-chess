@@ -43,7 +43,7 @@ test('each authenticated player can publish their own hex color',()=>{
 });
 test('live game reads both seated players colors, including changes to their current match',()=>{
  assert.match(online,/const colors=Object\.fromEntries/);
- assert.match(online,/await native\.present\(g,moves\.map\(m=>m\.move_uci\),uid,labels,colors\)/);
+ assert.match(online,/await native\.present\(g,moves\.map\(m=>m\.move_uci\),uid,labels,colors,\{spectating:isWatcher\}\)/);
  assert.match(html,/G\.colors=filteredColors/);
  assert.match(html,/if\(colorsChanged\)\{/);
  assert.match(html,/applySideColors\(true\)/);
@@ -60,4 +60,35 @@ test('database field uses player-own RLS and hex constraint',()=>{
  assert.match(migration,/alter table public\.chess_profiles/);
  assert.match(migration,/piece_color text/);
  assert.match(migration,/chess_profiles_piece_color_hex/);
+});
+
+test('signed-in members see active games, saved display names and watch actions',()=>{
+ assert.match(online,/\.eq\('status','active'\)\.not\('black_player_id','is',null\)/);
+ assert.match(online,/\.select\('id,display_name'\)\.in\('id',ids\)/);
+ assert.match(online,/title\.textContent=white\+' vs '\+black/);
+ assert.match(online,/button\.textContent=participant\?'Return to my game':'Watch live'/);
+ assert.match(online,/void refreshLive\(true\)/);
+ assert.match(online,/livePoll=setInterval\(/);
+ assert.match(online,/id="cgLiveGames"/);
+ assert.match(online,/cgWatchShortcut/);
+});
+test('spectator mode never submits a move, changes seats or joins games',()=>{
+ assert.match(online,/matchMode!=='play'\) throw new Error\('Only participating players can submit moves\.'/);
+ assert.match(online,/await native\.present\(g,moves\.map\(m=>m\.move_uci\),uid,labels,colors,\{spectating:isWatcher\}\)/);
+ assert.match(html,/const watching=options\.spectating===true/);
+ assert.match(html,/mySeat = watching \? null : white === userId/);
+ assert.match(html,/me\.canWrite = !watching/);
+ assert.match(html,/Spectating \$\{seatName\('w'\)\} vs \$\{seatName\('b'\)\} · read-only/);
+ assert.match(online,/leaveWatch\.addEventListener\('click',leaveSpectating\)/);
+ assert.match(online,/else if\(part\.status==='active'&&part\.black_player_id\)await startMatch\(invite,'watch'\)/);
+});
+test('RLS permits authenticated spectators to read live games and moves, not to edit or view waiting games',()=>{
+ const sql=read('database/chess-spectator-access.sql');
+ assert.match(sql,/create policy chess_games_watch_live/);
+ assert.match(sql,/create policy chess_moves_watch_live/);
+ assert.match(sql,/for select to authenticated/g);
+ assert.match(sql,/black_player_id is not null/);
+ assert.match(sql,/status='active'/);
+ assert.match(sql,/updated_at > now\(\) - interval '1 hour'/);
+ assert.doesNotMatch(sql,/for (update|insert|delete)/i);
 });
