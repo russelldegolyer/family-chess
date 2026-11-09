@@ -786,6 +786,7 @@ body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); 
       <div class="chat-list" id="chatList"></div>
       <div class="hist" id="historyView" hidden></div>
     </div>
+    <div class="review-dock" id="reviewDock" role="group" aria-label="Game replay controls" hidden></div>
     <div class="typing" id="typing" aria-live="polite"></div>
     <form class="chat-form" id="chatForm" autocomplete="off">
       <label class="sr" for="chatInput">Message</label>
@@ -2886,6 +2887,7 @@ let mySeat = null;
 let viewSide = 'w';
 let localView = store.get('sg.orient', 'w') === 'b' ? 'b' : 'w';
 let review = null;
+let reviewMovesExpanded = false;
 let reviewTimer = null;
 let pending = null;
 let selected = null;
@@ -5292,6 +5294,7 @@ $('promoCancel').addEventListener('click', () => { promoCtx = null; hide($('prom
 /* ------------------------------------------------------------------ review */
 function startReview(r) {
   stopReviewPlayback(false);
+  reviewMovesExpanded = false;
   if (pending) cancelPreview(false);
   clearSelection();
   const ply = clamp(r.ply, 0, r.moves.length);
@@ -5440,13 +5443,20 @@ function endReview() {
 function renderHistory() {
   if (!historyOpen) return;
   const view = $('historyView');
+  const oldViewScroll = view.scrollTop;
   const oldMoveScroll = view.querySelector('.review-move-scroll')?.scrollTop || 0;
+  const dock = $('reviewDock');
+  $('panel').classList.toggle('reviewing', !!review);
+  dock.hidden = !review;
+  document.querySelector('#panel .chat-title').textContent = review ? 'Review' : 'Chat';
   const frag = document.createDocumentFragment();
   const moves = review ? review.moves : G.moves;
   const sans = sanList(moves);
-  const h = el('h3'); h.textContent = review && !review.live ? review.title : G.mode === 'cpu' ? 'Versus computer' : `Game ${G.n}`;
+  const h = el('h3'); h.textContent = review ? 'Game review' : G.mode === 'cpu' ? 'Versus computer' : `Game ${G.n}`;
   const sub = el('div', 'sub');
   if (review && !review.live) sub.textContent = review.subtitle || '';
+  else if (review && G.mode === 'cpu') sub.textContent = 'Against computer · You play ' + SIDE[cpu.human];
+  else if (review && G.mode === 'live') sub.textContent = seatName('w') + ' vs ' + seatName('b');
   else if (G.mode === 'local') sub.textContent = 'Two players on this screen';
   else if (G.mode === 'cpu') sub.textContent = `You play ${SIDE[cpu.human]} · ${LEVEL_NAME[cpu.level]}`;
   else sub.textContent = G.status === 'over' ? describeResult().line || 'Finished' : bothSeated() ? `${seatName('w')} with White, ${seatName('b')} with Black` : 'Waiting for both players';
@@ -5461,9 +5471,9 @@ function renderHistory() {
     const summary = el('section', 'review-summary');
     summary.setAttribute('aria-label', 'Game replay');
     const kicker = el('div', 'review-kicker');
-    kicker.textContent = 'GAME REVIEW';
+    kicker.textContent = 'MOVE ' + review.ply + ' OF ' + total;
     const counter = el('span', 'review-counter');
-    counter.textContent = review.ply + ' / ' + total + ' half-moves';
+    counter.textContent = review.ply ? moveLabel(review.ply, sans[review.ply - 1]) : 'Starting position';
     kicker.append(counter);
     const track = el('div', 'review-track'), progress = el('div', 'review-progress');
     progress.style.width = (total ? 100 * review.ply / total : 0) + '%';
@@ -5472,11 +5482,13 @@ function renderHistory() {
     const headline = el('strong');
     headline.textContent = note.label;
     const san = el('span', 'review-san');
-    san.textContent = review.ply ? moveLabel(review.ply, sans[review.ply - 1]) : '0. Start';
+    san.textContent = review.ply ? (review.alternative ? 'Suggested move' : 'Actual move') : 'Opening';
     badge.append(headline, san);
     const explanation = el('p', 'review-detail');
     explanation.textContent = note.detail;
-    summary.append(kicker, track, badge, explanation);
+    summary.append(kicker, track);
+    // Engine coaching replaces generic piece movement explanations when available.
+    if (!verdict || review.alternative || review.ply === 0) summary.append(badge, explanation);
     frag.append(summary);
     const analyzer = window.ChessReviewAnalyzer;
     const engineState = analyzer?.status();
@@ -5647,6 +5659,7 @@ function renderHistory() {
     }
   }
   view.replaceChildren(frag);
+  view.scrollTop = oldViewScroll;
   if (review) {
     const scroller = view.querySelector('.review-move-scroll');
     if (scroller) {
