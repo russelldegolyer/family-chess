@@ -26,7 +26,7 @@
   const state = {
     id: null, mode: null, view: null, messages: [], pending: [],
     loaded: false, error: '', generation: 0, channel: null, poll: null,
-    sending: false, readBusy: false, reread: false, seen: new Set(), names: {}, clearing:false, readAt:'1970-01-01T00:00:00Z', readReady:false, unread:0, marking:false, paintKey:''
+    sending: false, readBusy: false, reread: false, seen: new Set(), names: {}, clearing:false, readAt:'1970-01-01T00:00:00Z', readReady:false, readLoading:false, unread:0, marking:false, markAgain:false, paintKey:''
   };
 
   const visible = () => {
@@ -134,32 +134,90 @@
     else list.scrollTop=Math.max(0,priorScroll+list.scrollHeight-priorHeight);
   }
 
-  function accept(rows, forceBottom=false, replace=false) {
-    if (!state.id) return;
-    const previous = new Set(state.messages.map(m=>m.id));
-    const latest = new Map((replace?[]:state.messages).map(m=>[m.id,m]));
-    for (const row of rows) {
-      if (!row || row.game_id !== state.id || typeof row.body !== 'string') continue;
-      latest.set(row.id,row);
-      if (state.loaded && !previous.has(row.id) && !state.seen.has(row.id) &&
-          row.sender_id !== state.view?.userId && !visible()) {
-        const badge=document.getElementById('unread');
-        if (badge) {
-          const n = Math.min(9, Number(badge.dataset.supChatUnread||'0')+1);
-          badge.dataset.supChatUnread=String(n);
-          badge.textContent=n===9?'9+':String(n);
-          badge.hidden=false;
-        }
-      }
-      state.seen.add(row.id);
-      state.pending = state.pending.filter(p=>p.id!==row.id);
+
+  function showUnread() {
+    const n=Math.max(0,Number(state.unread)||0);
+    for(const id of ['unread','unreadFocus']){
+      const badge=document.getElementById(id);
+      if(!badge)continue;
+      badge.hidden=n===0;
+      badge.textContent=n>99?'99+':String(n);
     }
-    state.messages = [...latest.values()]
-      .sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at) || String(a.id).localeCompare(String(b.id)))
+    const fab=document.getElementById('chatFab');
+    if(fab)fab.setAttribute('aria-label',n?'Open chat, '+n+' unread message'+(n===1?'':'s'):'Open chat');
+    try {
+      if(n>0)void navigator.setAppBadge?.(n)?.catch?.(()=>{});
+      else void navigator.clearAppBadge?.()?.catch?.(()=>{});
+    }catch{}
+  }
+  async function loadReceipt(){
+    if(state.readReady||state.readLoading||!state.id||!state.view?.userId)return;
+    const id=state.id,uid=state.view.userId,mode=state.mode,epoch=state.generation;
+    state.readLoading=true;
+    try {
+      const {data,error}=await db.from('chess_chat_read_state').select('read_at')
+        .eq('game_id',id).eq('user_id',uid).eq('channel',mode).maybeSingle();
+      if(error)throw error;
+      if(epoch!==state.generation||state.id!==id)return;
+      state.readAt=data?.read_at||'1970-01-01T00:00:00Z';
+      state.readReady=true;
+      if(visible())void markRead();
+      else void updateUnread();
+    } catch(e){console.warn('Could not load chess unread status',e?.message||'unknown');}
+    finally{if(epoch===state.generation)state.readLoading=false;}
+  }
+  async function updateUnread(){
+    if(!state.id||!state.view?.userId||!state.readReady)return;
+    if(visible()){
+      if(state.unread>0)void markRead();
+      return;
+    }
+    const id=state.id,uid=state.view.userId,epoch=state.generation;
+    const {count,error}=await db.from(table())
+      .select('id',{count:'exact',head:true})
+      .eq('game_id',id).neq('sender_id',uid)
+      .gt('created_at',state.readAt);
+    if(error||epoch!==state.generation||state.id!==id)return;
+    state.unread=count||0;showUnread();
+  }
+  async function markRead(){
+    if(!state.id||!state.view?.userId||!state.loaded||!state.readReady||!visible())return;
+    if(state.marking){state.markAgain=true;return;}
+    state.marking=true;
+    const id=state.id,epoch=state.generation,mode=state.mode;
+    try {
+      const {data,error}=await db.rpc('chess_mark_chat_read',{p_game_id:id,p_channel:mode});
+      if(error)throw error;
+      if(epoch!==state.generation||state.id!==id)return;
+      state.readAt=data;
+      state.unread=0;showUnread();
+    }catch(e){console.warn('Could not mark chess messages read',e?.message||'unknown');}
+    finally{
+      if(epoch===state.generation){
+        state.marking=false;
+        if(state.markAgain){state.markAgain=false;void markRead();}
+      }
+    }
+  }
+  function accept(rows,forceBottom=false,replace=false){
+    if(!state.id)return;
+    const latest=new Map((replace?[]:state.messages).map(m=>[m.id,m]));
+    for(const row of rows||[]){
+      if(!row||row.game_id!==state.id||typeof row.body!=='string')continue;
+      latest.set(row.id,row);
+      state.pending=state.pending.filter(m=>m.id!==row.id);
+    }
+    state.messages=[...latest.values()]
+      .sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at)||String(a.id).localeCompare(String(b.id)))
       .slice(-100);
     state.loaded=true;
     paint(forceBottom);
+    if(state.readReady){
+      if(visible())void markRead();
+      else void updateUnread();
+    }
   }
+
   async function refresh() {
     if (!state.id || !['play','watch'].includes(state.mode)) return;
     if (state.readBusy) {state.reread=true;return;}
@@ -201,10 +259,10 @@
     state.id=null;state.mode=null;state.view=null;state.messages=[];state.pending=[];
     state.loaded=false;state.error='';state.sending=false;state.readBusy=false;
     state.clearing=false;state.names={};
+    state.readAt='1970-01-01T00:00:00Z';state.readReady=false;state.readLoading=false;
+    state.unread=0;state.marking=false;state.markAgain=false;state.paintKey='';
     state.reread=false;state.seen.clear();
-    const badge=document.getElementById('unread');
-    if(badge){badge.dataset.supChatUnread='0';badge.hidden=true;}
-    updateInput();
+    showUnread();updateInput();
   }
   function begin(id,mode) {
     stop();
@@ -218,14 +276,14 @@
         filter:'game_id=eq.'+id
       },({new:message})=>{
         if(id!==state.id)return;
-        accept([message], true);
+        accept([message], false);
         if(state.mode==='watch'&&!state.names[message.sender_id])void refresh();
       })
       .on('postgres_changes',{
         event:'DELETE',schema:'public',table:table()
       },()=>{if(id===state.id)void refresh();})
       .subscribe();
-    state.poll=setInterval(()=>{if(state.id===id)void refresh();},12000);
+    state.poll=setInterval(()=>{if(state.id===id){void refresh();void updateUnread();}},12000);
   }
   async function send(raw) {
     const text=String(raw||'').replace(/\s+/g,' ').trim().slice(0,400);
@@ -284,17 +342,23 @@
       if(generation===state.generation){state.clearing=false;updateInput();}
     }
   }
+
   function render(view,forceBottom=false){
     state.view=view;
     const title=document.querySelector('#panel .chat-title');
-    if(title) title.textContent=state.mode==='watch'?'Spectators':'Chat';
-    const badge=document.getElementById('unread');
-    if(visible()&&badge && badge.dataset.supChatUnread!=='0') {
-      badge.dataset.supChatUnread='0';badge.hidden=true;
-    }
+    if(title)title.textContent=state.mode==='watch'?'Spectators':'Chat';
     paint(forceBottom);
+    if(!state.readReady)void loadReceipt();
+    if(visible()&&state.loaded&&state.readReady&&state.unread>0)void markRead();
   }
-  window.familyChessChat={ render, canSend, send, refresh, clear, mode:()=>state.mode };
+  function opened(){
+    if(visible()){paint(true);void markRead();}
+    else void updateUnread();
+  }
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)opened();
+  });
+  window.familyChessChat={ render, canSend, send, refresh, clear, opened, mode:()=>state.mode };
   window.addEventListener('familyChessMatchChanged',event=>{
     const detail=event.detail||{};
     if(detail.id&&detail.mode){begin(detail.id,detail.mode);}
