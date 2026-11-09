@@ -4868,9 +4868,18 @@ function playMove(uci, opts = {}) {
     const submit = window.familyChessSubmitMove;
     if (typeof submit !== 'function') { toast('Online move service unavailable. Refresh the page.'); return; }
     G.onlineBusy = true; clearSelection();
-    // Cancel the unsaved preview until the server accepts the move.
-    syncBoard(G.pos, {animate:true,quick:true}); updateMarkers();
+    // Keep the confirmed piece at its destination while the server validates
+    // the move. Returning to G.pos here made the piece visibly bounce backward
+    // during fast two-tap confirmation (especially on the 2D board).
+    // G.pos and the move list remain authoritative until Supabase accepts it.
+    syncBoard(proposed, {animate:true,quick:true,hint:proposed.last});
+    updateMarkers();
     Promise.resolve(submit(G.gid, uci)).catch(e => {
+      // Only restore the saved board if the move actually failed.
+      if (G.onlineProvider === 'supabase') {
+        syncBoard(G.pos, {animate:true,quick:true});
+        updateMarkers();
+      }
       toast(e?.message || 'Move could not be saved. Check your connection.', 4600);
     }).finally(() => {
       G.onlineBusy = false;
