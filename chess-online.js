@@ -57,6 +57,21 @@
   const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let player = null, invitePresented = false;
   let matchId = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
+  let colorSaveTimer=null;
+  const validColor=(v)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
+  window.addEventListener('familyChessPieceColorChanged',(event)=>{
+    const hex=event.detail?.color,uid=player?.id;
+    if(!uid||!validColor(hex))return;
+    clearTimeout(colorSaveTimer);
+    // A drag on the color wheel can fire many updates per second.
+    // Only persist the final color after the gesture settles.
+    colorSaveTimer=setTimeout(async()=>{
+      if(player?.id!==uid)return;
+      const {error}=await api.from('chess_profiles').update({piece_color:hex.toLowerCase()}).eq('id',uid);
+      if(error){status('Could not share your piece color: '+error.message,true);return;}
+      if(matchId)void syncMatch();
+    },320);
+  });
   const invite = new URL(location.href).searchParams.get('game') || '';
   if (pattern.test(invite)) $('cgJoinId').value = invite;
   const status = (s, bad=false) => { $('cgMessage').textContent = s; $('cgMessage').classList.toggle('error', bad); };
@@ -110,12 +125,14 @@
       if (!moves || moves.length > 1000 || moves.some((m,i)=>m.ply!==i+1)) throw new Error('Move history is inconsistent.');
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
       const ids=[g.white_player_id,g.black_player_id].filter(Boolean);
-      const {data:profiles}=await api.from('chess_profiles').select('id,display_name').in('id',ids);
+      const {data:profiles}=await api.from('chess_profiles').select('id,display_name,piece_color').in('id',ids);
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
       const labels=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
+      const colors=Object.fromEntries((profiles||[]).filter(p=>validColor(p.piece_color))
+        .map(p=>[p.id,p.piece_color.toLowerCase()]));
       const native=await nativeBoard();
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
-      await native.present(g,moves.map(m=>m.move_uci),uid,labels);
+      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors);
       if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
       else status('Live match connected · '+moves.length+' half-moves saved.');
       return true;
@@ -177,10 +194,18 @@
   async function ensureProfile() {
     const id = player?.id;
     if (!id) return;
-    const {data,error} = await api.from('chess_profiles').select('display_name').eq('id',id).maybeSingle();
+    const {data,error} = await api.from('chess_profiles').select('display_name,piece_color').eq('id',id).maybeSingle();
     if (player?.id !== id) return;
     if (error) { status('Could not load chess name: '+error.message,true); return; }
-    if (data) { $('cgDisplayName').value = data.display_name; return; }
+    if(data){
+      $('cgDisplayName').value=data.display_name;
+      if(validColor(data.piece_color)){
+        void nativeBoard().then(native=>{
+          if(player?.id===id)native.setAccountColor?.(data.piece_color);
+        }).catch(()=>{});
+      }
+      return;
+    }
     const display_name = 'Player ' + id.slice(0,6);
     const created = await api.from('chess_profiles').insert({id,display_name});
     if (created.error && created.error.code !== '23505') { status('Could not create chess profile: '+created.error.message,true); return; }
@@ -252,6 +277,7 @@
     player = next || null;
     launch.hidden = !player;
     if (!player) {
+      clearTimeout(colorSaveTimer);
       stopMatch();
       window.familyChessNative?.leaveToPractice();
       root.hidden=true; return;
