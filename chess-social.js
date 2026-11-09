@@ -1,4 +1,4 @@
-/* Live family lobby, online presence, spectator boards and 60-second challenges. */
+/* Live chess lobby, online presence, spectator boards and 60-second challenges. */
 (() => {
  'use strict';
  const api=window.chessSupabase;
@@ -8,12 +8,12 @@
  const VAPID_PUBLIC_KEY='BBJfBdOHnTHFbKTs2KEqCyr_aCKMOM0l3IxpJYtaIimFJzJMswcLwD90K1_IVH7WrUDbLM5miTcs8K74vuXobTA';
  mount.innerHTML=`
  <section class="cgSocialSection">
-  <h3 class="cgSocialHeading">Family players <small id="cgOnlineCount" class="cgSocialMeta">Checking status…</small></h3>
+  <h3 class="cgSocialHeading">Players <small id="cgOnlineCount" class="cgSocialMeta">Checking status…</small></h3>
   <div id="cgPlayerList" class="cgSocialList"><div class="cgSocialEmpty">Loading players…</div></div>
  </section>
  <section class="cgSocialSection">
   <h3 class="cgSocialHeading">Challenges <small class="cgSocialTimer">60 seconds</small></h3>
-  <div id="cgChallengeStatus" class="cgSocialNotice" role="status" aria-live="polite">Send a challenge to an online or offline family member.</div>
+  <div id="cgChallengeStatus" class="cgSocialNotice" role="status" aria-live="polite">Send a challenge to an online or offline player.</div>
   <button id="cgAllowPush" class="cgButton" type="button" style="margin-top:13px;width:100%">Enable challenge notifications</button>
   <button id="cgTestPush" class="cgButton" type="button" style="margin-top:8px;width:100%">Send a test notification to my phone</button>
   <span class="cgSocialSub" id="cgPushInfo">Offline notifications require permission. On iPhone, install this website to your Home Screen first.</span>
