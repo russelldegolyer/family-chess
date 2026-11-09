@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read=(p)=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const lobby=read('chess-social.js'),socialCss=read('chess-social.css');
+const online=read('chess-online.js'),html=read('index.html');
+const sql=read('database/chess-lobby-challenges.sql'),edge=read('supabase/functions/chess-notify-challenge/index.ts');
+test('authenticated spectators can watch live boards but not make moves',()=>{
+ assert.match(sql,/status='active' and black_player_id is not null/);
+ assert.match(sql,/alter table public\.chess_challenges enable row level security/);
+ assert.match(online,/const spectating=g\.white_player_id!==uid&&g\.black_player_id!==uid/);
+ assert.match(online,/native\.present\(g,moves\.map\(m=>m\.move_uci\),uid,labels,colors,spectating\)/);
+ assert.match(html,/me\.canWrite = participating/);
+ assert.match(html,/mySeat = white === userId \? 'w' : 'b'/);
+ assert.match(html,/return G\.mode === 'live' && !!mySeat && bothSeated\(\)/);
+});
+test('direct challenges have server-side 60 second expiry and atomic accept',()=>{
+ assert.match(sql,/expires_at timestamptz not null default \(now\(\)\+interval '60 seconds'\)/);
+ assert.match(sql,/if c\.expires_at <= clock_timestamp\(\)/);
+ assert.match(sql,/where id=p_id for update/);
+ assert.match(sql,/insert into public\.chess_games\(white_player_id,black_player_id,status\)/);
+ assert.match(sql,/if c\.status<>'pending'/);
+ assert.match(lobby,/remaining\(c\)/);
+ assert.match(lobby,/chess_respond_challenge/);
+ assert.match(lobby,/chess_send_challenge/);
+});
+test('online availability is presence-backed; games show players by profile names',()=>{
+ assert.match(lobby,/api\.channel\('chess-family-presence-v1'/);
+ assert.match(lobby,/presence\.presenceState\(\)/);
+ assert.match(lobby,/document\.visibilityState==='hidden'/);
+ assert.match(lobby,/nameFor\(game\.white_player_id\)\+' vs '\+nameFor\(game\.black_player_id\)/);
+ assert.match(lobby,/activeGames\.find\(g=>/);
+ assert.match(lobby,/familyChessOpenMatch/);
+ assert.match(html,/chess-social\.js/);
+ assert.match(html,/chess-social\.css/);
+});
+test('authenticated push registration, server verification and secure storage',()=>{
+ assert.match(lobby,/Notification\.requestPermission\(\)/);
+ assert.match(lobby,/navigator\.serviceWorker\.register\('\/chess-sw\.js'\)/);
+ assert.match(lobby,/applicationServerKey:urlBase64ToUInt8\(VAPID_PUBLIC_KEY\)/);
+ assert.match(lobby,/chess_push_subscriptions/);
+ assert.match(lobby,/chess-notify-challenge/);
+ assert.match(edge,/client\.auth\.getUser\(token\)/);
+ assert.match(edge,/c\.challenger_id!==user\.id/);
+ assert.match(edge,/\.is\("push_sent_at",null\)/);
+ assert.match(edge,/admin\.rpc\("chess_vapid_config"\)/);
+ assert.match(edge,/webpush\.sendNotification/);
+ assert.match(sql,/create policy chess_push_owned/);
+ const worker=read('chess-sw.js');
+ assert.match(worker,/self\.registration\.showNotification/);
+ assert.match(worker,/notificationclick/);
+ assert.match(worker,/self\.clients\.openWindow/);
+});
+test('family lobby has proper mobile UI and invite links remain optional',()=>{
+ assert.match(socialCss,/#cgChallengeAlert/);
+ assert.match(socialCss,/\.cgSocialDot\.online\{background:#30d158/);
+ assert.match(socialCss,/\.cgSocialRow/);
+ assert.match(online,/<details id="cgLegacy">/);
+ assert.match(online,/<div id="cgSocialMount"><\/div>/);
+ assert.match(lobby,/Offline notifications require permission/);
+});
