@@ -46,12 +46,13 @@
       return { kind: 'unknown', label: 'Not enough analysis', loss: null };
     if (r.forced || r.played === r.move) return { kind: 'best', label: 'Best found', loss: 0 };
     const loss = Math.max(0, r.bestScore - r.playedScore);
-    // Low-depth results are shown as provisional rather than branding a real move a mistake.
-    if (r.depth < 3) return { kind: 'uncertain', label: 'Preliminary estimate', loss };
+    // Forced mates are concrete enough to flag even when found at a shallow depth.
     if (r.bestScore > 98500 && r.playedScore < 98500)
       return { kind: 'blunder', label: 'Missed checkmate', loss };
     if (r.playedScore < -98500 && r.bestScore > -98500)
       return { kind: 'blunder', label: 'Allowed checkmate', loss };
+    // Non-mating evaluations from shallow searches must remain provisional.
+    if (r.depth < 3) return { kind: 'uncertain', label: 'Preliminary estimate', loss };
     if (loss >= 500) return { kind: 'blunder', label: 'Blunder', loss };
     if (loss >= 225) return { kind: 'mistake', label: 'Mistake', loss };
     if (loss >= 100) return { kind: 'inaccuracy', label: 'Inaccuracy', loss };
