@@ -868,6 +868,10 @@ body.compact.chat2d.view-2d #stage{opacity:0!important}
   border:0!important;box-shadow:none!important;
 }
 body.clock-timed #status.notice{display:block!important}
+body.compact.chat2d #status.notice{display:none!important}
+body.clock-timed:not(.compact) #status.notice{
+  top:calc(var(--gt,16px) + 154px)
+}
 #status.notice{
   z-index:7;max-width:calc(100% - 28px);
   background:#252529;border:1px solid #56565d;
@@ -4985,6 +4989,11 @@ function layout2D() {
   if(compact && document.body.classList.contains('clock-timed')){
     const clockBottom = document.querySelector('#chessClockHud .clock-top')?.getBoundingClientRect().bottom || 100;
     top = Math.max(top, Math.ceil(clockBottom)+7);
+  }
+  // Keep exceptional status notices out of the board's reserved play area.
+  const notice = $('status');
+  if (notice?.classList.contains('notice') && getComputedStyle(notice).display !== 'none') {
+    top = Math.max(top, Math.ceil(notice.getBoundingClientRect().bottom) + 8);
   }
   const left = split ? 5 : compact ? 6 : 230;
   const right = areaRight + (split ? 5 : compact ? 6 : 16);
