@@ -268,7 +268,7 @@
     const id=matchId, uid=player.id, epoch=syncToken;
     try {
       const {data:g,error:gameError}=await api.from('chess_games')
-        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_white_ms,clock_black_ms,clock_turn_started_at')
+        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_white_ms,clock_black_ms,clock_turn_started_at,clock_state,clock_penalty_side,clock_paused_by')
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) throw new Error('This match is private or no longer available.');
@@ -283,6 +283,11 @@
       if (movesError) throw movesError;
       if (!moves || moves.length > 1000 || moves.some((m,i)=>m.ply!==i+1)) throw new Error('Move history is inconsistent.');
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
+      const {data:actions,error:actionsError}=await api.from('chess_clock_actions')
+        .select('id,after_ply,kind,square,fen_after,actor_id')
+        .eq('game_id',id).order('id',{ascending:true}).limit(200);
+      if(actionsError)throw actionsError;
+      if(epoch!==syncToken||matchId!==id||player?.id!==uid)return;
       const ids=[g.white_player_id,g.black_player_id].filter(Boolean);
       const {data:profiles}=await api.from('chess_profiles').select('id,display_name,piece_color').in('id',ids);
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
@@ -291,7 +296,8 @@
         .map(p=>[p.id,p.piece_color.toLowerCase()]));
       const native=await nativeBoard();
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
-      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors,{spectating:isWatcher});
+      await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors,
+        {spectating:isWatcher,actions:actions||[]});
       if(isWatcher){
         spectatorLabel.textContent=`Watching · ${labels[g.white_player_id]||'White'} vs ${labels[g.black_player_id]||'Black'}`;
         spectatorBar.hidden=false;
@@ -342,8 +348,23 @@
     if(data && matchId===id) await syncMatch();
     return !!data;
   };
+  window.familyChessPause = async id => {
+    if(!player||matchId!==id||matchMode!=='play')throw new Error('Sign in as a player');
+    const {data,error}=await api.rpc('chess_toggle_clock_pause',{p_game_id:id});
+    if(error)throw new Error(error.message||'Could not pause game');
+    await syncMatch();return data;
+  };
+  window.familyChessPawnAction = async (id,action,square) => {
+    if(!player||matchId!==id||matchMode!=='play')throw new Error('Sign in as a player');
+    const {data,error}=await api.functions.invoke('chess-clock-action',{
+      body:{game_id:id,action,pawn_square:square??null}
+    });
+    if(error)throw new Error(data?.error||error.message||'Pawn action unavailable');
+    if(!data?.ok)throw new Error(data?.error||'Pawn choice rejected');
+    await syncMatch();return data;
+  };
   window.familyChessSaveClockPreference = async mode => {
-    if(!['off','10m','12m','15m','move3'].includes(mode))throw new Error('Invalid clock selection');
+    if(!['off','10m','12m','15m','move60'].includes(mode))throw new Error('Invalid clock selection');
     if(!player)return false;
     const {error}=await api.from('chess_profiles').update({clock_preference:mode}).eq('id',player.id);
     if(error)throw new Error(error.message||'Could not save clock preference');
