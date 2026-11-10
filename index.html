@@ -7031,7 +7031,9 @@ function openSettings() {
       ['15m','15 min each'],['move3','3 min per move']
     ],window.ChessClock?.getPreference?.()||'off',(v)=>{
       window.ChessClock?.setPreference(v);
-      Promise.resolve(window.familyChessSaveClockPreference?.(v))
+      window.familyChessClockSavePromise =
+        Promise.resolve(window.familyChessSaveClockPreference?.(v));
+      window.familyChessClockSavePromise
         .catch((e)=>toast('Clock preference could not sync: '+(e?.message||'Try again'),4200));
     },'10/12/15 minutes: each player has that much total time. 3-minute mode resets the active clock on every move. Applies to your next new computer game or online invitation; existing games keep their clock.'));
     s0.append(group('Preferred starting position', [['w', 'First'], ['b', 'Second'], ['r', 'Random']], store.get('sg.side', 'w'), (v) => store.set('sg.side', v), 'Used for games against the computer. Online, the challenge rules decide who opens.'));
