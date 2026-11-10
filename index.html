@@ -4900,6 +4900,8 @@ function markers2D() {
   }
 }
 function layout2D() {
+  // Do not refit or reposition the board when iOS opens its keyboard.
+  if(document.body.classList.contains('chat-keyboard'))return;
   if (!b2.svg) build2D();
   const W = window.innerWidth, H = window.innerHeight;
   const chat2d = document.body.classList.contains('chat2d');
@@ -6816,8 +6818,9 @@ function updateChatKeyboard(){
   if(board){
     const rect=board.getBoundingClientRect();
     const bottomTarget=visibleBottom-78;
-    const width=Math.max(1,rect.height);
-    const scale=Math.max(.62,Math.min(1,(bottomTarget-rect.top)/width));
+    const previousScale=Number(document.documentElement.style.getPropertyValue('--chat-keyboard-scale'))||1;
+    const naturalHeight=Math.max(1,rect.height/previousScale);
+    const scale=Math.max(.62,Math.min(1,(bottomTarget-rect.top)/naturalHeight));
     document.documentElement.style.setProperty('--chat-keyboard-scale',String(scale));
   }
 }
