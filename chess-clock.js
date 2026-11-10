@@ -133,14 +133,15 @@
     nodes[opp].node.style.top=top+'px';
     nodes[own].node.style.top=bottom+'px';
     actions.style.right='auto';
-    pauseBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState==='penalty';
+    pauseBtn.hidden=true; // Game controls render the unified Pause/Resume button.
     pauseBtn.textContent=state.clockState==='paused'?'▶ Resume':'⏸ Pause';
     const remainingNow=remaining(state.turn,at);
     tradeBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState!=='running'
+      ||!['10m','12m','15m'].includes(state.mode)
       ||state.actorSide!==state.turn||remainingNow<=0||remainingNow>=30000;
     tradeBtn.textContent='♟ Pawn +1:30';
     chooseBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState!=='penalty'
-      ||state.actorSide===state.penaltySide;
+      ||!['10m','12m','15m'].includes(state.mode)||state.actorSide===state.penaltySide;
     chooseBtn.textContent='♟ Choose pawn';
     // Compute positions only after visibility is updated: a hidden Pawn button
     // must not reserve space, and neither button may cover the timer or exit
@@ -148,7 +149,7 @@
     const clockRect=nodes[own].node.getBoundingClientRect();
     const clockActionsLeft=Math.round(clockRect.right+7);
     const actionRoom=Math.max(65,window.innerWidth-clockActionsLeft-8);
-    const buttons=[pauseBtn,tradeBtn,chooseBtn].filter(b=>!b.hidden);
+    const buttons=[tradeBtn,chooseBtn].filter(b=>!b.hidden);
     actions.classList.remove('stacked');
     actions.style.width='max-content';
     const needed=buttons.reduce((w,b)=>w+b.getBoundingClientRect().width,0)+
@@ -185,8 +186,11 @@
     if (state.source==='local') {
       state[state.turn]=0;
       state.startedAt=0;
-      state.clockState='penalty';
-      state.penaltySide=state.turn;
+      if(state.mode==='move60'){
+        state.status='over';state.clockState='running';state.penaltySide=null;
+      }else{
+        state.clockState='penalty';state.penaltySide=state.turn;
+      }
       redraw();
       state.onLocalTimeout?.(state.turn);
     } else if(state.source==='online' && state.onOnlineTimeout && state.gameId &&
@@ -225,8 +229,7 @@
     if(state[mover]<=0) {tick();return;}
     if(state.mode==='move60') {
       const bonusKey=nextTurn==='w'?'bonusW':'bonusB';
-      state[nextTurn]=60000+state[bonusKey];
-      state[bonusKey]=0;
+      state[nextTurn]=60000;
     }
     state.turn=nextTurn;
     state.status=ended?'over':'active';
@@ -284,25 +287,21 @@
     const now=Date.now();
     if(state.clockState==='running'){
       if(state.mode!=='off')state[state.turn]=remaining(state.turn,now);
-      if(state.mode!=='off'&&state[state.turn]<=0){tick();return 'penalty';}
+      if(state.mode!=='off'&&state[state.turn]<=0){tick();return state.mode==='move60'?'timeout':'penalty';}
       state.clockState='paused';state.startedAt=0;
     }else {state.clockState='running';state.startedAt=state.mode==='off'?0:now;}
     redraw();return state.clockState;
   }
   function resolveLocalPenalty(){
-    if(state.source!=='local'||state.clockState!=='penalty')return false;
+    if(state.source!=='local'||state.clockState!=='penalty'||!['10m','12m','15m'].includes(state.mode))return false;
     state[state.penaltySide]=180000;
     state.clockState='running';state.penaltySide=null;state.startedAt=Date.now();tick();return true;
   }
   function sacrificeLocal(nextTurn,ply){
-    if(state.source!=='local'||state.clockState!=='running'||state.mode==='off'
+    if(state.source!=='local'||state.clockState!=='running'||!['10m','12m','15m'].includes(state.mode)
       ||remaining(state.turn)<=0||remaining(state.turn)>=30000)return false;
     const actor=state.turn,rem=remaining(actor);
-    if(state.mode==='move60'){
-      state[actor]=150000;state[actor==='w'?'bonusW':'bonusB']=90000;
-      const bonusKey=nextTurn==='w'?'bonusW':'bonusB';
-      state[nextTurn]=60000+state[bonusKey];state[bonusKey]=0;
-    }else state[actor]=rem+90000;
+    state[actor]=rem+90000;
     state.turn=nextTurn;state.startedAt=Date.now();
     if(Number.isInteger(ply))state.history[ply]={w:state.w,b:state.b,turn:state.turn};
     tick();return true;
