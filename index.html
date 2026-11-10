@@ -1791,7 +1791,26 @@ function endInfo(chess, last) {
   return null;
 }
 let sanCache = { key: null, list: [] };
-function sanList(moves) { const key = moves.join(' '); if (sanCache.key !== key) sanCache = { key, list: positionFrom(moves).chess.history() }; return sanCache.list; }
+function sanList(moves,actions=[]) {
+  const events=(actions||[]).slice().sort((a,b)=>Number(a.id)-Number(b.id));
+  const key=moves.join(' ')+'|'+events.map(x=>x.id).join(',');
+  if(sanCache.key===key)return sanCache.list;
+  let chess=new Chess(),idx=0;const list=[];
+  for(let i=0;i<=moves.length;i++){
+    if(i>0){
+      const u=moves[i-1];let mv;
+      try{mv=chess.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||undefined});}
+      catch{break;}
+      if(!mv)break;
+      list.push(mv.san);
+    }
+    while(idx<events.length&&Number(events[idx].after_ply)===i){
+      try{chess=new Chess(events[idx].fen_after);}catch{}
+      idx++;
+    }
+  }
+  sanCache={key,list};return list;
+}
 const moveLabel = (ply, san) => `${Math.ceil(ply / 2)}${ply % 2 ? '.' : '...'} ${san}`;
 const spoken = (mv) => `${PIECE[mv.piece]} ${mv.captured ? 'takes on' : 'to'} ${mv.to}${mv.san.endsWith('#') ? ', checkmate' : mv.san.endsWith('+') ? ', check' : ''}`;
 
@@ -5503,7 +5522,8 @@ function startReview(r) {
   if (pending) cancelPreview(false);
   clearSelection();
   const ply = clamp(r.ply, 0, r.moves.length);
-  review = { ...r, ply, pos: positionFrom(r.moves, ply), alternative: false };
+  const actions=r.actions||(r.live&&G.onlineProvider==='supabase'?(G.clockActions||[]):[]);
+  review = { ...r, actions, ply, pos: positionFrom(r.moves,ply,actions), alternative: false };
   syncBoard(review.pos, { animate: true, quick: true });
   hide($('endCard'));
   updateAll();
@@ -5521,7 +5541,7 @@ function reviewTo(ply, auto = false) {
   const wasAlternative = review.alternative;
   const forward = !wasAlternative && p === review.ply + 1;
   review.ply = p; review.alternative = false;
-  review.pos = positionFrom(review.moves, p);
+  review.pos = positionFrom(review.moves,p,review.actions||[]);
   window.ChessReviewAnalyzer?.focus(p);
   const land = syncBoard(review.pos, { animate: true, quick: !forward, hint: forward ? review.pos.last : null });
   if (forward) fxForMove(review.pos.last, land, false);
@@ -5562,6 +5582,7 @@ function reviewComment(pos) {
 function startTeachingAnalysis() {
   const analyzer = window.ChessReviewAnalyzer;
   if (!review || !analyzer) return;
+  if(review.actions?.length){analyzer.stop();return;}
   const engineText = $('engineSrc')?.textContent;
   if (!engineText) return;
   try {
@@ -5656,7 +5677,7 @@ function renderHistory() {
   document.querySelector('#panel .chat-title').textContent = review ? 'Review' : 'Chat';
   const frag = document.createDocumentFragment();
   const moves = review ? review.moves : G.moves;
-  const sans = sanList(moves);
+  const sans = sanList(moves,review?.actions||(!review?G.clockActions||[]:[]));
   const h = el('h3'); h.textContent = review ? 'Game review' : G.mode === 'cpu' ? 'Versus computer' : `Game ${G.n}`;
   const sub = el('div', 'sub');
   if (review && !review.live) sub.textContent = review.subtitle || '';
