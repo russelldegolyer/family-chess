@@ -767,6 +767,18 @@ body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); 
   body.compact .review-dock .review-exit-button{font-size:11px}
 }
 
+
+.chess-pawn-picker{max-width:min(510px,96vw);max-height:85dvh;overflow:auto}
+.chess-pawn-picker h2{font-size:23px;line-height:1.16}
+.chess-pawn-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:8px;margin:15px 0}
+.chess-pawn-options .btn{padding:12px 5px;min-height:46px;border:1px solid #6d5a3f;
+ border-radius:10px;background:#2a2824;color:#eedcc3;font-size:15px;font-weight:750}
+.chess-pawn-options .btn:first-child:last-child{grid-column:1/-1}
+@media(max-width:400px){.chess-pawn-picker{padding:18px}
+.chess-pawn-picker h2{font-size:19px}
+.chess-pawn-options{gap:5px}}
+
 </style>
 
 </head>
@@ -7040,6 +7052,117 @@ function updateRewardsBadge() {
 
 /* ---------------- Settings (opened from the ⋯ menu): starting a game, gameplay, computer play, board effects ---------------- */
 const FX_PREF = { aurora: () => store.get('sg.aurora', 'balanced'), fortress: () => store.get('sg.fortressFx', 'full') };
+
+/* Pawns are removed as durable chess events; they are not ordinary chess moves. */
+let lastPenaltyPrompt='';
+function pawnCandidates(side){
+  return (G.pos?.board||[]).filter(x=>x[1]==='p'&&x[2]===side).map(x=>x[0]);
+}
+async function toggleChessPause(){
+  if(G.status!=='active'||G.onlineBusy)return;
+  if(G.onlineProvider==='supabase'){
+    if(!mySeat){toast('Only players can pause this game.');return;}
+    G.onlineBusy=true;
+    try {await window.familyChessPause?.(G.gid);}
+    catch(e){toast(e?.message||'Could not change pause state',4200);}
+    finally{G.onlineBusy=false;updateAll();}
+  }else{
+    const state=window.ChessClock?.pauseLocal();
+    if(state==='paused'){cancelComputer();toast('Game paused. Either player can resume.');}
+    else if(state==='running'){
+      toast('Game resumed.');
+      if(G.mode==='cpu'&&G.pos.chess.turn()!==cpu.human)requestComputer();
+    }
+    updateAll();
+  }
+}
+async function applyPawnTimeAction(kind,square){
+  const clock=window.ChessClock?.snapshot();
+  if(!clock||G.status!=='active'||G.onlineBusy)return;
+  if(G.onlineProvider==='supabase'){
+    if(!mySeat){toast('Spectators cannot choose pawns.');return;}
+    G.onlineBusy=true;
+    try {await window.familyChessPawnAction(G.gid,kind,square);}
+    catch(e){toast(e?.message||'Could not trade the pawn',4500);}
+    finally{G.onlineBusy=false;updateAll();}
+    return;
+  }
+  if(kind==='penalty'&&clock.clockState!=='penalty')return;
+  if(kind==='sacrifice'&&
+    (clock.clockState!=='running'||clock.remaining===null||
+      window.ChessClock.remaining(clock.turn)>=30000))return;
+  const victim=kind==='penalty'?clock.penaltySide:clock.turn;
+  if(victim!=='w'&&victim!=='b')return;
+  const before=new Chess(G.pos.chess.fen());
+  if(square!==null){
+    const piece=before.get(square);
+    if(!piece||piece.type!=='p'||piece.color!==victim){toast('Choose a valid pawn.');return;}
+    if(kind==='sacrifice'&&before.inCheck()){
+      toast('Escape check before trading a pawn.');return;
+    }
+    before.remove(square);
+    if(kind==='sacrifice'&&before.inCheck()){
+      toast('That pawn is protecting your king.');return;
+    }
+  }else if(kind!=='penalty'||pawnCandidates(victim).length){toast('Choose a pawn.');return;}
+  const bits=before.fen().split(' ');
+  bits[3]='-';bits[4]='0';
+  if(kind==='sacrifice'){
+    bits[1]=victim==='w'?'b':'w';
+    if(victim==='b')bits[5]=String(Number(bits[5])+1);
+  }
+  const fen=bits.join(' ');
+  try{new Chess(fen);}catch{toast('That pawn cannot be removed safely.');return;}
+  const action={id:Date.now()+Math.random(),after_ply:G.moves.length,
+    kind:kind==='penalty'&&!square?'waiver':kind,square,fen_after:fen};
+  const actions=[...(G.clockActions||[]),action];
+  const updated=positionFrom(G.moves,G.moves.length,actions);
+  if(updated.invalid||updated.chess.fen()!==fen){toast('Could not apply pawn choice.');return;}
+  const applied=kind==='penalty'?window.ChessClock.resolveLocalPenalty():
+    window.ChessClock.sacrificeLocal(updated.chess.turn(),G.moves.length);
+  if(!applied)return;
+  G.clockActions=actions;G.pos=updated;G.version++;
+  clearSelection();syncBoard(updated,{animate:true,quick:true});
+  updateAll();renderChat();
+  toast(kind==='penalty'?'Pawn removed · three minutes restored':
+    'Pawn forfeited · 1:30 added to your next turn',2800);
+  if(G.mode==='cpu'&&updated.chess.turn()!==cpu.human)
+    setTimeout(requestComputer,250);
+}
+function promptPawnTimeChoice(kind){
+  if(G.status!=='active')return;
+  const clock=window.ChessClock?.snapshot();
+  if(!clock)return;
+  const victim=kind==='penalty'?clock.penaltySide:clock.turn;
+  if(!victim)return;
+  if(kind==='penalty'&&clock.clockState!=='penalty')return;
+  const options=pawnCandidates(victim);
+  const title=kind==='penalty'?'Time expired — choose a pawn':'Forfeit a pawn for +1:30';
+  const info=kind==='penalty'
+    ? SIDE[victim]+' ran out of time. Select one of their pawns to remove. They receive three minutes and keep their turn.'
+    : 'Choose one of your own pawns to remove. This uses your turn and adds 1 minute 30 seconds.';
+  const d=dialog(title,[info],[['Cancel','quiet',null]]);
+  d.card.classList.add('chess-pawn-picker');
+  const list=el('div','chess-pawn-options');
+  if(!options.length&&kind==='penalty'){
+    const b=button('No pawns left — continue +3:00','gold',()=>{d.close();void applyPawnTimeAction('penalty',null);});
+    list.append(b);
+  }else{
+    for(const sq of options){
+      const b=button('♟ '+sq.toUpperCase(),'small',()=>{d.close();void applyPawnTimeAction(kind,sq);});
+      b.setAttribute('aria-label','Remove '+SIDE[victim]+' pawn on '+sq);
+      list.append(b);
+    }
+  }
+  d.card.insertBefore(list,d.card.lastChild);
+  if(options.length)list.querySelector('button')?.focus();
+}
+window.ChessClock?.setHandlers({
+  pause:()=>void toggleChessPause(),
+  trade:()=>promptPawnTimeChoice('sacrifice'),
+  select:()=>promptPawnTimeChoice('penalty')
+});
+
 function openSettings() {
   closeMenu();
   const d = dialog('Settings', [], [['Done', 'gold', null]]);
