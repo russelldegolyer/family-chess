@@ -149,6 +149,7 @@
   if(!user||requesting)return;
   requesting=true;
   try{
+   await window.familyChessClockSavePromise;
    const {data:id,error}=await api.rpc('chess_send_challenge',{p_target:targetId});
    if(error)throw error;
    message('Challenge sent to '+nameFor(targetId)+'. They have 60 seconds to respond.');
