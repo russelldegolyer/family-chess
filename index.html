@@ -5274,7 +5274,7 @@ function cancelPreview(animate = true) {
 function applyMove(uci, { placed = false } = {}) {
   if(G.mode==='cpu'||G.mode==='local'){
     window.ChessClock?.check?.();
-    if(G.status!=='active')return null;
+    if(G.status!=='active'||window.ChessClock?.snapshot?.().clockState!=='running')return null;
   }
   const moves = [...G.moves, uci];
   const after = positionFrom(moves,moves.length,G.clockActions||[]);
@@ -5349,7 +5349,8 @@ function cancelComputer() {
   thinking = null;
 }
 function requestComputer() {
-  if (G.mode !== 'cpu' || G.status !== 'active' || G.pos.chess.turn() === cpu.human || thinking) return;
+  if (G.mode !== 'cpu' || G.status !== 'active' || G.pos.chess.turn() === cpu.human || thinking
+     ||window.ChessClock?.snapshot?.().clockState!=='running') return;
   const id = ++reqSeq;
   thinking = { id, version: G.version, started: performance.now() };
   updatePlates();
@@ -5393,7 +5394,8 @@ function scheduleComputerApply(t) {
   const uci = t.uci, now = performance.now();
   const wait = Math.max(0, lockUntil - now, CPU_SPEED[cpuSpeed()] - (now - t.started));
   applyTimer = setTimeout(() => {
-    if (thinking !== t || t.version !== G.version || review) { if (thinking === t) thinking = null; updatePlates(); return; }
+    if (thinking !== t || t.version !== G.version || review ||
+      window.ChessClock?.snapshot?.().clockState!=='running') { if (thinking === t) thinking = null; updatePlates(); return; }
     thinking = null;
     if (pending) cancelPreview(false);
     clearSelection();
