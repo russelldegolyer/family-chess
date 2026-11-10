@@ -4643,23 +4643,61 @@ const chromaOk = (hex) => { if (!hexOk(hex)) return false; const [, s, v] = hex2
 const toLab = (hex) => { const [r, g, b] = hexRgb(hex).map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116); const X = f((r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047), Y = f(r * 0.2126 + g * 0.7152 + b * 0.0722), Z = f((r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883); return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)]; };
 const colorDist = (a, b) => { const A = toLab(a), B = toLab(b); return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); };
 const tooSimilar = (a, b) => colorDist(a, b) < 28;
-/* one-time reset to the new defaults: red for you, black for your opponent */
-if (!store.get('sg.colorsV2', false)) { store.set('sg.colorsV2', true); store.set('sg.myColor', COLOR_DEF.mine); store.set('sg.oppColor', COLOR_DEF.opp); }
-const myColor = () => { const c = store.get('sg.myColor', null); return chromaOk(c) ? c : (PROG.P && chromaOk(PROG.P.color) ? PROG.P.color : COLOR_DEF.mine); };
-const oppColor = () => { const c = store.get('sg.oppColor', null); return chromaOk(c) ? c : COLOR_DEF.opp; };
-/* each new game against the computer gives it a fresh, lively colour, clearly apart from yours */
+/* A player's chosen color belongs to their signed-in Chess account.
+   Keep a per-account cache so switching logins never borrows the previous
+   account's color, and preserve legacy practice preferences when signed out. */
+if (!store.get('sg.colorsV2', false)) store.set('sg.colorsV2', true);
+let activeChessColorProfile = null;
+const colorProfileKey = (kind, id=activeChessColorProfile) =>
+  id ? 'sg.chessColor.'+kind+'.'+id : null;
+const savedProfileColor = (kind) => {
+  const key=colorProfileKey(kind);
+  return key ? store.get(key,null) : null;
+};
+const myColor = () => {
+  const c=activeChessColorProfile ? savedProfileColor('mine') : store.get('sg.myColor',null);
+  return chromaOk(c) ? c : activeChessColorProfile ? COLOR_DEF.mine :
+    PROG.P&&chromaOk(PROG.P.color) ? PROG.P.color : COLOR_DEF.mine;
+};
+const oppColor = () => {
+  const c=activeChessColorProfile ? savedProfileColor('practice') : store.get('sg.oppColor',null);
+  return chromaOk(c) ? c : COLOR_DEF.opp;
+};
 let CPU_COLOR = null;
+function rememberPieceColor(kind,hex) {
+  const normalized=hex.toLowerCase();
+  if(activeChessColorProfile)store.set(colorProfileKey(kind),normalized);
+  store.set(kind==='mine'?'sg.myColor':'sg.oppColor',normalized);
+}
+function activateChessColorProfile(id) {
+  if(!id || typeof id!=='string')return;
+  activeChessColorProfile=id;
+  CPU_COLOR=oppColor();
+  applySideColors(true);updatePlates();
+  if(VIEW==='2d')draw2D(true);
+}
 function setMyColor(hex) {
   if (!chromaOk(hex)) return;
-  const changed=myColor().toLowerCase()!==hex.toLowerCase();
-  store.set('sg.myColor',hex);
-  if (PROG.ready) savePlayer((p)=>{p.color=hex;});
-  applySideColors(true);
-  updatePlates();
-  if (G.onlineProvider==='supabase') draw2D(true);
-  if (changed) window.dispatchEvent(new CustomEvent('familyChessPieceColorChanged',{detail:{color:hex.toLowerCase()}}));
+  const normalized=hex.toLowerCase();
+  const changed=myColor().toLowerCase()!==normalized;
+  rememberPieceColor('mine',normalized);
+  if (PROG.ready) savePlayer((p)=>{p.color=normalized;});
+  applySideColors(true);updatePlates();
+  if (G.onlineProvider==='supabase' && VIEW==='2d') draw2D(true);
+  if (changed) window.dispatchEvent(new CustomEvent(
+    'familyChessPieceColorChanged',{detail:{color:normalized}}));
 }
-function setOppColor(hex) { store.set('sg.oppColor', hex); applySideColors(true); updatePlates(); }
+function setOppColor(hex) {
+  if(!chromaOk(hex))return;
+  const normalized=hex.toLowerCase();
+  const changed=oppColor().toLowerCase()!==normalized;
+  rememberPieceColor('practice',normalized);
+  CPU_COLOR=normalized;
+  applySideColors(true);updatePlates();
+  if(VIEW==='2d')draw2D(true);
+  if(changed)window.dispatchEvent(new CustomEvent(
+    'familyChessPracticeColorChanged',{detail:{color:normalized}}));
+}
 /* the colour shown for each logical side in the current game */
 function sideColors() {
   const mine = myColor(), opp = oppColor();
@@ -7003,7 +7041,7 @@ $('btnChatClear').addEventListener('click', () => {
 /* the colour wheel on the bottom bar: your pieces, and the other side when it's on this device */
 function openQuickColors() {
   const tabs = [{ label: 'My pieces', get: myColor, set: (hx) => { setMyColor(hx); updatePlates(); }, against: () => oppSideColor() }];
-  if (G.mode === 'cpu') tabs.push({ label: 'Computer', get: () => CPU_COLOR || oppColor(), set: (hx) => { CPU_COLOR = hx; applySideColors(true); updatePlates(); }, against: myColor });
+  if (G.mode === 'cpu') tabs.push({ label: 'Computer', get: () => CPU_COLOR || oppColor(), set: (hx) => setOppColor(hx), against: myColor });
   else if (G.mode !== 'live') tabs.push({ label: 'Opponent', get: oppColor, set: (hx) => { setOppColor(hx); updatePlates(); }, against: myColor });
   openColorPicker('Piece colours', null, null, null, tabs);
   if (THEME !== 'unnamed') toast('Piece colours show on the Default board.', 2400);
@@ -7014,7 +7052,7 @@ function plateColor(side) {
   const cur = sideColors();
   if (mine) { openColorPicker('Your piece colour', myColor(), (hex) => setMyColor(hex), cur[other(side)]); return; }
   if (G.mode === 'live') { toast('Each player picks their own colour. Tap your own name to change yours.'); return; }
-  if (G.mode === 'cpu') { openColorPicker("Computer's colour", cur[side], (hex) => { CPU_COLOR = hex; applySideColors(true); updatePlates(); }, myColor()); return; }
+  if (G.mode === 'cpu') { openColorPicker("Computer's colour", cur[side], setOppColor, myColor()); return; }
   openColorPicker('Second player colour', oppColor(), (hex) => setOppColor(hex), myColor());
 }
 $('plateTop').addEventListener('click', () => plateColor(other(viewSide)));
@@ -7942,10 +7980,19 @@ window.familyChessNative = {
     beginGameReview();
     return true;
   },
+  activateColorProfile(id){activateChessColorProfile(id);},
   getAccountColor(){return myColor();},
+  getPracticeOpponentColor(){return oppColor();},
   setAccountColor(hex){
     if(!chromaOk(hex))return;
-    store.set('sg.myColor',hex.toLowerCase());
+    rememberPieceColor('mine',hex);
+    applySideColors(true);updatePlates();
+    if(VIEW==='2d')draw2D(true);
+  },
+  setPracticeOpponentColor(hex){
+    if(!chromaOk(hex))return;
+    rememberPieceColor('practice',hex);
+    CPU_COLOR=oppColor();
     applySideColors(true);updatePlates();
     if(VIEW==='2d')draw2D(true);
   },
