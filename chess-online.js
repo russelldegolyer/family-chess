@@ -675,12 +675,17 @@
     const old = player?.id;
     player = next || null;
     launch.hidden = !player;
-    if (!player) {
+    if (old && old!==player?.id) {
+      // Queue any unsynced edits for the account being left. They remain
+      // stored locally if the request cannot finish before Safari closes.
       for(const kind of ['mine','practice']){
         clearTimeout(colorSaveTimers[kind]);
-        if(player?.id&&validColor(pendingColor(kind,player.id)))
-          void savePendingColor(kind,player.id);
+        if(validColor(pendingColor(kind,old)))
+          void savePendingColor(kind,old);
       }
+    }
+    if (!player) {
+      window.familyChessNative?.clearColorProfile?.();
       stopMatch();
       if(livePoll){clearInterval(livePoll);livePoll=null;}
       liveCount=0;livePromptSeen=false;watchShortcut.hidden=true;
