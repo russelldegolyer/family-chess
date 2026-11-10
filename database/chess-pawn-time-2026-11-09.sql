@@ -2,13 +2,13 @@
 -- Events are saved separately so existing UCI move history stays intact.
 begin;
 
+alter table public.chess_profiles drop constraint if exists chess_profile_clock_preference_check;
+alter table public.chess_games drop constraint if exists chess_game_clock_mode_check;
 update public.chess_profiles set clock_preference='move60' where clock_preference='move3';
 update public.chess_games set clock_mode='move60',
   clock_white_ms=60000,clock_black_ms=60000 where clock_mode='move3';
-alter table public.chess_profiles drop constraint if exists chess_profile_clock_preference_check;
 alter table public.chess_profiles add constraint chess_profile_clock_preference_check
   check (clock_preference in ('off','10m','12m','15m','move60'));
-alter table public.chess_games drop constraint if exists chess_game_clock_mode_check;
 alter table public.chess_games add constraint chess_game_clock_mode_check
   check (clock_mode in ('off','10m','12m','15m','move60'));
 alter table public.chess_games
@@ -189,6 +189,7 @@ begin
   return array_to_string(parts,' ');
 end;$$;
 revoke all on function public.chess_clock_remove_pawn_fen(text,text,text,boolean) from public,anon,authenticated;
+grant execute on function public.chess_clock_remove_pawn_fen(text,text,text,boolean) to service_role;
 
 -- Service-only atomic event; called via chess-clock-action Edge Function after chess.js checks.
 create or replace function public.chess_commit_clock_action(
