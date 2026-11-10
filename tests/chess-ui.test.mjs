@@ -36,9 +36,11 @@ test('chat empty state is readable and does not promise unavailable messaging',(
 test('each authenticated player can publish their own hex color',()=>{
  assert.match(html,/familyChessPieceColorChanged/);
  assert.match(html,/if \(!chromaOk\(hex\)\) return/);
- assert.match(online,/\.update\(\{piece_color:hex\.toLowerCase\(\)\}\)\.eq\('id',uid\)/);
- assert.match(online,/clearTimeout\(colorSaveTimer\)/);
- assert.match(online,/if\(player\?\.id!==uid\)return/);
+ assert.match(online,/\.update\(\{\[column\]:hex\.toLowerCase\(\)\}\)\.eq\('id',id\)/);
+ assert.match(online,/clearTimeout\(colorSaveTimers\[kind\]\)/);
+ assert.match(online,/const id=player\?\.id/);
+ assert.match(online,/if\(player\?\.id!==id\)return/);
+ assert.match(online,/colorPendingKey=\(kind,id\)/);
  assert.match(online,/\.select\('id,display_name,piece_color'\)/);
 });
 test('live game reads both seated players colors, including changes to their current match',()=>{
