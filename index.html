@@ -4672,6 +4672,22 @@ function rememberPieceColor(kind,hex) {
 function activateChessColorProfile(id) {
   if(!id || typeof id!=='string')return;
   activeChessColorProfile=id;
+  // Move a pre-upgrade selection into the FIRST account only, rather than
+  // borrowing an unrelated account's color on subsequent sign-ins.
+  if(!store.get('sg.accountColorMigrated',false)){
+    for(const [kind,legacy] of [['mine','sg.myColor'],['practice','sg.oppColor']]){
+      const c=store.get(legacy,null);
+      if(chromaOk(c)&&!chromaOk(savedProfileColor(kind)))
+        store.set(colorProfileKey(kind),c.toLowerCase());
+    }
+    store.set('sg.accountColorMigrated',true);
+  }
+  CPU_COLOR=oppColor();
+  applySideColors(true);updatePlates();
+  if(VIEW==='2d')draw2D(true);
+}
+function clearChessColorProfile(){
+  activeChessColorProfile=null;
   CPU_COLOR=oppColor();
   applySideColors(true);updatePlates();
   if(VIEW==='2d')draw2D(true);
@@ -7981,6 +7997,7 @@ window.familyChessNative = {
     return true;
   },
   activateColorProfile(id){activateChessColorProfile(id);},
+  clearColorProfile(){clearChessColorProfile();},
   getAccountColor(){return myColor();},
   getPracticeOpponentColor(){return oppColor();},
   setAccountColor(hex){
