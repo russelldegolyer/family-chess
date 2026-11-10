@@ -1689,23 +1689,43 @@ const sideName = (side) => (side === 'w' ? 'white' : 'black');
 const other = (s) => (s === 'w' ? 'b' : 'w');
 const UCI = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
 
-function positionFrom(moves, ply = moves.length) {
-  const chess = new Chess();
+function positionFrom(moves, ply = moves.length, actions = []) {
+  let chess = new Chess();
   const captured = { w: [], b: [] };
-  let last = null;
+  let last = null, processed = 0;
   const n = Math.min(ply, moves.length);
-  for (let i = 0; i < n; i++) {
-    const u = moves[i];
-    const spec = { from: u.slice(0, 2), to: u.slice(2, 4) };
-    if (u[4]) spec.promotion = u[4];
-    let mv;
-    try { mv = chess.move(spec); } catch { break; }
-    if (mv.captured) captured[mv.color === 'w' ? 'b' : 'w'].push(mv.captured);
-    last = mv;
+  const events = (Array.isArray(actions) ? actions : []).slice()
+    .sort((x,y) => Number(x.id)-Number(y.id));
+  let eventIndex = 0;
+  for (let i = 0; i <= n; i++) {
+    if (i > 0) {
+      const u = moves[i-1];
+      if (typeof u!=='string' || !UCI.test(u)) break;
+      const spec = { from:u.slice(0,2), to:u.slice(2,4) };
+      if (u[4]) spec.promotion = u[4];
+      let mv;
+      try {mv=chess.move(spec);}catch{break;}
+      if (!mv)break;
+      if (mv.captured) captured[mv.color==='w'?'b':'w'].push(mv.captured);
+      last=mv;processed++;
+    }
+    while(eventIndex < events.length && Number(events[eventIndex].after_ply)===i) {
+      const e=events[eventIndex++];
+      if (typeof e.fen_after!=='string') continue;
+      const victim=chess.turn();
+      try {chess=new Chess(e.fen_after);}
+      catch {return {chess,board:[],captured,last,ply:processed,invalid:true};}
+      if(e.kind!=='waiver'&&typeof e.square==='string') {
+        captured[victim].push('p');
+        last={from:e.square,to:e.square,color:victim,piece:'p',
+          san:e.kind==='sacrifice'?'Pawn trade':'Clock penalty',flags:''};
+      }
+    }
   }
   const board = [];
-  for (const row of chess.board()) for (const cell of row) if (cell) board.push([cell.square, cell.type, cell.color]);
-  return { chess, board, captured, last, ply: chess.history().length };
+  for (const row of chess.board())
+    for (const cell of row) if(cell) board.push([cell.square,cell.type,cell.color]);
+  return { chess, board, captured, last, ply:processed };
 }
 function endInfo(chess, last) {
   if (chess.isCheckmate()) return { result: last && last.color === 'b' ? '0-1' : '1-0', reason: 'checkmate' };
@@ -5135,7 +5155,7 @@ function applyMove(uci, { placed = false } = {}) {
     if(G.status!=='active')return null;
   }
   const moves = [...G.moves, uci];
-  const after = positionFrom(moves);
+  const after = positionFrom(moves,moves.length,G.clockActions||[]);
   if (!after.last || after.ply !== moves.length) return null;
   const now = Date.now();
   const end = endInfo(after.chess, after.last);
@@ -5151,7 +5171,7 @@ function applyMove(uci, { placed = false } = {}) {
 function playMove(uci, opts = {}) {
   if (G.mode === 'live' && G.onlineProvider === 'supabase') {
     if (!canAct() || G.onlineBusy) return;
-    const proposed = positionFrom([...G.moves, uci]);
+    const proposed = positionFrom([...G.moves, uci],G.moves.length+1,G.clockActions||[]);
     if (proposed.ply !== G.moves.length + 1) { toast('Illegal move.'); return; }
     const submit = window.familyChessSubmitMove;
     if (typeof submit !== 'function') { toast('Online move service unavailable. Refresh the page.'); return; }
@@ -5286,6 +5306,7 @@ function undo() {
   clearSelection();
   hide($('endCard'));
   G.moves = G.moves.slice(0, plan.len);
+  G.clockActions=[];
   G.pos = positionFrom(G.moves);
   G.version++;
   if(G.mode==='cpu'||G.mode==='local')
@@ -6245,6 +6266,7 @@ function resetLocalGame(mode, n) {
   if (!$('promoDialog').hidden) { promoCtx = null; hide($('promoDialog')); }
   Object.assign(G, { mode, gid: null, key: 'k' + Date.now().toString(36) + rid(4), board: null, chooser: null, n, moves: [], pos: positionFrom([]), status: 'active', result: null, reason: null, drawOffer: null, turnAt: Date.now(), startedAt: Date.now(), endedAt: null, feedback: null, seats: { w: 'local', b: 'local' }, names: { w: '', b: '' } });
   G.version++;
+  G.clockActions=[];
   if(mode==='cpu'||mode==='local')
     window.ChessClock?.startLocal(window.ChessClock.getPreference(), (expiredSide)=>{
       if(G.mode!==mode||G.status!=='active')return;
@@ -6279,7 +6301,7 @@ function enterLive() {
   window.ChessClock?.reset();
   stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop();
   review = null;
-  G.mode = 'live'; G.gid = null; G.moves = []; G.version++; gameFirst = false;
+  G.mode = 'live'; G.gid = null; G.moves = []; G.clockActions=[]; G.version++; gameFirst = false;
   onGame(liveDoc, true);
   presentTheme();
   renderChat();
@@ -7227,8 +7249,10 @@ window.familyChessNative = {
     if(!isPlayer&&!watching)throw new Error('You are not a player in this match');
     if(watching&&(!game.black_player_id||!['active','finished'].includes(game.status)))
       throw new Error('This match is not open for spectators');
-    const pos = positionFrom(moves);
-    if (pos.ply !== moves.length || pos.chess.fen() !== game.current_fen) throw new Error('Online position mismatch. Refresh the match.');
+    const actions=Array.isArray(options.actions)?options.actions:[];
+    const pos = positionFrom(moves,moves.length,actions);
+    if (pos.invalid || pos.ply !== moves.length || pos.chess.fen() !== game.current_fen)
+      throw new Error('Online position mismatch. Refresh the match.');
     const sameGame = G.onlineProvider === 'supabase' && G.gid === game.id;
     const sameMoves = sameGame && G.moves.length === moves.length && G.moves.every((m,i) => m === moves[i]);
     const extension = sameGame && G.moves.length + 1 === moves.length && G.moves.every((m,i) => m === moves[i]);
@@ -7257,7 +7281,7 @@ window.familyChessNative = {
        pos.chess.isThreefoldRepetition()?'threefold repetition':'the fifty-move rule') : null;
     G.drawOffer = null; G.startedAt = new Date(game.created_at || Date.now()).getTime();
     G.turnAt = new Date(game.updated_at || Date.now()).getTime();
-    G.moves = moves.slice(); G.pos = pos;
+    G.moves = moves.slice(); G.clockActions=actions.slice(); G.pos = pos;
     mySeat = watching ? null : white === userId ? 'w' : 'b';
     window.ChessClock?.showOnline(game,pos.chess.turn(),
       watching?null:window.familyChessClaimTimeout);
