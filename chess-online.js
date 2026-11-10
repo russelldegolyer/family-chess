@@ -18,12 +18,32 @@
     .cgCreatedLink a {font-size:12px;color:#e9e9ff;overflow-wrap:anywhere;text-decoration:underline}
     .cgCreatedLink .cgButton {flex:1}
     /* Show account name near the top of the lobby, not below long player lists. */
-    #cgProfileSettings {margin:10px 0 16px;border:1px solid #38383c;border-radius:12px;background:#1c1c20;padding:0 12px}
-    #cgProfileSettings summary {display:flex;justify-content:space-between;align-items:center;gap:8px;
-      list-style:none;cursor:pointer;color:#f0f0f3;font-size:13px;font-weight:600;min-height:46px}
-    #cgProfileSettings summary::-webkit-details-marker{display:none}
-    #cgProfileSettings summary::after{content:"Edit";color:#f2a0a9;font-size:12px;font-weight:700}
-    #cgNameValue {color:#aaa;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%}
+    #cgProfileSettings,#cgAccountSettings{
+      margin:10px 0;border:1px solid #38383c;border-radius:12px;
+      background:#1c1c20;padding:0 12px;
+    }
+    #cgProfileSettings summary,#cgAccountSettings summary{
+      display:flex;justify-content:space-between;align-items:center;gap:8px;
+      list-style:none;cursor:pointer;color:#f0f0f3;font-size:13px;
+      font-weight:600;min-height:46px;
+    }
+    #cgProfileSettings summary::-webkit-details-marker,
+    #cgAccountSettings summary::-webkit-details-marker{display:none}
+    #cgProfileSettings summary::after,#cgAccountSettings summary::after{
+      content:"Edit";color:#f2a0a9;font-size:12px;font-weight:700;
+    }
+    #cgAccountSettings summary::after{content:"Manage"}
+    #cgNameValue{color:#aaa;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%}
+    .cgAccountBody{padding:0 0 13px;display:flex;flex-direction:column;gap:11px}
+    #cgAccountEmail{color:#a1a1a9;font-size:12px;overflow-wrap:anywhere;line-height:1.5}
+    #cgSignOutSlot{width:100%}
+    #cgSignOutSlot #authSignOut.cgAccountSignOut{
+      width:100%;min-height:44px;border:1px solid #675054;border-radius:10px;
+      padding:10px 14px;background:#2d2225;color:#ffbdbd;
+      font:600 13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      cursor:pointer;box-shadow:none;
+    }
+    #cgSignOutSlot #authSignOut.cgAccountSignOut:disabled{opacity:.5;cursor:wait}
     #cgProfileSettings #cgProfileForm{padding:0 0 14px}
     #cgProfileSettings .cgLabel{margin-top:0}
     .cgInput {font-size:16px!important}
@@ -110,6 +130,13 @@
             autocapitalize="words" required minlength="2" maxlength="40">
           <button class="cgButton" type="submit">Save</button></div></form>
       </details>
+      <details id="cgAccountSettings">
+        <summary>Account settings</summary>
+        <div class="cgAccountBody">
+          <span id="cgAccountEmail"></span>
+          <div id="cgSignOutSlot"></div>
+        </div>
+      </details>
       <div id="cgSocialMount"></div>
       <details id="cgLegacy">
         <summary>Invite with a private link (backup)</summary>
@@ -128,6 +155,10 @@
       <div id="cgGames" class="cgMuted">No matches yet.</div>
     </section>`;
   document.body.appendChild(root);
+  // Preserve the authenticated sign-out handler by moving the original
+  // button into the new Online Games account settings.
+  signOut.classList.add('cgAccountSignOut');
+  document.getElementById('cgSignOutSlot').appendChild(signOut);
   const watchShortcut=document.createElement('button');
   watchShortcut.id='cgWatchShortcut';watchShortcut.type='button';watchShortcut.hidden=true;
   watchShortcut.textContent='● Live games';watchShortcut.addEventListener('click',show);
@@ -213,11 +244,19 @@
     try { await navigator.clipboard.writeText(value); status('Invitation copied.'); }
     catch { status('Copy this link manually: ' + value); }
   }
-  function show() { if (!player) return; root.hidden=false; void refresh(); void loadInviteRecipients(); $('cgClose').focus(); }
+  function show() {
+    if(!player){window.familyChessLobbyRequested=true;return;}
+    window.familyChessLobbyRequested=false;
+    root.hidden=false;
+    document.getElementById('authAccountToggle')?.setAttribute('aria-expanded','true');
+    void refresh();void loadInviteRecipients();
+    $('cgClose').focus();
+  }
   function close() {
     root.hidden=true;
     const profileButton=document.getElementById('authAccountToggle');
-    if(profileButton && getComputedStyle(profileButton).display!=='none')profileButton.focus();
+    profileButton?.setAttribute('aria-expanded','false');
+    if(profileButton&&getComputedStyle(profileButton).display!=='none')profileButton.focus();
     else launch.focus();
   }
   window.familyChessOpenLobby = show;
@@ -675,6 +714,7 @@
     const old = player?.id;
     player = next || null;
     launch.hidden = !player;
+    $('cgAccountEmail').textContent=player?.email||'';
     if (old && old!==player?.id) {
       // Queue any unsynced edits for the account being left. They remain
       // stored locally if the request cannot finish before Safari closes.
@@ -686,6 +726,8 @@
     }
     if (!player) {
       window.familyChessNative?.clearColorProfile?.();
+      root.hidden=true;
+      document.getElementById('authAccountToggle')?.setAttribute('aria-expanded','false');
       stopMatch();
       if(livePoll){clearInterval(livePoll);livePoll=null;}
       liveCount=0;livePromptSeen=false;watchShortcut.hidden=true;
@@ -695,6 +737,7 @@
     if (old !== player.id) {
       if (old) { stopMatch(); window.familyChessNative?.leaveToPractice(); }
       await ensureProfile();
+      if(window.familyChessLobbyRequested){window.familyChessLobbyRequested=false;show();}
       if(!livePoll)livePoll=setInterval(()=>{if(player)void refreshLive(false);},30000);
       if(pattern.test(invite)&&!invitePresented){
         invitePresented=true;
