@@ -129,7 +129,7 @@
     const mover=state.turn;
     state[mover]=remaining(mover,now);
     if(state[mover]<=0) {tick();return;}
-    if(state.mode==='move3') {state.w=MODES.move3;state.b=MODES.move3;}
+    if(state.mode==='move3') state[nextTurn]=MODES.move3;
     state.turn=nextTurn;
     state.status=ended?'over':'active';
     state.startedAt=ended?0:now;
@@ -173,6 +173,6 @@
     tick();
   }
   window.ChessClock=Object.freeze({MODES,getPreference,setPreference,startLocal,moveLocal,
-    undoLocal,stopLocal,showOnline,reset,remaining,snapshot:()=>({...state,history:state.history.slice()})});
+    undoLocal,stopLocal,showOnline,reset,remaining,check:tick,snapshot:()=>({...state,history:state.history.slice()})});
   tick();
 })();
