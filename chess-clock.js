@@ -67,6 +67,32 @@
   const styleV2=document.createElement('style');
   styleV2.textContent="\n#chessClockHud{position:fixed;inset:0;left:0;top:0;max-width:none;display:block;\n z-index:24;pointer-events:none;background:none;overflow:visible}\n#chessClockHud .chess-clock{position:fixed;left:max(9px,env(safe-area-inset-left,0px));\n right:auto;top:auto;width:clamp(130px,19vw,205px);min-width:0;\n padding:8px 12px 9px;border-radius:12px;display:flex;flex-wrap:wrap;gap:3px 9px;\n align-items:center;justify-content:space-between;background:rgba(24,24,28,.95);\n border:1px solid #4a4a52;box-shadow:0 6px 20px #0008}\n#chessClockHud .chess-clock-label{font:700 11px/1.1 sans-serif;letter-spacing:.065em;\n text-transform:uppercase;color:#c1c1cb}\n#chessClockHud .chess-clock-time{font:800 24px/1 sans-serif;letter-spacing:-.025em;\n color:#f2f2f6;font-variant-numeric:tabular-nums}\n#chessClockHud .chess-clock.active{background:#1c3026;border-color:#35cd7a;\n box-shadow:inset 4px 0 #35cd7a,0 8px 22px #000b}\n#chessClockHud .chess-clock.active::after{content:'● TO MOVE';font:750 10px/1 sans-serif;\n color:#83efac;letter-spacing:.045em;flex-basis:100%}\n#chessClockHud .chess-clock.waiting::after{content:'PAUSED';color:#e9cb75;\n font:750 10px/1 sans-serif;flex-basis:100%}\n#chessClockHud .chess-clock.low{background:#3d1c27;border-color:#f06070}\n#chessClockHud .chess-clock.low .chess-clock-time{color:#ff8b98}\n#chessClockHud .chess-clock-actions{position:fixed;right:max(8px,env(safe-area-inset-right,0px));\n left:auto;display:flex;gap:5px;pointer-events:none}\n#chessClockHud .chess-clock-actions button{pointer-events:auto;white-space:nowrap;\n background:#292a2f;color:#f2f2f4;border:1px solid #53545a;border-radius:9px;\n min-height:35px;padding:7px 9px;font:700 11px/1 sans-serif;cursor:pointer}\n#chessClockHud .chess-clock-actions button[hidden]{display:none}\n#chessClockHud .chess-clock-actions button:nth-child(2){border-color:#b78a48;background:#3c2e26}\n#chessClockHud .chess-clock-actions button:nth-child(3){border-color:#eab64b;background:#443016}\n@media(max-width:899px){\n #chessClockHud .chess-clock{width:131px;padding:6px 9px 7px;border-radius:11px}\n #chessClockHud .chess-clock-label{font-size:9px}\n #chessClockHud .chess-clock-time{font-size:20px}\n #chessClockHud .chess-clock-actions button{min-height:32px;padding:6px 7px;font-size:10px}\n}\n@media(max-width:360px){\n #chessClockHud .chess-clock{width:118px}\n #chessClockHud .chess-clock-time{font-size:18px}\n #chessClockHud .chess-clock-actions button{font-size:9px;padding:6px}\n}";
   document.head.append(styleV2);
+  /* Action buttons must fit beside the player's clock on every phone width.
+     When two actions cannot fit horizontally, stack them in the free lane. */
+  const styleV3=document.createElement('style');
+  styleV3.textContent=`
+    #chessClockHud .chess-clock-actions{
+      max-width:calc(100vw - 10px);align-items:center;
+      flex-wrap:nowrap;min-width:0;z-index:1
+    }
+    #chessClockHud .chess-clock-actions button{
+      min-width:0;flex-shrink:0
+    }
+    #chessClockHud .chess-clock-actions.stacked{
+      flex-direction:column;align-items:stretch;gap:4px;
+    }
+    #chessClockHud .chess-clock-actions.stacked button{
+      display:block;width:100%;max-width:100%;height:29px;min-height:29px;
+      padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis;
+    }
+    #chessClockHud .chess-clock-actions.stacked button[hidden]{display:none}
+    @media(max-width:360px){
+      #chessClockHud .chess-clock-actions.stacked button{
+        font-size:9px;padding:4px 3px
+      }
+    }
+  `;
+  document.head.append(styleV3);
 
   const state = { source:null, mode:'off', status:'waiting', turn:'w', gameId:null,
     w:0,b:0,startedAt:0,history:[],onLocalTimeout:null,onOnlineTimeout:null,
@@ -106,9 +132,6 @@
     const bottom=Math.max(top+53,Math.min(visibleBottom-58,lowerLimit-53));
     nodes[opp].node.style.top=top+'px';
     nodes[own].node.style.top=bottom+'px';
-    actions.style.top=(bottom+4)+'px';
-    actions.style.left=Math.max(136,Math.min(
-      window.innerWidth-195,Number(nodes[own].node.getBoundingClientRect().right||146)+6))+'px';
     actions.style.right='auto';
     pauseBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState==='penalty';
     pauseBtn.textContent=state.clockState==='paused'?'▶ Resume':'⏸ Pause';
@@ -119,6 +142,30 @@
     chooseBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState!=='penalty'
       ||state.actorSide===state.penaltySide;
     chooseBtn.textContent='♟ Choose pawn';
+    // Compute positions only after visibility is updated: a hidden Pawn button
+    // must not reserve space, and neither button may cover the timer or exit
+    // the right edge of a narrow iPhone.
+    const clockRect=nodes[own].node.getBoundingClientRect();
+    const clockActionsLeft=Math.round(clockRect.right+7);
+    const actionRoom=Math.max(65,window.innerWidth-clockActionsLeft-8);
+    const buttons=[pauseBtn,tradeBtn,chooseBtn].filter(b=>!b.hidden);
+    actions.classList.remove('stacked');
+    actions.style.width='max-content';
+    const needed=buttons.reduce((w,b)=>w+b.getBoundingClientRect().width,0)+
+      Math.max(0,buttons.length-1)*5;
+    const stacked=needed>actionRoom;
+    actions.classList.toggle('stacked',stacked);
+    actions.style.left=clockActionsLeft+'px';
+    if(stacked){
+      actions.style.width=actionRoom+'px';
+      // Above the bottom toolbar/chat, without crossing into the clock.
+      actions.style.top=Math.round(bottom-Math.max(0,buttons.length*29+
+        Math.max(0,buttons.length-1)*4-49))+'px';
+    }else{
+      actions.style.width='max-content';
+      actions.style.top=Math.round(bottom+(clockRect.height-
+        Math.max(0,actions.getBoundingClientRect().height))/2)+'px';
+    }
     for (const side of ['w','b']) {
       const left = remaining(side,at), selected = state.turn===side &&
         state.status==='active' && state.clockState==='running';
