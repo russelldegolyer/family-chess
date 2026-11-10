@@ -1078,6 +1078,26 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
   body.compact .bottom-bar .controls{gap:3px!important}
 }
 
+/* Five understated difficulty selections: numbered only in the interface. */
+#optLevel.cpu-levels{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;
+  background:transparent;padding:0;border:0;overflow:visible;
+}
+#optLevel.cpu-levels .opt{
+  min-width:0;min-height:48px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.16);
+  background:#232327;color:#d0d0d4;
+  font:700 17px/1 var(--body);text-align:center;
+}
+#optLevel.cpu-levels .opt[aria-checked="true"]{
+  background:#57575e;color:#fff;border-color:#999aa2;
+  box-shadow:0 0 0 1px #ffffff25;
+}
+@media(max-width:360px){
+  #optLevel.cpu-levels{gap:4px}
+  #optLevel.cpu-levels .opt{min-height:43px;font-size:15px;padding:6px 0}
+}
+
 </style>
 
 </head>
@@ -1220,11 +1240,13 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
           <button class="opt" type="button" role="radio" data-v="b"><span class="orb"></span>Second — the computer opens</button>
           <button class="opt" type="button" role="radio" data-v="r">Random — a fair coin decides</button>
         </div>
-        <div class="opt-label" id="levelLabel">Computer level</div>
-        <div class="opt-group stack" role="radiogroup" aria-labelledby="levelLabel" id="optLevel">
-          <button class="opt" type="button" role="radio" data-v="1">Level 1 — Easy</button>
-          <button class="opt" type="button" role="radio" data-v="2">Level 2 — Average</button>
-          <button class="opt" type="button" role="radio" data-v="3">Level 3 — Hard</button>
+        <div class="opt-label" id="levelLabel">Computer difficulty</div>
+        <div class="opt-group cpu-levels" role="radiogroup" aria-labelledby="levelLabel" id="optLevel">
+          <button class="opt" type="button" role="radio" data-v="1" aria-label="Difficulty 1">1</button>
+          <button class="opt" type="button" role="radio" data-v="2" aria-label="Difficulty 2">2</button>
+          <button class="opt" type="button" role="radio" data-v="3" aria-label="Difficulty 3">3</button>
+          <button class="opt" type="button" role="radio" data-v="4" aria-label="Difficulty 4">4</button>
+          <button class="opt" type="button" role="radio" data-v="5" aria-label="Difficulty 5">5</button>
         </div>
       </div>
       <p class="setup-note" id="setupNote"></p>
@@ -1432,7 +1454,7 @@ function Engine() {
       const p = b[s]; if (!p) continue;
       const t = p & 7, white = !(p & BL), sg = white ? 1 : -1, i = idx64(s, white);
       let v = VAL[t] + pw * (t === K && endgame ? KEND[i] : PST[t][i]);
-      if (level === 3) {
+      if (level >= 3) {
         const c = white ? 0 : 1, f = s & 7, row = s >> 4;
         if (t === P) {
           if (pawnsF[c][f] > 1) v -= 12;
@@ -1455,9 +1477,43 @@ function Engine() {
           for (const df of [-1, 0, 1]) { const x = s + fw + df; if (on(x) && b[x] === (P | (p & BL))) v += 9; }
         }
       }
+      // Difficulty 4: calculated initiative, advanced pieces and king-side
+      // pressure. Difficulty 5: pawn health, controlled activity, endgame
+      // technique and small, sustainable improvements. Both keep the same
+      // material values and retain the ability to play solid defense.
+      if (level === 4) {
+        const enemyKing = king[white ? 1 : 0], ef = enemyKing & 7, er = enemyKing >> 4;
+        const df = Math.abs(f - ef), dr = Math.abs(row - er);
+        if (t === N || t === B || t === Q || t === R) {
+          const approach = Math.max(0, 5 - Math.max(df, dr));
+          v += approach * (t === Q ? 6 : t === N ? 8 : t === B ? 6 : 4);
+          if (t !== Q) v += Math.max(0, white ? 6 - row : row - 1) * 2;
+        }
+        if (t === P && !endgame && Math.abs(f - ef) <= 1) {
+          const advance = white ? 6 - row : row - 1;
+          v += Math.max(0, advance - 1) * 4;
+        }
+      } else if (level === 5) {
+        const f = s & 7, row = s >> 4, c = white ? 0 : 1;
+        const center = 3.5 - Math.abs(f - 3.5);
+        if (t === P) {
+          const supportLeft = on(s + (white ? 15 : -17)) && b[s + (white ? 15 : -17)] === p;
+          const supportRight = on(s + (white ? 17 : -15)) && b[s + (white ? 17 : -15)] === p;
+          if (supportLeft || supportRight) v += 10;
+          if (pawnsF[c][f] > 1) v -= 14;
+          if ((f === 0 || !pawnsF[c][f-1]) && (f === 7 || !pawnsF[c][f+1])) v -= 15;
+          if (endgame) v += Math.max(0, white ? 6 - row : row - 1) * 3;
+        }
+        if (t === N || t === B) v += center * (endgame ? 4 : 3);
+        if (t === R && !pawnsF[c][f]) v += endgame ? 14 : 7;
+        if (t === K && endgame) {
+          v += (3.5 - Math.abs(f - 3.5)) * 7;
+          v += (3.5 - Math.abs(row - 3.5)) * 7;
+        }
+      }
       mg += sg * v;
     }
-    if (level === 3) { if (bishops[0] >= 2) mg += 30; if (bishops[1] >= 2) mg -= 30; }
+    if (level >= 3) { if (bishops[0] >= 2) mg += 30; if (bishops[1] >= 2) mg -= 30; }
     return side ? -mg : mg;
   }
 
@@ -1489,11 +1545,11 @@ function Engine() {
     }
     return alpha;
   }
-  const QD = { 1: 0, 2: 4, 3: 10 };
+  const QD = { 1: 0, 2: 4, 3: 10, 4: 12, 5: 12 };
   function search(depth, alpha, beta, ply) {
     tick(); if (stopped) return 0;
     const check = inCheck();
-    if (check && level === 3) depth++;
+    if (check && level >= 3 && ply < 10) depth++;
     if (depth <= 0) return level === 1 ? evaluate() : quiesce(alpha, beta, QD[level]);
     let legal = 0, best = -MATE * 2;
     for (const m of order(gen([], false), ply, null)) {
@@ -1514,9 +1570,39 @@ function Engine() {
   }
 
   function uci(m) { return sqName(m.f) + sqName(m.t) + (m.pr ? ' nbrq'[m.pr - 1] : ''); }
+  const distance = (a, z) => Math.max(Math.abs((a&7)-(z&7)), Math.abs((a>>4)-(z>>4)));
+  // Called after the candidate is made (side is now the opponent).
+  // These SMALL centipawn tie-breakers make the two hard personalities
+  // noticeably different without overriding a forced mate or major tactics.
+  function rootStyle(m, givesCheck) {
+    const type = (m.pr || m.p) & 7, enemyKing = king[side ? 1 : 0];
+    const approach = Math.max(-3, Math.min(3, distance(m.f,enemyKing)-distance(m.t,enemyKing)));
+    if (level === 4) {
+      let bonus = givesCheck ? 16 : 0;
+      if (type !== K) bonus += 4 * approach;
+      if (m.c) bonus += 5;
+      if (m.pr) bonus += 8;
+      return Math.max(-14,Math.min(28,bonus));
+    }
+    if (level === 5) {
+      let bonus = givesCheck ? 2 : 0;
+      // Improving pieces, preserving a complex position and creating long
+      // endgame pressure are worth more than empty forcing gestures.
+      if (!m.c && !givesCheck) bonus += 5;
+      if (type === P && !m.c) bonus += 4;
+      if (type === N || type === B || type === R) {
+        const center = sq => (3.5-Math.abs((sq&7)-3.5))+(3.5-Math.abs((sq>>4)-3.5));
+        bonus += Math.max(-8,Math.min(8,Math.round((center(m.t)-center(m.f))*3)));
+      }
+      if (m.c && (m.p&7) !== P) bonus -= 3;
+      return Math.max(-12,Math.min(17,bonus));
+    }
+    return 0;
+  }
 
   function think(fen, lvl, budget, rnd = Math.random, analysisMove = '') {
     load(fen);
+    lvl = Math.max(1, Math.min(5, Math.trunc(Number(lvl) || 2)));
     level = lvl; nodes = 0; stopped = false; killers.length = 0; hist.fill(0);
     const start = performance.now();
     deadline = start + budget;
@@ -1526,7 +1612,7 @@ function Engine() {
       move: uci(root[0]), depth: 0, nodes: 0,
       ...(analysisMove ? { bestScore: 0, playedScore: uci(root[0]) === analysisMove ? 0 : null, forced: true } : {})
     };
-    const maxDepth = analysisMove ? 6 : lvl === 1 ? 2 : lvl === 2 ? 4 : 64;
+    const maxDepth = analysisMove ? 6 : lvl === 1 ? 1 : lvl === 2 ? 4 : 64;
     let best = root[0], bestScores = null, done = 0;
     for (let d = 1; d <= maxDepth; d++) {
       const scores = [];
@@ -1534,11 +1620,12 @@ function Engine() {
       order(root, 0, best);
       for (const m of root) {
         make(m);
-        const narrow = lvl === 3 && !analysisMove;
+        const givesCheck = lvl >= 4 && inCheck();
+        const narrow = lvl >= 3 && !analysisMove;
         let v = -search(d - 1, -MATE * 2, narrow ? -alpha : MATE * 2, 1);
         unmake();
         if (stopped) break;
-        if (lvl === 1) { if (m.c) v += 30; make(m); if (inCheck()) v += 25; unmake(); }
+        if (!analysisMove && lvl >= 4) v += rootStyle(m, givesCheck);
         scores.push([m, v]);
         if (v > alpha) alpha = v;
       }
@@ -1558,12 +1645,20 @@ function Engine() {
     }
     let pick = best;
     if (lvl === 1) {
-      const top = bestScores[0][1];
-      const pool = bestScores.filter(([, v]) => v >= top - 140);
-      pick = rnd() < 0.18 ? bestScores[Math.floor(rnd() * Math.ceil(bestScores.length / 2))][0] : pool[Math.floor(rnd() * pool.length)][0];
+      // Deliberately inexperienced: almost never spots multi-move tactics,
+      // frequently plays a weak legal move, occasionally finds the best one.
+      const n = bestScores.length, chance = rnd();
+      if (chance < 0.12) pick = bestScores[0][0];
+      else if (chance < 0.30) pick = bestScores[Math.floor(rnd() * n)][0];
+      else {
+        const start = Math.min(n - 1, Math.floor(n * 0.40));
+        pick = bestScores[start + Math.floor(rnd() * (n - start))][0];
+      }
     } else if (lvl === 2) {
-      const top = bestScores[0][1];
-      const pool = bestScores.filter(([, v]) => v >= top - 15);
+      // Challenging but fallible: usually a sound move, sometimes a small
+      // mistake; unlike level 1 it calculates sequences up to four plies.
+      const top = bestScores[0][1], chance = rnd();
+      const pool = bestScores.filter(([,v]) => v >= top - (chance < .22 ? 80 : 25));
       pick = pool[Math.floor(rnd() * pool.length)][0];
     } else {
       pick = bestScores[0][0];
@@ -3299,8 +3394,8 @@ const G = {
   status: 'waiting', result: null, reason: null, drawOffer: null, turnAt: Date.now(), startedAt: null, endedAt: null, feedback: null,
   version: 0,
 };
-const LEVEL_NAME = { 1: 'Level 1 — Easy', 2: 'Level 2 — Average', 3: 'Level 3 — Hard' };
-const cpu = { human: 'w', level: clamp(Number(store.get('sg.level', 2)) || 2, 1, 3) };
+const LEVEL_NAME = { 1: '1', 2: '2', 3: '3', 4: '4', 5: '5' };
+const cpu = { human: 'w', level: clamp(Number(store.get('sg.level', 2)) || 2, 1, 5) };
 let thinking = null;
 let lockUntil = 0;
 let liveDoc = null;
@@ -5645,7 +5740,7 @@ function playMove(uci, opts = {}) {
 }
 
 /* ------------------------------------------------------------------ computer opponent */
-const BUDGET = { 1: 250, 2: 600, 3: 1200 };
+const BUDGET = { 1: 140, 2: 650, 3: 1250, 4: 1800, 5: 1800 };
 let worker = null, workerFailed = false, reqSeq = 0, applyTimer = 0;
 function getWorker() {
   if (worker || workerFailed) return worker;
@@ -7288,7 +7383,7 @@ registerBoard({ id: 'unnamed', name: 'Default', subtitle: 'Black & white marble 
 const enabledBoards = () => BOARDS.filter((b) => b.enabled && THEMES[b.rendererKey]);
 
 /* which finished games count toward progression (configurable) */
-const ELIGIBLE = { live: true, cpuLevels: [1, 2, 3], local: false };
+const ELIGIBLE = { live: true, cpuLevels: [1, 2, 3, 4, 5], local: false };
 
 /* ---------------- storage: the artifact store, or a local stand-in with the same small API ---------------- */
 const LocalStore = (() => {
