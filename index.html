@@ -3016,6 +3016,7 @@ function actingSide() { return G.mode === 'local' ? G.pos.chess.turn() : G.mode 
 function inputBlocked() { return !!thinking || performance.now() < lockUntil; }
 function canAct() {
   if (!piecesReady || review || G.status !== 'active' || G.onlineBusy || inputBlocked()) return false;
+  if(window.ChessClock?.snapshot?.().clockState!=='running')return false;
   if (G.mode === 'local') return true;
   if (G.mode === 'cpu') return G.pos.chess.turn() === cpu.human;
   return G.mode === 'live' && !!mySeat && bothSeated() && G.pos.chess.turn() === mySeat;
@@ -3225,7 +3226,17 @@ function updateBanner() {
   if (wasHidden !== !msg && compact && window.innerWidth < window.innerHeight && !userCam && piecesReady) fitCamera(true);
 }
 let cpuIntro = '';
-function updateAll() { updateResignBtn(); applySideColors(); updateMarkers(); updatePlates(); updateBanner(); renderHistory(); updateChatEnabled(); }
+function updateAll() {
+  updateResignBtn();applySideColors();updateMarkers();updatePlates();
+  updateBanner();renderHistory();updateChatEnabled();
+  if(window.ChessClock){
+    const clock=window.ChessClock.snapshot();
+    const actor=G.mode==='cpu'?cpu.human:
+      G.mode==='local'?(clock.clockState==='penalty'?
+        (clock.penaltySide==='w'?'b':'w'):G.pos.chess.turn()):mySeat;
+    window.ChessClock.setPerspective(viewSide,actor);
+  }
+}
 
 
 
@@ -5251,7 +5262,7 @@ function onComputerResult(data) {
   const t = thinking;
   if (t.version !== G.version || G.mode !== 'cpu' || G.status !== 'active' || G.pos.chess.turn() === cpu.human) { thinking = null; updatePlates(); return; }
   let uci = typeof data.move === 'string' && UCI.test(data.move) ? data.move : null;
-  if (uci) { const check = positionFrom([...G.moves, uci]); if (check.ply !== G.moves.length + 1) uci = null; }
+  if (uci) { const check = positionFrom([...G.moves, uci],G.moves.length+1,G.clockActions||[]); if (check.ply !== G.moves.length + 1) uci = null; }
   if (!uci) uci = fallbackMove(G.pos.chess);
   t.uci = uci;
   scheduleComputerApply(t);
@@ -7050,14 +7061,14 @@ function openSettings() {
     const s0 = el('div', 'set-sec'); const h0 = el('h3'); h0.textContent = 'Starting a game'; s0.append(h0);
     s0.append(group('Chess clock', [
       ['off','No timer'],['10m','10 min each'],['12m','12 min each'],
-      ['15m','15 min each'],['move3','3 min per move']
+      ['15m','15 min each'],['move60','60 seconds per move']
     ],window.ChessClock?.getPreference?.()||'off',(v)=>{
       window.ChessClock?.setPreference(v);
       window.familyChessClockSavePromise =
         Promise.resolve(window.familyChessSaveClockPreference?.(v));
       window.familyChessClockSavePromise
         .catch((e)=>toast('Clock preference could not sync: '+(e?.message||'Try again'),4200));
-    },'10/12/15 minutes: each player has that much total time. 3-minute mode resets the active clock on every move. Applies to your next new computer game or online invitation; existing games keep their clock.'));
+    },'10/12/15 minutes: each player has that much total time. 60-second mode resets the active clock for each turn. Applies to your next new computer game or online invitation; existing games keep their clock.'));
     s0.append(group('Preferred starting position', [['w', 'First'], ['b', 'Second'], ['r', 'Random']], store.get('sg.side', 'w'), (v) => store.set('sg.side', v), 'Used for games against the computer. Online, the challenge rules decide who opens.'));
     s2.append(group('2D pieces', [['classic', 'Classic pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v })));
     s2.append(group('Sound', [[true, 'On'], [false, 'Off']], Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) Sound.ensure(); }));
