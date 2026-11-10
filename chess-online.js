@@ -549,6 +549,7 @@
     b.disabled=true;
     try {
       status('Creating your private chess invitation…');
+      await window.familyChessClockSavePromise;
       const {data:id,error}=await api.rpc('chess_create_private_game');
       if(error)throw error;
       const url=link(id);
