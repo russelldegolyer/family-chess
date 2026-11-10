@@ -1622,8 +1622,11 @@ function Engine() {
       for (const m of root) {
         make(m);
         const givesCheck = lvl >= 4 && inCheck();
-        const narrow = lvl >= 3 && !analysisMove;
-        let v = -search(d - 1, -MATE * 2, narrow ? -alpha : MATE * 2, 1);
+        // Full-window root comparisons are intentional. The previous
+        // null-window code never re-searched tied/failed candidates, so
+        // inferior moves got artificial zero scores and style tie-breakers
+        // could accidentally override sound chess.
+        let v = -search(d - 1, -MATE * 2, MATE * 2, 1);
         unmake();
         if (stopped) break;
         if (!analysisMove && lvl >= 4) v += rootStyle(m, givesCheck);
