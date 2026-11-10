@@ -3242,6 +3242,31 @@ function statusText() {
 }
 function updateStatus() {
   const [t, alert] = statusText();
+  let badge=$('chessTurnBadge');
+  if(!badge){
+    badge=el('span');badge.id='chessTurnBadge';
+    $('ui').append(badge);
+  }
+  const clock=window.ChessClock?.snapshot?.();
+  const active=G.status==='active'&&!review&&G.mode!=='connecting'&&
+    (G.mode!=='live'||bothSeated());
+  badge.hidden=!active;
+  if(active){
+    let label='';
+    const side=G.pos.chess.turn();
+    const actor=G.mode==='cpu'?cpu.human:G.mode==='local'?null:mySeat;
+    const paused=clock?.clockState==='paused'||clock?.clockState==='penalty';
+    if(clock?.clockState==='penalty')
+      label='⏸ TIME EXPIRED · PAWN PENALTY';
+    else if(paused)label='⏸ GAME PAUSED';
+    else if(G.mode==='local')label=SIDE[side].toUpperCase()+' TO MOVE';
+    else if(!actor)label=SIDE[side].toUpperCase()+' TO MOVE';
+    else label=side===actor?'● YOUR TURN':'○ OPPONENT TO MOVE';
+    if(G.pos.chess.inCheck()&&!paused)label='CHECK · '+label;
+    badge.textContent=label;
+    badge.classList.toggle('other',!paused&&!!actor&&side!==actor);
+    badge.classList.toggle('paused',!!paused);
+  }
   const s = $('status');
   if (s.textContent !== t) s.textContent = t;
   s.classList.toggle('alert', alert);
@@ -7540,6 +7565,16 @@ window.familyChessNative = {
     }
     hide($('seatDialog'));
     updateAll();
+    if(game.clock_state==='penalty' && mySeat &&
+       mySeat!==game.clock_penalty_side){
+      const penaltyKey=game.id+':'+game.updated_at;
+      if(lastPenaltyPrompt!==penaltyKey){
+        lastPenaltyPrompt=penaltyKey;
+        setTimeout(()=>{if(G.gid===game.id&&
+          window.ChessClock?.snapshot?.().clockState==='penalty')
+            promptPawnTimeChoice('penalty');},450);
+      }
+    }
     // The original practice renderer initializes before Supabase connects.
     // Refresh the empty/chat state as soon as a private match is displayed.
     renderChat();
