@@ -6645,6 +6645,12 @@ function openMenu() {
   m.replaceChildren();
   const add = (label, fn, cls = '') => { const b = el('button', cls); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.textContent = label; b.addEventListener('click', fn); m.append(b); return b; };
   const playing = G.onlineProvider !== 'supabase' && G.status === 'active' && (G.mode === 'local' || G.mode === 'cpu' || (mySeat && bothSeated()));
+  const canPause=G.status==='active' &&
+    (G.mode==='cpu'||G.mode==='local'||(G.onlineProvider==='supabase'&&!!mySeat));
+  if(canPause){
+    const paused=window.ChessClock?.snapshot?.().clockState==='paused';
+    add(paused?'▶ Resume game':'⏸ Pause game',()=>{closeMenu();void toggleChessPause();});
+  }
   if (playing && canOfferDraw()) add('Offer a draw', () => { closeMenu(); offerDraw(); });
   if (playing) add('Resign…', () => {
     m.replaceChildren();
