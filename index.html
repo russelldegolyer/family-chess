@@ -4921,7 +4921,7 @@ let viewYShift = 0;
 function uiReserve() {
   const H = window.innerHeight;
   let top = 0;
-  for (const id of ['plateTop', 'status', 'banner']) { const e = $(id); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height > 0) top = Math.max(top, r.bottom); }
+  for (const id of ['plateTop', 'status', 'banner', 'chessClockHud']) { const e = $(id); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height > 0) top = Math.max(top, r.bottom); }
   const bb = document.querySelector('.bottom-bar').getBoundingClientRect();
   return { top: top + 8, bottom: H - bb.top + 8 };
 }
