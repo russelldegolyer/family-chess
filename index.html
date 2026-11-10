@@ -1006,7 +1006,8 @@ body.compact #btnPause .pause-label{display:none}
   body.compact #btnChatPause{width:40px;min-width:40px;padding:0!important}
   body.compact #btnChatPause .pause-label{display:none}
 }
-body.compact.chat2d #btnChatPause{display:inline-flex}
+body.compact.chat2d #btnChatPause:not([hidden]){display:inline-flex}
+body.compact.chat2d #btnChatPause[hidden]{display:none!important}
 body.compact.chat-keyboard #btnChatPause{display:none!important}
 /* Dark and white player selections still have a visible frame, but the actual
    colored stroke is never replaced by the green active-turn decoration. */
@@ -1022,6 +1023,17 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
 }
 #plateTop:not(.turn),#plateBottom:not(.turn){
   border-color:var(--plate-accent,#787880)!important
+}
+
+/* Space-safe mobile HUD: move secondary actions into the overflow menu
+   instead of letting controls drift into the chat button or off screen. */
+@media(max-width:520px){
+  body.compact #btnCollection{display:none!important}
+}
+@media(max-width:360px){
+  body.compact .bottom-bar #btnNew{display:none!important}
+  body.compact .bottom-bar,body.compact .bottom-bar .mine,
+  body.compact .bottom-bar .controls{gap:3px!important}
 }
 
 </style>
@@ -6897,6 +6909,10 @@ function openMenu() {
     m.append(p, row);
   }, 'danger');
   if (m.children.length) m.append(el('hr'));
+  if(compact){
+    add('Choose board…',()=>{closeMenu();$('btnCollection').click();});
+    if(window.innerWidth<=360)add('New game…',()=>{closeMenu();openSetup();});
+  }
   add('Settings…', () => { closeMenu(); openSettings(); });
   if (G.status === 'over' && G.moves.length) add('Game review ▶', () => { closeMenu(); beginGameReview(); });
   add('Move history', () => { closeMenu(); if (focusMode) setFocus(false); if (compact) setSheet(true); openHistory(); });
