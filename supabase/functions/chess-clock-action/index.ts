@@ -35,6 +35,9 @@ Deno.serve(async(req)=>{
   const actor=g?.white_player_id===user?'w':g?.black_player_id===user?'b':null;
   if(!g||!actor)return reply(403,{error:'You are not a player in this match'});
   if(g.status!=='active')return reply(409,{error:'This match is finished'});
+  // Normal time controls allow pawn-for-time. The per-move countdown does not.
+  if(!['10m','12m','15m'].includes(g.clock_mode))
+    return reply(409,{error:'Pawn exchanges are available only in normal timed games'});
   const chess=new Chess(g.current_fen);
   const turn=chess.turn();
   const victim=action==='sacrifice'?actor:g.clock_penalty_side;
