@@ -7544,7 +7544,11 @@ window.familyChessNative = {
       throw new Error('Online position mismatch. Refresh the match.');
     const sameGame = G.onlineProvider === 'supabase' && G.gid === game.id;
     const sameMoves = sameGame && G.moves.length === moves.length && G.moves.every((m,i) => m === moves[i]);
-    const extension = sameGame && G.moves.length + 1 === moves.length && G.moves.every((m,i) => m === moves[i]);
+    const oldActions=G.clockActions||[];
+    const sameActions=sameGame&&oldActions.length===actions.length&&
+      oldActions.every((item,i)=>String(item.id)===String(actions[i].id));
+    const boardChanged=!sameActions||G.pos?.chess?.fen()!==pos.chess.fen();
+    const extension = sameGame && sameActions && G.moves.length + 1 === moves.length && G.moves.every((m,i) => m === moves[i]);
     const wasOver = G.status === 'over';
     const priorSeat = mySeat;
     const oldColors=JSON.stringify(G.colors||{});
@@ -7586,7 +7590,7 @@ window.familyChessNative = {
       applySideColors(true);
       if(VIEW==='2d')draw2D(true);
     }
-    if (seatChanged || !sameMoves || sideChanged) {
+    if (seatChanged || !sameMoves || sideChanged || boardChanged) {
       G.version++;
       if (pending) cancelPreview(false);
       clearSelection();
