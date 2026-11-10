@@ -878,19 +878,31 @@ body.clock-timed:not(.compact) #status.notice{
   box-shadow:0 5px 20px #0008;font-size:12px;
 }
 @media(max-width:899px){
+  /* Paired header: player identity on the left, account badge on the right.
+     Reserve 104px for the account button and a clean gap on narrow screens. */
   body.compact .plate-top,
   body.compact.chat2d .plate-top{
-    top:max(9px,env(safe-area-inset-top,0px))!important;
-    left:max(8px,env(safe-area-inset-left,0px))!important;
-    right:max(72px,calc(env(safe-area-inset-right,0px) + 66px))!important;
-    margin-inline:auto!important;width:max-content;
-    max-width:calc(100vw - 96px)!important;
-    min-height:55px!important;
-    padding:7px 11px!important;gap:9px!important;
-    border-radius:17px!important;
+    position:absolute!important;
+    top:max(12px,env(safe-area-inset-top,0px))!important;
+    left:max(12px,env(safe-area-inset-left,0px))!important;
+    right:auto!important;
+    margin:0!important;
+    width:max-content;
+    max-width:calc(100vw - 104px)!important;
+    height:54px!important;min-height:54px!important;
+    box-sizing:border-box;
+    padding:6px 12px!important;gap:9px!important;
+    border-radius:16px!important;
+    align-items:center;
   }
-  body.compact .plate-top .pname{font-size:18px;line-height:1.08;max-width:min(43vw,205px)}
-  body.compact .plate-top .ptag{font-size:11px;letter-spacing:.01em}
+  body.compact .plate-top .pwrap{min-width:0;max-width:100%;overflow:hidden}
+  body.compact .plate-top .pname{
+    font-size:18px;line-height:1.08;
+    max-width:100%!important;overflow:hidden;text-overflow:ellipsis;
+  }
+  body.compact .plate-top .ptag{
+    font-size:11.5px;letter-spacing:.01em;max-width:100%;overflow:hidden;
+  }
   body.compact .plate-top .orb{width:19px;height:19px;flex-shrink:0}
   body.compact .plate-top .pcap{display:none!important}
   body.compact #status.notice{
@@ -904,9 +916,12 @@ body.clock-timed:not(.compact) #status.notice{
 }
 @media(max-width:350px){
   body.compact .plate-top,body.compact.chat2d .plate-top{
-    right:66px!important;max-width:calc(100vw - 82px)!important;padding:7px 8px!important
+    left:max(9px,env(safe-area-inset-left,0px))!important;
+    right:auto!important;
+    max-width:calc(100vw - 95px)!important;
+    padding:6px 9px!important
   }
-  body.compact .plate-top .pname{font-size:16px;max-width:38vw}
+  body.compact .plate-top .pname{font-size:16px;max-width:100%!important}
 }
 
 /* The board chooser is a full-screen workspace, not a translucent modal.
