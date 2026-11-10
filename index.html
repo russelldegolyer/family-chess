@@ -5317,8 +5317,8 @@ function undo() {
   clearSelection();
   hide($('endCard'));
   G.moves = G.moves.slice(0, plan.len);
-  G.clockActions=[];
-  G.pos = positionFrom(G.moves);
+  G.clockActions=(G.clockActions||[]).filter(a=>Number(a.after_ply)<plan.len);
+  G.pos = positionFrom(G.moves,G.moves.length,G.clockActions);
   G.version++;
   if(G.mode==='cpu'||G.mode==='local')
     window.ChessClock?.undoLocal(G.moves.length,G.pos.chess.turn());
@@ -6281,8 +6281,12 @@ function resetLocalGame(mode, n) {
   if(mode==='cpu'||mode==='local')
     window.ChessClock?.startLocal(window.ChessClock.getPreference(), (expiredSide)=>{
       if(G.mode!==mode||G.status!=='active')return;
-      finishGame({status:'over',result:expiredSide==='w'?'0-1':'1-0',
-        reason:'timeout',endedAt:Date.now()});
+      updateAll();
+      if(mode==='cpu'&&expiredSide===cpu.human){
+        const pawns=G.pos.board.filter(([sq,type,color])=>type==='p'&&color===expiredSide);
+        setTimeout(()=>{if(window.ChessClock?.snapshot?.().clockState==='penalty')
+          void applyPawnTimeAction('penalty',pawns[0]?.[0]||null);},350);
+      }else promptPawnTimeChoice('penalty');
     });
   mySeat = null;
   flipped = false;
