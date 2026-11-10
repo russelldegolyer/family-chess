@@ -2,11 +2,11 @@
    Only Supabase may finalize online timeouts. The client merely displays time and requests settlement. */
 (() => {
   'use strict';
-  const MODES = Object.freeze({ off:0, '10m':600000, '12m':720000, '15m':900000, move3:180000 });
+  const MODES = Object.freeze({ off:0, '10m':600000, '12m':720000, '15m':900000, move60:60000 });
   const VALID = new Set(Object.keys(MODES));
   const prefKey = 'sg.chessClock';
   let preference = 'off';
-  try { const saved = JSON.parse(localStorage.getItem(prefKey) || '"off"'); if (VALID.has(saved)) preference = saved; } catch {}
+  try { const saved = JSON.parse(localStorage.getItem(prefKey) || '"off"'); if (VALID.has(saved)) preference = saved; else if(saved==='move3')preference='move60'; } catch {}
   const hud = document.createElement('div');
   hud.id = 'chessClockHud';
   hud.hidden = true;
@@ -58,10 +58,12 @@
 
   const state = { source:null, mode:'off', status:'waiting', turn:'w', gameId:null,
     w:0,b:0,startedAt:0,history:[],onLocalTimeout:null,onOnlineTimeout:null,
-    claimedAt:0, claimInFlight:false };
+    claimedAt:0, claimInFlight:false,clockState:'running',penaltySide:null,
+    actorSide:null,viewSide:'w',bonusW:0,bonusB:0 };
   const parseDate = v => v ? new Date(v).getTime() || 0 : 0;
   const normalized = mode => VALID.has(mode) ? mode : 'off';
-  const active = () => state.mode!=='off' && state.status==='active' && state.startedAt>0;
+  const active = () => state.mode!=='off' && state.status==='active'
+    && state.clockState==='running' && state.startedAt>0;
   const remaining = (side,at=Date.now()) => Math.max(0, state[side] -
     (active() && side===state.turn ? Math.max(0,at-state.startedAt) : 0));
   const stamp = ms => {
@@ -93,7 +95,8 @@
     if (state.source==='local') {
       state[state.turn]=0;
       state.startedAt=0;
-      state.status='over';
+      state.clockState='penalty';
+      state.penaltySide=state.turn;
       redraw();
       state.onLocalTimeout?.(state.turn);
     } else if(state.source==='online' && state.onOnlineTimeout && state.gameId &&
@@ -118,6 +121,7 @@
     mode=normalized(mode);
     const limit=MODES[mode];
     Object.assign(state,{source:'local',mode,status:'active',turn:'w',gameId:null,
+      clockState:'running',penaltySide:null,bonusW:0,bonusB:0,
       w:limit,b:limit,startedAt:mode==='off'?0:Date.now(),
       history:[{w:limit,b:limit,turn:'w'}],onLocalTimeout:onTimeout,onOnlineTimeout:null,
       claimedAt:0,claimInFlight:false});
@@ -129,7 +133,11 @@
     const mover=state.turn;
     state[mover]=remaining(mover,now);
     if(state[mover]<=0) {tick();return;}
-    if(state.mode==='move3') state[nextTurn]=MODES.move3;
+    if(state.mode==='move60') {
+      const bonusKey=nextTurn==='w'?'bonusW':'bonusB';
+      state[nextTurn]=60000+state[bonusKey];
+      state[bonusKey]=0;
+    }
     state.turn=nextTurn;
     state.status=ended?'over':'active';
     state.startedAt=ended?0:now;
@@ -143,7 +151,7 @@
     state.history=state.history.slice(0,ply+1);
     state.w=snap.w;state.b=snap.b;
     state.turn=nextTurn;
-    state.status='active';
+    state.status='active';state.clockState='running';state.penaltySide=null;
     state.startedAt=Date.now();
     tick();
   }
@@ -160,6 +168,7 @@
     const first=state.source!=='online'||state.gameId!==game.id;
     Object.assign(state,{source:'online',mode,gameId:game.id,turn:turn==='b'?'b':'w',
       status:game.status==='active'?'active':game.status==='finished'?'over':'waiting',
+      clockState:game.clock_state||'running',penaltySide:game.clock_penalty_side||null,
       w:Math.max(0,Number(game.clock_white_ms)||0),
       b:Math.max(0,Number(game.clock_black_ms)||0),
       startedAt:parseDate(game.clock_turn_started_at),onOnlineTimeout:onTimeout,
@@ -169,6 +178,7 @@
   }
   function reset() {
     Object.assign(state,{source:null,mode:'off',status:'waiting',startedAt:0,gameId:null,
+      clockState:'running',penaltySide:null,actorSide:null,
       onOnlineTimeout:null,onLocalTimeout:null,w:0,b:0,history:[],claimedAt:0,claimInFlight:false});
     tick();
   }
