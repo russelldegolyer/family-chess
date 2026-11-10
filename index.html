@@ -779,6 +779,31 @@ body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); 
 .chess-pawn-picker h2{font-size:19px}
 .chess-pawn-options{gap:5px}}
 
+
+/* Keyboard mode: messages slide away, composer stays immediately above iOS keyboard. */
+body.compact.chat2d.chat-keyboard .panel,
+body.compact.chat2d.chat-keyboard:not(.landscape) .panel{
+  position:fixed!important;top:auto!important;
+  bottom:var(--chat-keyboard-bottom,0px)!important;
+  height:70px!important;min-height:0!important;max-height:70px!important;
+  border-radius:12px 12px 0 0!important;transform:none!important;z-index:45;
+  background:#19191c!important;box-shadow:0 -6px 25px #000b!important}
+body.compact.chat-keyboard .panel-head,
+body.compact.chat-keyboard .panel-body,
+body.compact.chat-keyboard .typing,
+body.compact.chat-keyboard .review-dock{display:none!important}
+body.compact.chat-keyboard .chat-form{
+  display:flex!important;height:100%;min-height:0;
+  padding:9px 10px;align-items:center;margin:0;box-sizing:border-box}
+body.compact.chat-keyboard #chatInput{
+  font-size:16px!important;min-width:0}
+body.compact.chat-keyboard #board2d .b2svg{
+  transform:scale(var(--chat-keyboard-scale,1))!important;
+  transform-origin:top center!important}
+body.compact.chat-keyboard #board2d{pointer-events:auto}
+body.compact.chat-keyboard .bottom-bar,
+body.compact.chat-keyboard .chat-empty-state{display:none!important}
+
 </style>
 
 </head>
@@ -6698,6 +6723,42 @@ $('panel').addEventListener('transitionend', (e) => {
 $('chatFab').addEventListener('click', () => setSheet(!sheetOpen));
 $('btnSheetClose').addEventListener('click', () => setSheet(false));
 $('chatForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('chatInput').value; if (!v.trim()) return; $('chatInput').value = ''; sendChat(v); });
+/* iOS typing mode: hide messages and pin the composer directly above the keyboard.
+   Keep the board's existing top position rather than recalculating its location
+   while Safari shrinks or pans the visual viewport. */
+let chatKeyboardOpen=false;
+function updateChatKeyboard(){
+  if(!chatKeyboardOpen||!compact)return;
+  const vv=window.visualViewport;
+  const bottom=Math.max(0,window.innerHeight-
+    ((vv?.offsetTop||0)+(vv?.height||window.innerHeight)));
+  document.documentElement.style.setProperty('--chat-keyboard-bottom',bottom+'px');
+  const visibleBottom=(vv?.offsetTop||0)+(vv?.height||window.innerHeight);
+  const board=document.querySelector('#board2d .b2svg');
+  if(board){
+    const rect=board.getBoundingClientRect();
+    const bottomTarget=visibleBottom-78;
+    const width=Math.max(1,rect.height);
+    const scale=Math.max(.62,Math.min(1,(bottomTarget-rect.top)/width));
+    document.documentElement.style.setProperty('--chat-keyboard-scale',String(scale));
+  }
+}
+$('chatInput').addEventListener('focus',()=>{
+  if(!compact)return;
+  chatKeyboardOpen=true;
+  document.body.classList.add('chat-keyboard');
+  updateChatKeyboard();
+  requestAnimationFrame(updateChatKeyboard);
+});
+$('chatInput').addEventListener('blur',()=>{
+  chatKeyboardOpen=false;
+  document.body.classList.remove('chat-keyboard');
+  document.documentElement.style.removeProperty('--chat-keyboard-scale');
+  document.documentElement.style.removeProperty('--chat-keyboard-bottom');
+  setTimeout(()=>{if(compact&&VIEW==='2d')layout2D();},160);
+});
+window.visualViewport?.addEventListener('resize',updateChatKeyboard);
+window.visualViewport?.addEventListener('scroll',updateChatKeyboard);
 $('chatInput').addEventListener('input', () => setTyping($('chatInput').value.trim().length > 0));
 $('chatInput').addEventListener('blur', () => setTyping(false));
 $('chatList').addEventListener('scroll', () => { const l = $('chatList'); if (l.scrollHeight - l.scrollTop - l.clientHeight < 40) markChatRead(); });
