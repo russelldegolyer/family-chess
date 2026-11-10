@@ -818,21 +818,91 @@ body.compact.chat-keyboard .fab,
 body.compact.chat-keyboard .chat-empty-state{display:none!important}
 body.compact.chat2d.view-2d #stage{opacity:0!important}
 
-/* Turn clarity: active plate, glow, and unambiguous badge even when chat is open. */
-.plate.turn{outline:2px solid rgba(65,219,132,.8)!important;
- box-shadow:0 0 0 4px rgba(55,206,119,.16),0 6px 30px #0008!important}
-.plate.turn .pname{color:#a8f4c0!important}
-#chessTurnBadge{position:fixed;z-index:12;right:calc(var(--area-r,0px) + 12px);
- top:calc(var(--gt,16px) + 47px);max-width:40vw;
- border-radius:999px;padding:6px 11px;background:#1c2c22;border:1px solid #398f60;
- color:#c3ffd8;font:800 11px/1.2 var(--body);letter-spacing:.045em;
- text-align:center;pointer-events:none;box-shadow:0 5px 18px #0009}
-#chessTurnBadge[hidden]{display:none!important}
-#chessTurnBadge.other{background:#29262a;border-color:#55515a;color:#d1cdd2}
-#chessTurnBadge.paused{background:#393020;border-color:#a77c35;color:#f8dfab}
+/* Player identity HUD: the selected piece colour belongs to each player,
+   while the separate White/Black subtitle is always the actual chess side.
+   Turn state lives in this single plate instead of stacked floating badges. */
+#plateTop,#plateBottom{
+  --plate-ring:#7d7d82;
+  border:1.5px solid var(--plate-ring)!important;
+  background:rgba(22,22,25,.92)!important;
+  box-shadow:0 6px 22px #0009!important;
+  overflow:hidden;
+  isolation:isolate;
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+#plateTop .pwrap,#plateBottom .pwrap{min-width:0;overflow:hidden;gap:4px}
+#plateTop .pname,#plateBottom .pname{
+  color:#f8f8fa!important;white-space:nowrap;text-overflow:ellipsis;
+  overflow:hidden;min-width:0;max-width:100%;
+}
+#plateTop .ptag,#plateBottom .ptag{
+  display:block!important;color:#b8b8bf!important;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  min-width:0;font-weight:500;line-height:1.25;
+}
+#plateTop .ptag[hidden],#plateBottom .ptag[hidden]{display:none!important}
+#plateTop .plate-turn-hint,#plateBottom .plate-turn-hint{
+  color:var(--plate-ring,#c8c8ce);font-weight:650;
+}
+#plateTop .orb,#plateBottom .orb{
+  background:radial-gradient(circle at 29% 24%,
+    color-mix(in srgb,var(--plate-accent,#888) 47%,white),
+    var(--plate-accent,#888) 46%,
+    color-mix(in srgb,var(--plate-accent,#888) 62%,black))!important;
+  box-shadow:inset 0 0 0 1px #ffffff25,inset 0 -2px 4px #0008;
+}
+#plateTop.turn,#plateBottom.turn{
+  border-color:var(--plate-ring)!important;outline:0!important;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--plate-ring) 27%,transparent),
+    0 8px 24px #0009!important;
+}
+#plateTop:not(.turn),#plateBottom:not(.turn){
+  border-color:color-mix(in srgb,var(--plate-ring) 72%,#39393f)!important;
+}
+/* Keep normal turn status available to assistive technology, not on the board.
+   Notices are the only separate statuses worth consuming board space. */
+#status:not(.notice){
+  position:absolute!important;width:1px!important;height:1px!important;
+  padding:0!important;overflow:hidden!important;
+  clip-path:inset(50%)!important;white-space:nowrap!important;
+  border:0!important;box-shadow:none!important;
+}
+body.clock-timed #status.notice{display:block!important}
+#status.notice{
+  z-index:7;max-width:calc(100% - 28px);
+  background:#252529;border:1px solid #56565d;
+  box-shadow:0 5px 20px #0008;font-size:12px;
+}
 @media(max-width:899px){
- #chessTurnBadge{right:8px;top:max(55px,calc(var(--gt,16px) + 40px));font-size:10px}
- body.compact.chat2d #chessTurnBadge{top:max(54px,calc(var(--gt,16px) + 40px))}
+  body.compact .plate-top,
+  body.compact.chat2d .plate-top{
+    top:max(9px,env(safe-area-inset-top,0px))!important;
+    left:max(8px,env(safe-area-inset-left,0px))!important;
+    right:max(72px,calc(env(safe-area-inset-right,0px) + 66px))!important;
+    margin-inline:auto!important;width:max-content;
+    max-width:calc(100vw - 96px)!important;
+    min-height:55px!important;
+    padding:7px 11px!important;gap:9px!important;
+    border-radius:17px!important;
+  }
+  body.compact .plate-top .pname{font-size:18px;line-height:1.08;max-width:min(43vw,205px)}
+  body.compact .plate-top .ptag{font-size:11px;letter-spacing:.01em}
+  body.compact .plate-top .orb{width:19px;height:19px;flex-shrink:0}
+  body.compact .plate-top .pcap{display:none!important}
+  body.compact #status.notice{
+    top:max(80px,calc(var(--gt,16px) + 66px));
+    left:8px;right:8px;margin-inline:auto;
+    padding:5px 11px;max-width:calc(100vw - 24px)
+  }
+  body.compact.clock-timed #status.notice{
+    top:max(151px,calc(var(--gt,16px) + 133px))
+  }
+}
+@media(max-width:350px){
+  body.compact .plate-top,body.compact.chat2d .plate-top{
+    right:66px!important;max-width:calc(100vw - 82px)!important;padding:7px 8px!important
+  }
+  body.compact .plate-top .pname{font-size:16px;max-width:38vw}
 }
 
 </style>
@@ -3235,16 +3305,39 @@ function fillPlate(node, side) {
   node.querySelector('.orb').className = 'orb' + (side === 'w' ? ' white' : '');
   node.querySelector('.pname').textContent = seatName(side);
   const pos = displayPos();
-  const turn = G.status === 'active' && !review && !pending && seatsReady() && pos.chess.turn() === side;
+  const turn = G.status === 'active' && !review && seatsReady() && pos.chess.turn() === side;
   node.classList.toggle('turn', turn);
-  const tags = seatName(side) === SIDE[side] ? [] : [SIDE[side]];
-  if (G.mode === 'cpu' && side !== cpu.human) tags.push(LEVEL_NAME[cpu.level].replace(' — ', ' · '));
-  if (turn) tags.push(thinking && G.mode === 'cpu' && side !== cpu.human ? 'Thinking…' : (G.mode === 'live' && side === mySeat) || (G.mode === 'cpu' && side === cpu.human) ? 'Your move' : 'To move');
-  const adv = material(pos, side);
-  if (adv > 0) tags.push('+' + adv);
-  if (G.status === 'active' && G.drawOffer === side) tags.push('Offered a draw');
-  const tag = node.querySelector('.ptag');
-  tag.textContent = tags.join(' · '); tag.hidden = !tags.length;
+  // The coloured outline is the player's selection, never an indication
+  // that they are White or Black. Only the subtitle conveys their chess side.
+  const chosen=sideColors()[side];
+  node.style.setProperty('--plate-accent',chosen);
+  node.style.setProperty('--plate-ring',
+    lum(chosen)<0.075?mixHex(chosen,'#ffffff',0.52):chosen);
+  const clock=window.ChessClock?.snapshot?.();
+  const paused=clock?.clockState==='paused';
+  const penalty=clock?.clockState==='penalty';
+  const checked=turn&&pos.chess.inCheck();
+  const role=node.querySelector('.ptag');
+  const sideLabel=el('span');
+  sideLabel.className='plate-side-label';
+  sideLabel.textContent=SIDE[side];
+  role.replaceChildren(sideLabel);
+  if(turn){
+    const cue=el('span');
+    cue.className='plate-turn-hint';
+    cue.textContent=penalty?' · Time expired':paused?' · Paused':checked?' · Check':
+      thinking&&G.mode==='cpu'&&side!==cpu.human?' · Thinking…':' · To move';
+    role.append(cue);
+  }
+  role.hidden=false;
+  node.setAttribute('aria-label',seatName(side)+', '+SIDE[side]+
+    (turn?', '+(paused?'paused':penalty?'time expired':'to move'):''));
+  const extra=[];
+  if(G.mode==='cpu'&&side!==cpu.human)extra.push(LEVEL_NAME[cpu.level]);
+  const adv=material(pos,side);
+  if(adv>0)extra.push('+'+adv+' material');
+  if(G.status==='active'&&G.drawOffer===side)extra.push('Draw offered');
+  node.title=extra.length?extra.join(' · '):seatName(side)+' · '+SIDE[side];
   /* on phones the pieces this side has taken show as a row of small icons in its plate */
   const cap = node.querySelector('.pcap');
   if (cap) {
@@ -3273,36 +3366,21 @@ function statusText() {
   return [check ? `Check · ${t}` : t, check];
 }
 function updateStatus() {
-  const [t, alert] = statusText();
-  let badge=$('chessTurnBadge');
-  if(!badge){
-    badge=el('span');badge.id='chessTurnBadge';
-    $('ui').append(badge);
-  }
+  const [t,alert]=statusText();
+  const s=$('status');
   const clock=window.ChessClock?.snapshot?.();
-  const active=G.status==='active'&&!review&&G.mode!=='connecting'&&
-    (G.mode!=='live'||bothSeated());
-  badge.hidden=!active;
-  if(active){
-    let label='';
-    const side=G.pos.chess.turn();
-    const actor=G.mode==='cpu'?cpu.human:G.mode==='local'?null:mySeat;
-    const paused=clock?.clockState==='paused'||clock?.clockState==='penalty';
-    if(clock?.clockState==='penalty')
-      label='⏸ TIME EXPIRED · PAWN PENALTY';
-    else if(paused)label='⏸ GAME PAUSED';
-    else if(G.mode==='local')label=SIDE[side].toUpperCase()+' TO MOVE';
-    else if(!actor)label=SIDE[side].toUpperCase()+' TO MOVE';
-    else label=side===actor?'● YOUR TURN':'○ OPPONENT TO MOVE';
-    if(G.pos.chess.inCheck()&&!paused)label='CHECK · '+label;
-    badge.textContent=label;
-    badge.classList.toggle('other',!paused&&!!actor&&side!==actor);
-    badge.classList.toggle('paused',!!paused);
-  }
-  const s = $('status');
-  if (s.textContent !== t) s.textContent = t;
-  s.classList.toggle('alert', alert);
-  $('btnUndo').disabled = !canUndo();
+  const paused=clock?.clockState==='paused';
+  const penalty=clock?.clockState==='penalty';
+  const notice=Boolean(
+    (G.status==='over'&&G.mode!=='connecting') ||
+    pending || (G.status==='active'&&G.pos.chess.inCheck()) ||
+    (G.status==='active'&&(paused||penalty)));
+  const copy=penalty&&G.status==='active'?'Time expired · Pawn penalty':
+    paused&&G.status==='active'?'Game paused':t;
+  if(s.textContent!==copy)s.textContent=copy;
+  s.classList.toggle('notice',notice);
+  s.classList.toggle('alert',alert||penalty);
+  $('btnUndo').disabled=!canUndo();
 }
 function updatePlates() { fillPlate($('plateTop'), other(viewSide)); fillPlate($('plateBottom'), viewSide); updateStatus(); }
 
