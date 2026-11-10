@@ -43,15 +43,14 @@ Deno.serve(async (req) => {
       .select('ply,move_uci').eq('game_id',game_id).order('ply',{ascending:true}).limit(1001);
     if(hErr)throw hErr;
     if((records?.length||0)>1000)return reply(409,{error:'Game history exceeds supported size.'});
-    const chess=new Chess();
-    for(let i=0;i<(records?.length||0);i++){
-      const rec=records[i];
-      if(rec.ply!==i+1)return reply(409,{error:'Game history is inconsistent.'});
-      const m=rec.move_uci;
-      try{chess.move({from:m.slice(0,2),to:m.slice(2,4),promotion:m[4]||undefined});}
-      catch{return reply(409,{error:'Invalid saved game history.'});}
-    }
-    if(chess.fen()!==g.current_fen)return reply(409,{error:'Game position needs repair before moves can resume.'});
+    // Saved pawn-for-time events can alter the board without a conventional UCI move.
+    // Every normal move is validated against the server's authoritative current FEN.
+    // SQL locks that same FEN when committing, preventing stale or duplicated moves.
+    for(let i=0;i<(records?.length||0);i++)
+      if(records[i].ply!==i+1)return reply(409,{error:'Game history is inconsistent.'});
+    let chess: Chess;
+    try{chess=new Chess(g.current_fen);}
+    catch{return reply(409,{error:'Invalid saved position. Contact support.'});}
     const side=chess.turn();
     if((side==='w'?g.white_player_id:g.black_player_id)!==auth.user.id)
       return reply(403,{error:'It is not your turn.'});
@@ -71,7 +70,7 @@ Deno.serve(async (req) => {
       p_finished:finished,p_result:result
     });
     if(commitErr)return reply(409,{error:commitErr.message||'Move conflicted. Refresh the game.'});
-    if(ply===0)return reply(409,{error:'Time expired. The other player wins on time.',timeout:true});
+    if(ply===0)return reply(409,{error:'Time expired. Game paused while your opponent selects a pawn.',timeout:true});
     return reply(200,{ok:true,ply,move_uci:canonical,move_san:mv.san,fen:newFen,
       status:finished?'finished':'active',result});
   } catch(e){
