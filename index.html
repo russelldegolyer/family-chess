@@ -15,7 +15,8 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-online.js?v=7"></script>
+<script defer src="./chess-clock.js?v=1"></script>
+<script defer src="./chess-online.js?v=8"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=2"></script>
 <link rel="stylesheet" href="./chess-social.css?v=2">
@@ -4766,8 +4767,13 @@ function layout2D() {
   const chat2d = document.body.classList.contains('chat2d');
   const split = chat2d && compact && !document.body.classList.contains('landscape');
   const topCard = $('plateTop')?.getBoundingClientRect();
-  const top = split ? Math.max(72, Math.ceil(topCard?.bottom || 90) + 6)
+  let top = split ? Math.max(72, Math.ceil(topCard?.bottom || 90) + 6)
     : compact ? Math.max(84, Math.ceil(topCard?.bottom || 80) + 8) : 44;
+  // Timed games reserve a row for both clocks above the 2D board.
+  if(compact && document.body.classList.contains('clock-timed')){
+    const clockBottom = document.getElementById('chessClockHud')?.getBoundingClientRect().bottom || 100;
+    top = Math.max(top, Math.ceil(clockBottom)+7);
+  }
   const left = split ? 5 : compact ? 6 : 230;
   const right = areaRight + (split ? 5 : compact ? 6 : 16);
   const box = $('board2d');
@@ -5124,6 +5130,10 @@ function cancelPreview(animate = true) {
 }
 /* The one place a move enters the game: human, computer or remote echo all go through positionFrom. */
 function applyMove(uci, { placed = false } = {}) {
+  if(G.mode==='cpu'||G.mode==='local'){
+    window.ChessClock?.check?.();
+    if(G.status!=='active')return null;
+  }
   const moves = [...G.moves, uci];
   const after = positionFrom(moves);
   if (!after.last || after.ply !== moves.length) return null;
@@ -5131,6 +5141,8 @@ function applyMove(uci, { placed = false } = {}) {
   const end = endInfo(after.chess, after.last);
   G.moves = moves; G.pos = after; G.turnAt = now; G.drawOffer = null; G.version++;
   if (end) Object.assign(G, { status: 'over', result: end.result, reason: end.reason, endedAt: now });
+  if(G.mode==='cpu'||G.mode==='local')
+    window.ChessClock?.moveLocal(after.chess.turn(),moves.length,!!end);
   let land = 0;
   if (!placed) { land = syncBoard(after, { animate: true, hint: after.last }); fxForMove(after.last, land, false); }
   lockUntil = performance.now() + (REDUCED ? 0 : land);
@@ -5276,6 +5288,8 @@ function undo() {
   G.moves = G.moves.slice(0, plan.len);
   G.pos = positionFrom(G.moves);
   G.version++;
+  if(G.mode==='cpu'||G.mode==='local')
+    window.ChessClock?.undoLocal(G.moves.length,G.pos.chess.turn());
   const end = plan.reopen ? null : endInfo(G.pos.chess, G.pos.last);
   Object.assign(G, end ? { status: 'over', result: end.result, reason: end.reason } : { status: 'active', result: null, reason: null, endedAt: null }, { drawOffer: null, turnAt: Date.now(), feedback: null });
   endDismissed = null;
@@ -6185,6 +6199,7 @@ function offerDraw() {
 }
 function finishGame(patch) {
   cancelComputer();
+  if(G.mode==='cpu'||G.mode==='local')window.ChessClock?.stopLocal();
   Object.assign(G, { status: patch.status, result: patch.result, reason: patch.reason, drawOffer: null, endedAt: patch.endedAt });
   G.version++;
   updateAll();
@@ -6230,6 +6245,12 @@ function resetLocalGame(mode, n) {
   if (!$('promoDialog').hidden) { promoCtx = null; hide($('promoDialog')); }
   Object.assign(G, { mode, gid: null, key: 'k' + Date.now().toString(36) + rid(4), board: null, chooser: null, n, moves: [], pos: positionFrom([]), status: 'active', result: null, reason: null, drawOffer: null, turnAt: Date.now(), startedAt: Date.now(), endedAt: null, feedback: null, seats: { w: 'local', b: 'local' }, names: { w: '', b: '' } });
   G.version++;
+  if(mode==='cpu'||mode==='local')
+    window.ChessClock?.startLocal(window.ChessClock.getPreference(), (expiredSide)=>{
+      if(G.mode!==mode||G.status!=='active')return;
+      finishGame({status:'over',result:expiredSide==='w'?'0-1':'1-0',
+        reason:'timeout',endedAt:Date.now()});
+    });
   mySeat = null;
   flipped = false;
   const want = wantedSide();
@@ -6255,6 +6276,7 @@ function startComputerGame(side, level) {
 }
 function enterLive() {
   cancelComputer();
+  window.ChessClock?.reset();
   stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop();
   review = null;
   G.mode = 'live'; G.gid = null; G.moves = []; G.version++; gameFirst = false;
@@ -6354,7 +6376,9 @@ function describeResult() {
   const winner = G.result === '1-0' ? 'w' : G.result === '0-1' ? 'b' : null;
   if (!winner) return { title: DRAW_TITLE[G.reason] || 'Draw', line: G.reason === 'agreement' ? 'Both sides called it even.' : '' };
   const loser = other(winner);
-  const title = G.reason === 'resignation' ? `${SIDE[loser]} Resigned — ${SIDE[winner]} Wins` : G.reason === 'checkmate' ? `Checkmate — ${SIDE[winner]} Wins` : `${SIDE[winner]} Wins`;
+  const title = G.reason === 'timeout' ? `${SIDE[loser]} Ran Out of Time — ${SIDE[winner]} Wins`
+    : G.reason === 'resignation' ? `${SIDE[loser]} Resigned — ${SIDE[winner]} Wins`
+    : G.reason === 'checkmate' ? `Checkmate — ${SIDE[winner]} Wins` : `${SIDE[winner]} Wins`;
   let line = '';
   if (G.mode === 'cpu') line = winner === cpu.human ? 'You beat the computer.' : 'The computer takes this one.';
   else if (G.mode === 'live') line = `${seatName(winner)} wins with ${SIDE[winner]}.`;
@@ -7002,6 +7026,14 @@ function openSettings() {
     s2.append(group('Moving pieces', [['preview', 'Two taps (confirm)'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), moveMode === 'preview' ? 'Place a move, look at it, then confirm it.' : 'Moves go through as soon as you place them.'));
     s2.append(group("Show opponent's last move", [[true, 'On'], [false, 'Off']], showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }));
     const s0 = el('div', 'set-sec'); const h0 = el('h3'); h0.textContent = 'Starting a game'; s0.append(h0);
+    s0.append(group('Chess clock', [
+      ['off','No timer'],['10m','10 min each'],['12m','12 min each'],
+      ['15m','15 min each'],['move3','3 min per move']
+    ],window.ChessClock?.getPreference?.()||'off',(v)=>{
+      window.ChessClock?.setPreference(v);
+      Promise.resolve(window.familyChessSaveClockPreference?.(v))
+        .catch((e)=>toast('Clock preference could not sync: '+(e?.message||'Try again'),4200));
+    },'10/12/15 minutes: each player has that much total time. 3-minute mode resets the active clock on every move. Applies to your next new computer game or online invitation; existing games keep their clock.'));
     s0.append(group('Preferred starting position', [['w', 'First'], ['b', 'Second'], ['r', 'Random']], store.get('sg.side', 'w'), (v) => store.set('sg.side', v), 'Used for games against the computer. Online, the challenge rules decide who opens.'));
     s2.append(group('2D pieces', [['classic', 'Classic pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v })));
     s2.append(group('Sound', [[true, 'On'], [false, 'Off']], Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) Sound.ensure(); }));
@@ -7217,6 +7249,7 @@ window.familyChessNative = {
     G.result = game.result || null;
     G.reason = G.status === 'over' ?
       (game.end_reason==='replaced'?'replaced':game.end_reason==='resignation'?'resignation':
+       game.end_reason==='timeout'?'timeout':
        pos.chess.isCheckmate()?'checkmate':
        pos.chess.isStalemate()?'stalemate':pos.chess.isInsufficientMaterial()?'insufficient material':
        pos.chess.isThreefoldRepetition()?'threefold repetition':'the fifty-move rule') : null;
@@ -7224,6 +7257,8 @@ window.familyChessNative = {
     G.turnAt = new Date(game.updated_at || Date.now()).getTime();
     G.moves = moves.slice(); G.pos = pos;
     mySeat = watching ? null : white === userId ? 'w' : 'b';
+    window.ChessClock?.showOnline(game,pos.chess.turn(),
+      watching?null:window.familyChessClaimTimeout);
     const label = document.querySelector('.auth-practice');
     if(label)label.textContent=watching?'Spectating · '+G.names.w+' vs '+G.names.b:
       'Online · '+(mySeat==='w'?'White':'Black');
