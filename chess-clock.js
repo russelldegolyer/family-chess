@@ -107,6 +107,9 @@
     nodes[opp].node.style.top=top+'px';
     nodes[own].node.style.top=bottom+'px';
     actions.style.top=(bottom+4)+'px';
+    actions.style.left=Math.max(136,Math.min(
+      window.innerWidth-195,Number(nodes[own].node.getBoundingClientRect().right||146)+6))+'px';
+    actions.style.right='auto';
     pauseBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState==='penalty';
     pauseBtn.textContent=state.clockState==='paused'?'▶ Resume':'⏸ Pause';
     const remainingNow=remaining(state.turn,at);
