@@ -3024,8 +3024,8 @@ function dotTex() {
 const sqGeo = new THREE.PlaneGeometry(1, 1);
 const basic = (o) => new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false, ...o });
 const MK = {
-  lastFrom: flatMesh(sqGeo, basic({ color: 0xffce61, opacity: 0.32 }), 0.0045),
-  lastTo: flatMesh(sqGeo, basic({ color: 0xffce61, opacity: 0.55 }), 0.0046),
+  lastFrom: flatMesh(sqGeo, basic({ color: 0xf0d58e, opacity: 0.17 }), 0.0045),
+  lastTo: flatMesh(sqGeo, basic({ color: 0xf0d58e, opacity: 0.28 }), 0.0046),
   check: flatMesh(new THREE.PlaneGeometry(1.15, 1.15), basic({ map: radialTex('rgba(150,22,18,0.9)', 'rgba(120,10,8,0)') }), 0.005),
   selShadow: flatMesh(new THREE.RingGeometry(0.43, 0.47, 64), basic({ color: 0x120c08, opacity: 0.55 }), 0.0052),
   sel: flatMesh(new THREE.RingGeometry(0.4, 0.435, 64), basic({ color: 0xe9c27c, opacity: 0.95 }), 0.0055),
@@ -3207,8 +3207,8 @@ function updateMarkers() {
   const last = shownLastMove(pos);
   placeSq(MK.lastFrom, last && last.from);
   placeSq(MK.lastTo, last && last.to);
-  MK.lastTo.material.opacity = pending ? 0.38 : 0.57;
-  MK.lastFrom.material.opacity = 0.33;
+  MK.lastTo.material.opacity = pending ? 0.20 : 0.28;
+  MK.lastFrom.material.opacity = 0.17;
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   placeSq(MK.check, kingSq || null);
   const live = selected && canAct();
@@ -4875,29 +4875,10 @@ function markers2D() {
   const pos = displayPos(), last = shownLastMove(pos);
   const cell = (sq, attrs) => { const [c, r] = sqCR(sq); return sv('rect', { x: c, y: r, width: 1, height: 1, ...attrs }, g); };
   const edge = (sq, a) => { const [c, r] = sqCR(sq); return sv('rect', { x: c + 0.05, y: r + 0.05, width: 0.9, height: 0.9, fill: C2.hl + (a * 0.25) + ')', stroke: C2.hl + a + ')', 'stroke-width': 0.035 }, g); };
+  // Muted yellow shows the move's two squares without a directional arrow.
   if (last) {
-    if (C2.mono) { edge(last.from, 0.75); edge(last.to, pending ? 0.95 : 0.9); }
-    else {
-      cell(last.from,{fill:'rgba(247,191,62,.32)',stroke:'#f6c954','stroke-width':.065});
-      cell(last.to,{fill:'rgba(247,191,62,.48)',stroke:'#ffe077','stroke-width':.09});
-    }
-  }
-  if (last && last.from!==last.to) {
-    const [ax, ay] = sqCR(last.from), [bx, by] = sqCR(last.to);
-    const x1 = ax + 0.5, y1 = ay + 0.5, x2 = bx + 0.5, y2 = by + 0.5;
-    const dx = x2 - x1, dy = y2 - y1, distance = Math.hypot(dx, dy);
-    if (distance > 0) {
-      const ux = dx / distance, uy = dy / distance;
-      const startX = x1 + ux * 0.20, startY = y1 + uy * 0.20;
-      const endX = x2 - ux * 0.22, endY = y2 - uy * 0.22;
-      const color = '#e8bd54';
-      sv('line', { x1:startX, y1:startY, x2:endX, y2:endY, stroke:color, 'stroke-width':0.115, 'stroke-linecap':'round', opacity:0.83 }, g);
-      const wing = 0.19, tipX = x2 - ux * 0.07, tipY = y2 - uy * 0.07;
-      sv('polygon', { points: [
-        [tipX, tipY], [endX - ux*0.18 - uy*wing, endY - uy*0.18 + ux*wing],
-        [endX - ux*0.18 + uy*wing, endY - uy*0.18 - ux*wing]
-      ].map(v => v.join(',')).join(' '), fill:color, opacity:0.88 }, g);
-    }
+    cell(last.from, { fill:'rgba(240,206,119,.17)', stroke:'rgba(231,201,128,.33)', 'stroke-width':.035 });
+    cell(last.to, { fill:'rgba(240,206,119,'+(pending?'.21':'.27')+')', stroke:'rgba(231,201,128,.43)', 'stroke-width':.04 });
   }
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   if (kingSq) { const [c, r] = sqCR(kingSq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.5, fill: 'url(#chk2)' }, g); }
