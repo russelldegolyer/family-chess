@@ -909,6 +909,33 @@ body.clock-timed:not(.compact) #status.notice{
   body.compact .plate-top .pname{font-size:16px;max-width:38vw}
 }
 
+/* The board chooser is a full-screen workspace, not a translucent modal.
+   A fully opaque layer prevents both the 3D canvas and 2D board from showing
+   through behind the custom color inputs, tiles, or scrolling gaps. */
+#ui > #collection.overlay.collection:not([hidden]){
+  position:absolute;
+  inset:0!important;
+  background:#111216!important;
+  background-image:none!important;
+  opacity:1;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  isolation:isolate;
+}
+#collection .col-shell{
+  background:#111216;
+}
+#collection .custom2d{
+  position:relative;
+  background:#1b1c21;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:16px;
+  padding:14px 16px;
+}
+@media(max-width:520px){
+  #collection .custom2d{padding:12px 13px}
+}
+
 /* Modal/clock layering: dialog surfaces always sit above timers and their
    interactive actions. The account menu, chat and board stay underneath. */
 #ui > .overlay:not([hidden]){z-index:130;isolation:isolate}
