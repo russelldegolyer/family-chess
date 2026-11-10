@@ -143,20 +143,62 @@
   let player = null, invitePresented = false;
   let matchId = null, matchMode = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
   let livePromptSeen=false, liveCount=0, livePoll=null;
-  let colorSaveTimer=null;
   const validColor=(v)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
-  window.addEventListener('familyChessPieceColorChanged',(event)=>{
-    const hex=event.detail?.color,uid=player?.id;
-    if(!uid||!validColor(hex))return;
-    clearTimeout(colorSaveTimer);
-    // A drag on the color wheel can fire many updates per second.
-    // Only persist the final color after the gesture settles.
-    colorSaveTimer=setTimeout(async()=>{
-      if(player?.id!==uid)return;
-      const {error}=await api.from('chess_profiles').update({piece_color:hex.toLowerCase()}).eq('id',uid);
-      if(error){status('Could not share your piece color: '+error.message,true);return;}
-      if(matchId)void syncMatch();
-    },320);
+  const colorColumns={mine:'piece_color',practice:'practice_opponent_color'};
+  const colorSaveTimers={mine:null,practice:null};
+  const colorSaveChains={mine:Promise.resolve(),practice:Promise.resolve()};
+  const colorPendingKey=(kind,id)=>'sg.pendingChessColor.'+kind+'.'+id;
+  const pendingColor=(kind,id)=>{
+    try{return localStorage.getItem(colorPendingKey(kind,id));}
+    catch{return null;}
+  };
+  const storePendingColor=(kind,id,hex)=>{
+    try{localStorage.setItem(colorPendingKey(kind,id),hex.toLowerCase());}
+    catch{/* Local storage may be disabled. */}
+  };
+  const clearPendingColor=(kind,id,hex)=>{
+    try{
+      if(pendingColor(kind,id)===hex)localStorage.removeItem(colorPendingKey(kind,id));
+    }catch{/* Keep the current session usable without storage. */}
+  };
+  // Store edits on the device immediately; serialize and retry cloud updates.
+  // If Safari closes the app mid-save, the pending value survives until login.
+  function savePendingColor(kind,id){
+    const column=colorColumns[kind];
+    if(!column||!id)return Promise.resolve();
+    colorSaveChains[kind]=colorSaveChains[kind].catch(()=>{}).then(async()=>{
+      const hex=pendingColor(kind,id);
+      if(!validColor(hex))return;
+      const {error}=await api.from('chess_profiles')
+        .update({[column]:hex.toLowerCase()}).eq('id',id);
+      if(error){
+        if(player?.id===id)status('Could not sync your saved colors: '+error.message,true);
+        return;
+      }
+      clearPendingColor(kind,id,hex);
+      if(kind==='mine'&&matchId&&player?.id===id)void syncMatch();
+    });
+    return colorSaveChains[kind];
+  }
+  function queueProfileColor(kind,hex){
+    const id=player?.id;
+    if(!id||!validColor(hex))return;
+    storePendingColor(kind,id,hex);
+    clearTimeout(colorSaveTimers[kind]);
+    // Continuous colour-wheel dragging should not flood the database.
+    colorSaveTimers[kind]=setTimeout(()=>void savePendingColor(kind,id),250);
+  }
+  window.addEventListener('familyChessPieceColorChanged',
+    ev=>queueProfileColor('mine',ev.detail?.color));
+  window.addEventListener('familyChessPracticeColorChanged',
+    ev=>queueProfileColor('practice',ev.detail?.color));
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden||!player)return;
+    for(const kind of ['mine','practice']){
+      clearTimeout(colorSaveTimers[kind]);
+      if(validColor(pendingColor(kind,player.id)))
+        void savePendingColor(kind,player.id);
+    }
   });
   const invite = new URL(location.href).searchParams.get('game') || '';
   if (pattern.test(invite)) $('cgJoinId').value = invite;
@@ -415,41 +457,59 @@
   root.querySelector('.cgShade').addEventListener('click', close);
   document.addEventListener('keydown', ev => { if(ev.key==='Escape'&&!root.hidden)close(); });
   async function ensureProfile() {
-    const id = player?.id;
-    if (!id) return;
-    const {data,error} = await api.from('chess_profiles').select('display_name,piece_color,clock_preference').eq('id',id).maybeSingle();
-    if (player?.id !== id) return;
-    if (error) { status('Could not load chess name: '+error.message,true); return; }
+    const id=player?.id;
+    if(!id)return;
+    // Always select the correct local profile before reading saved colours.
+    // The signed-in profile then overrides its cache, except for unsynced edits.
+    let native;
+    try{native=await nativeBoard();}
+    catch(e){status('Could not open your saved color settings: '+e.message,true);return;}
+    if(player?.id!==id)return;
+    native.activateColorProfile?.(id);
+    const {data,error}=await api.from('chess_profiles')
+      .select('display_name,piece_color,practice_opponent_color,clock_preference')
+      .eq('id',id).maybeSingle();
+    if(player?.id!==id)return;
+    if(error){status('Could not load chess profile: '+error.message,true);return;}
     if(data){
-      if(window.ChessClock && data.clock_preference)
+      if(window.ChessClock&&data.clock_preference)
         window.ChessClock.setPreference(data.clock_preference);
       $('cgDisplayName').value=data.display_name;
       $('cgNameValue').textContent=data.display_name;
-      // Keep the existing account's chosen color across devices. Profiles
-      // created before this feature have no piece_color yet; backfill the
-      // last locally selected color without resetting their preference.
-      void nativeBoard().then(async native=>{
-        if(player?.id!==id)return;
-        if(validColor(data.piece_color)){
-          native.setAccountColor?.(data.piece_color);
-        } else {
-          const locallyChosen=native.getAccountColor?.();
-          if(validColor(locallyChosen)){
-            const {error:saveError}=await api.from('chess_profiles')
-              .update({piece_color:locallyChosen.toLowerCase()}).eq('id',id);
-            if(saveError)status('Could not sync your saved piece color: '+saveError.message,true);
+      const hydrate=[
+        ['mine',data.piece_color,'getAccountColor','setAccountColor'],
+        ['practice',data.practice_opponent_color,
+          'getPracticeOpponentColor','setPracticeOpponentColor']
+      ];
+      for(const [kind,remote,getter,setter] of hydrate){
+        const pending=pendingColor(kind,id);
+        if(validColor(pending)){
+          native[setter]?.(pending);
+          void savePendingColor(kind,id);
+        }else if(validColor(remote)){
+          native[setter]?.(remote.toLowerCase());
+        }else{
+          const local=native[getter]?.();
+          if(validColor(local)){
+            storePendingColor(kind,id,local);
+            void savePendingColor(kind,id);
           }
         }
-      }).catch(()=>{});
+      }
       return;
     }
-    const display_name = 'Player ' + id.slice(0,6);
-    const created = await api.from('chess_profiles').insert({
-      id,display_name,clock_preference:window.ChessClock?.getPreference?.()||'off'
+    const display_name='Player '+id.slice(0,6);
+    const created=await api.from('chess_profiles').insert({
+      id,display_name,
+      piece_color:native.getAccountColor?.()||'#c60018',
+      practice_opponent_color:native.getPracticeOpponentColor?.()||'#141414',
+      clock_preference:window.ChessClock?.getPreference?.()||'off'
     });
-    if (created.error && created.error.code !== '23505') { status('Could not create chess profile: '+created.error.message,true); return; }
-    $('cgDisplayName').value = display_name;
-    $('cgNameValue').textContent = display_name;
+    if(created.error && created.error.code!=='23505'){
+      status('Could not create chess profile: '+created.error.message,true);return;
+    }
+    $('cgDisplayName').value=display_name;
+    $('cgNameValue').textContent=display_name;
   }
   $('cgProfileForm').addEventListener('submit', async ev => {
     ev.preventDefault(); if (!player) return;
@@ -616,7 +676,11 @@
     player = next || null;
     launch.hidden = !player;
     if (!player) {
-      clearTimeout(colorSaveTimer);
+      for(const kind of ['mine','practice']){
+        clearTimeout(colorSaveTimers[kind]);
+        if(player?.id&&validColor(pendingColor(kind,player.id)))
+          void savePendingColor(kind,player.id);
+      }
       stopMatch();
       if(livePoll){clearInterval(livePoll);livePoll=null;}
       liveCount=0;livePromptSeen=false;watchShortcut.hidden=true;
