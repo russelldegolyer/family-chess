@@ -32,13 +32,22 @@
 .auth-account-toggle{display:none;flex:none;width:40px;height:40px;border:1px solid #4a4a4c;border-radius:50%;background:#202023;color:#f5f5f5;place-items:center;cursor:pointer}
 .auth-account-toggle svg{width:21px;height:21px}
 .auth-account-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:9px;min-width:0}
-@media(max-width:600px){
- .auth-account{top:max(9px,env(safe-area-inset-top,0px))!important;bottom:auto!important;
-   right:max(10px,env(safe-area-inset-right,0px));left:auto;
-   width:44px;max-width:44px;min-height:44px;padding:2px;
-   display:flex;justify-content:center;align-items:center;
-   border-radius:999px;background:#161619;box-shadow:0 8px 24px #0008}
- .auth-account-toggle{display:grid}
+@media(max-width:899px){
+ /* Profile button and player nameplate share one top header row. */
+ .auth-account{
+   top:max(12px,env(safe-area-inset-top,0px))!important;bottom:auto!important;
+   right:max(12px,env(safe-area-inset-right,0px))!important;left:auto!important;
+   width:54px;max-width:54px;min-width:54px;
+   height:54px;max-height:54px;min-height:54px;
+   box-sizing:border-box;padding:4px;
+   display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;
+   border-radius:50%;background:#161619;box-shadow:0 5px 18px #0008
+ }
+ .auth-account-toggle{
+   display:grid;width:44px;height:44px;
+   align-items:center;justify-items:center;border-radius:50%
+ }
+ .auth-account-toggle svg{width:23px;height:23px}
  .auth-account-actions{display:none;position:absolute;right:0;top:calc(100% + 9px);
    width:min(288px,calc(100vw - 22px));max-height:calc(100dvh - 95px);overflow:auto;
    flex-direction:column;align-items:stretch;gap:8px;padding:14px;
@@ -54,7 +63,7 @@
 
 /* Desktop layout: keep the signed-in toolbar in its own lane above chat.
    The chat panel starts below it rather than rendering controls underneath. */
-@media (min-width: 601px) {
+@media (min-width: 900px) {
   .auth-account {
     top: max(12px, env(safe-area-inset-top, 0px));
     right: var(--gr, 16px);
@@ -87,6 +96,6 @@
     top: calc(var(--gt, 16px) + 76px);
   }
 }
-@media (min-width: 601px) and (max-width: 1050px) {
+@media (min-width: 900px) and (max-width: 1050px) {
   .auth-account .auth-practice { display: none; }
 }
