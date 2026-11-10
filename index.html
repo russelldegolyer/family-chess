@@ -1630,7 +1630,10 @@ function Engine() {
         scores.push([m, v]);
         if (v > alpha) alpha = v;
       }
-      if (stopped && scores.length < root.length) { if (!analysisMove && bestScores && scores.length && d > 1) { scores.sort((x, y) => y[1] - x[1]); if (scores[0][1] > bestScores[0][1]) best = scores[0][0]; } break; }
+      // An interrupted iteration contains placeholder scores from searches
+      // that ran out of time. Never allow it to replace the last COMPLETE
+      // depth (even if all root moves happened to receive a score).
+      if (stopped) break;
       scores.sort((x, y) => y[1] - x[1]);
       bestScores = scores; best = scores[0][0]; done = d;
       if (Math.abs(scores[0][1]) > MATE - 200) break;
