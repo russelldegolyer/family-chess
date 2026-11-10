@@ -804,6 +804,24 @@ body.compact.chat-keyboard #board2d{pointer-events:auto}
 body.compact.chat-keyboard .bottom-bar,
 body.compact.chat-keyboard .chat-empty-state{display:none!important}
 
+
+/* Turn clarity: active plate, glow, and unambiguous badge even when chat is open. */
+.plate.turn{outline:2px solid rgba(65,219,132,.8)!important;
+ box-shadow:0 0 0 4px rgba(55,206,119,.16),0 6px 30px #0008!important}
+.plate.turn .pname{color:#a8f4c0!important}
+#chessTurnBadge{position:fixed;z-index:12;right:calc(var(--area-r,0px) + 12px);
+ top:calc(var(--gt,16px) + 47px);max-width:40vw;
+ border-radius:999px;padding:6px 11px;background:#1c2c22;border:1px solid #398f60;
+ color:#c3ffd8;font:800 11px/1.2 var(--body);letter-spacing:.045em;
+ text-align:center;pointer-events:none;box-shadow:0 5px 18px #0009}
+#chessTurnBadge[hidden]{display:none!important}
+#chessTurnBadge.other{background:#29262a;border-color:#55515a;color:#d1cdd2}
+#chessTurnBadge.paused{background:#393020;border-color:#a77c35;color:#f8dfab}
+@media(max-width:899px){
+ #chessTurnBadge{right:8px;top:max(55px,calc(var(--gt,16px) + 40px));font-size:10px}
+ body.compact.chat2d #chessTurnBadge{top:max(54px,calc(var(--gt,16px) + 40px))}
+}
+
 </style>
 
 </head>
@@ -2974,8 +2992,8 @@ function dotTex() {
 const sqGeo = new THREE.PlaneGeometry(1, 1);
 const basic = (o) => new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, toneMapped: false, ...o });
 const MK = {
-  lastFrom: flatMesh(sqGeo, basic({ color: 0xd8b27a, opacity: 0.13 }), 0.0045),
-  lastTo: flatMesh(sqGeo, basic({ color: 0xd8b27a, opacity: 0.2 }), 0.0046),
+  lastFrom: flatMesh(sqGeo, basic({ color: 0xffce61, opacity: 0.32 }), 0.0045),
+  lastTo: flatMesh(sqGeo, basic({ color: 0xffce61, opacity: 0.55 }), 0.0046),
   check: flatMesh(new THREE.PlaneGeometry(1.15, 1.15), basic({ map: radialTex('rgba(150,22,18,0.9)', 'rgba(120,10,8,0)') }), 0.005),
   selShadow: flatMesh(new THREE.RingGeometry(0.43, 0.47, 64), basic({ color: 0x120c08, opacity: 0.55 }), 0.0052),
   sel: flatMesh(new THREE.RingGeometry(0.4, 0.435, 64), basic({ color: 0xe9c27c, opacity: 0.95 }), 0.0055),
@@ -3145,6 +3163,7 @@ const showLastPref = () => store.get('sg.lastMove', true) !== false;
 function shownLastMove(pos) {
   if (review) return pos.last;
   if (!showLastPref()) return null;
+  if(pos.last?.from===pos.last?.to)return pos.last;
   const moves = G.moves || [];
   const opp = G.mode === 'cpu' ? other(cpu.human) : G.mode === 'live' && mySeat ? other(mySeat) : null;
   if (!opp) return pos.last;
@@ -3156,7 +3175,8 @@ function updateMarkers() {
   const last = shownLastMove(pos);
   placeSq(MK.lastFrom, last && last.from);
   placeSq(MK.lastTo, last && last.to);
-  MK.lastTo.material.opacity = pending ? 0.32 : 0.2;
+  MK.lastTo.material.opacity = pending ? 0.38 : 0.57;
+  MK.lastFrom.material.opacity = 0.33;
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   placeSq(MK.check, kingSq || null);
   const live = selected && canAct();
@@ -4798,8 +4818,14 @@ function markers2D() {
   const pos = displayPos(), last = shownLastMove(pos);
   const cell = (sq, attrs) => { const [c, r] = sqCR(sq); return sv('rect', { x: c, y: r, width: 1, height: 1, ...attrs }, g); };
   const edge = (sq, a) => { const [c, r] = sqCR(sq); return sv('rect', { x: c + 0.05, y: r + 0.05, width: 0.9, height: 0.9, fill: C2.hl + (a * 0.25) + ')', stroke: C2.hl + a + ')', 'stroke-width': 0.035 }, g); };
-  if (last) { if (C2.mono) { edge(last.from, 0.4); edge(last.to, pending ? 0.75 : 0.6); } else { cell(last.from, { fill: C2.hl + '0.34)' }); cell(last.to, { fill: C2.hl + (pending ? '0.58)' : '0.46)') }); } }
-  if (review && last) {
+  if (last) {
+    if (C2.mono) { edge(last.from, 0.75); edge(last.to, pending ? 0.95 : 0.9); }
+    else {
+      cell(last.from,{fill:'rgba(247,191,62,.32)',stroke:'#f6c954','stroke-width':.065});
+      cell(last.to,{fill:'rgba(247,191,62,.48)',stroke:'#ffe077','stroke-width':.09});
+    }
+  }
+  if (last && last.from!==last.to) {
     const [ax, ay] = sqCR(last.from), [bx, by] = sqCR(last.to);
     const x1 = ax + 0.5, y1 = ay + 0.5, x2 = bx + 0.5, y2 = by + 0.5;
     const dx = x2 - x1, dy = y2 - y1, distance = Math.hypot(dx, dy);
