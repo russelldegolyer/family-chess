@@ -6,9 +6,9 @@ import vm from 'node:vm';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const engineText=html.match(/<script type="text\/plain" id="engineSrc">([\s\S]*?)<\/script>/)?.[1];
 assert.ok(engineText,'embedded computer engine must exist');
-const create=()=>{
+const create=(source=engineText)=>{
   const sandbox={performance:{now:()=>Number(process.hrtime.bigint()/1000000n)}};
-  vm.runInNewContext(engineText+'\nthis.makeEngine=Engine;',sandbox,{timeout:1500});
+  vm.runInNewContext(source+'\nthis.makeEngine=Engine;',sandbox,{timeout:1500});
   return sandbox.makeEngine();
 };
 const opening='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -53,4 +53,25 @@ test('level one is intentionally less calculating and can choose worse moves',()
  assert.match(engineText,/lvl === 1 \? 1 : lvl === 2 \? 4/);
  assert.match(engineText,/if \(chance < 0\.12\)/);
  assert.match(engineText,/Math\.floor\(n \* 0\.40\)/);
+});
+
+test('hard level 4 attacks differently from hard level 5 in a real middlegame',()=>{
+ // Pin the calculation depth only for the comparison, so the test isn't
+ // affected by differences in GitHub runner hardware or scheduling.
+ const twoPly=engineText.replace(
+   'const maxDepth = analysisMove ? 6 : lvl === 1 ? 1 : lvl === 2 ? 4 : 64;',
+   'const maxDepth = 2;');
+ assert.notEqual(twoPly,engineText);
+ const ai=create(twoPly);
+ const sicilian='rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6';
+ const aggressive=ai.think(sicilian,4,100000,()=>.42);
+ const positional=ai.think(sicilian,5,100000,()=>.42);
+ assert.match(aggressive.move,/^[a-h][1-8][a-h][1-8][nbrq]?$/);
+ assert.match(positional.move,/^[a-h][1-8][a-h][1-8][nbrq]?$/);
+ assert.notEqual(aggressive.move,positional.move,'the two hardest levels must actually evaluate the position differently');
+});
+test('strong AI does not score candidates through broken null-window ties',()=>{
+ assert.match(engineText,/let v = -search\(d - 1, -MATE \* 2, MATE \* 2, 1\)/);
+ assert.match(engineText,/if \(stopped\) break;/);
+ assert.doesNotMatch(engineText,/narrow \? -alpha/);
 });
