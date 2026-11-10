@@ -14,7 +14,7 @@ function makeClock(){
   let now=1_800_000_000_000;
   class MockNode {
     constructor(){
-      this.children=[];this.style={};this.hidden=false;this.textContent='';
+      this.children=[];this.style={};this.dataset={};this.hidden=false;this.textContent='';
       this.classList={
         add(){},remove(){},toggle(){},contains(){return false}
       };
