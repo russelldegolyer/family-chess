@@ -17,15 +17,20 @@ test('Chess 3D/2D inline module has valid JavaScript syntax',()=>{
    assert.equal(result.status,0,result.stderr);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
-test('account controls remain accessible but never float over phone chat',()=>{
+test('profile icon opens Online Games directly and Sign out lives in account settings',()=>{
  assert.match(html,/id="authAccountToggle"/);
- assert.match(html,/id="authAccountActions"/);
- assert.match(css,/\.auth-account\{top:max\(9px,env\(safe-area-inset-top/);
+ assert.match(html,/aria-label="Open Online Games"/);
+ assert.match(html,/aria-controls="cgLobby"/);
+ assert.match(css,/@media\(max-width:899px\)/);
  assert.match(css,/bottom:auto!important/);
- assert.match(css,/\.auth-account\.is-open \.auth-account-actions\{display:flex\}/);
  assert.match(auth,/accToggle\.addEventListener\('click'/);
- assert.match(auth,/closeAccountMenu\(\)/);
- assert.match(online,/account\.insertBefore\(launch, document\.getElementById\('authSignOut'\)\)/);
+ assert.match(auth,/window\.familyChessOpenLobby\(\)/);
+ assert.doesNotMatch(auth,/acc\.classList\.toggle\('is-open'\)/);
+ assert.match(online,/id="cgAccountSettings"/);
+ assert.match(online,/id="cgSignOutSlot"/);
+ assert.match(online,/document\.getElementById\('cgSignOutSlot'\)\.appendChild\(signOut\)/);
+ assert.match(online,/profileButton\?\.setAttribute\('aria-expanded','false'\)/);
+ assert.match(auth,/\$\('authSignOut'\)\.addEventListener\('click'/);
 });
 test('chat empty state is readable and does not promise unavailable messaging',()=>{
  assert.match(html,/chat-empty-state/);
