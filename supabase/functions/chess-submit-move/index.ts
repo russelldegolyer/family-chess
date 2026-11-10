@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     if(typeof game_id!=='string'||!uuid.test(game_id)||typeof move_uci!=='string'||!uci.test(move_uci))
       return reply(400,{error:'Invalid game ID or move.'});
     const {data:g,error:gErr}=await db.from('chess_games')
-      .select('id,white_player_id,black_player_id,current_fen,status,result')
+      .select('id,white_player_id,black_player_id,current_fen,status,result,clock_mode')
       .eq('id',game_id).maybeSingle();
     if(gErr)throw gErr;
     if(!g||(g.white_player_id!==auth.user.id && g.black_player_id!==auth.user.id))
@@ -70,7 +70,9 @@ Deno.serve(async (req) => {
       p_finished:finished,p_result:result
     });
     if(commitErr)return reply(409,{error:commitErr.message||'Move conflicted. Refresh the game.'});
-    if(ply===0)return reply(409,{error:'Time expired. Game paused while your opponent selects a pawn.',timeout:true});
+    if(ply===0)return reply(409,g.clock_mode==='move60'
+      ?{error:'60-second turn expired. Game lost on time.',timeout:true,finished:true}
+      :{error:'Time expired. Game paused while your opponent selects a pawn.',timeout:true});
     return reply(200,{ok:true,ply,move_uci:canonical,move_san:mv.san,fen:newFen,
       status:finished?'finished':'active',result});
   } catch(e){
