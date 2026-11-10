@@ -1482,6 +1482,7 @@ function Engine() {
       // technique and small, sustainable improvements. Both keep the same
       // material values and retain the ability to play solid defense.
       if (level === 4) {
+        const f = s & 7, row = s >> 4;
         const enemyKing = king[white ? 1 : 0], ef = enemyKing & 7, er = enemyKing >> 4;
         const df = Math.abs(f - ef), dr = Math.abs(row - er);
         if (t === N || t === B || t === Q || t === R) {
