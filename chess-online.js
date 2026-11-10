@@ -268,7 +268,7 @@
     const id=matchId, uid=player.id, epoch=syncToken;
     try {
       const {data:g,error:gameError}=await api.from('chess_games')
-        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at')
+        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_white_ms,clock_black_ms,clock_turn_started_at')
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) throw new Error('This match is private or no longer available.');
@@ -335,6 +335,20 @@
   }
 
   window.familyChessOpenMatch = (id,mode='play') => startMatch(id,mode);
+  window.familyChessClaimTimeout = async (id) => {
+    if (!player || !matchId || matchId!==id || matchMode!=='play') return false;
+    const {data,error}=await api.rpc('chess_claim_timeout',{p_game_id:id});
+    if(error)throw new Error(error.message || 'Could not verify game clock.');
+    if(data && matchId===id) await syncMatch();
+    return !!data;
+  };
+  window.familyChessSaveClockPreference = async mode => {
+    if(!['off','10m','12m','15m','move3'].includes(mode))throw new Error('Invalid clock selection');
+    if(!player)return false;
+    const {error}=await api.from('chess_profiles').update({clock_preference:mode}).eq('id',player.id);
+    if(error)throw new Error(error.message||'Could not save clock preference');
+    return true;
+  };
   window.familyChessCurrentMatch = () => matchId;
   // Only a signed-in player in this active shared match may resign.
   // The database RPC validates ownership and records the winner atomically.
@@ -382,10 +396,12 @@
   async function ensureProfile() {
     const id = player?.id;
     if (!id) return;
-    const {data,error} = await api.from('chess_profiles').select('display_name,piece_color').eq('id',id).maybeSingle();
+    const {data,error} = await api.from('chess_profiles').select('display_name,piece_color,clock_preference').eq('id',id).maybeSingle();
     if (player?.id !== id) return;
     if (error) { status('Could not load chess name: '+error.message,true); return; }
     if(data){
+      if(window.ChessClock && data.clock_preference)
+        window.ChessClock.setPreference(data.clock_preference);
       $('cgDisplayName').value=data.display_name;
       $('cgNameValue').textContent=data.display_name;
       // Keep the existing account's chosen color across devices. Profiles
@@ -407,7 +423,9 @@
       return;
     }
     const display_name = 'Player ' + id.slice(0,6);
-    const created = await api.from('chess_profiles').insert({id,display_name});
+    const created = await api.from('chess_profiles').insert({
+      id,display_name,clock_preference:window.ChessClock?.getPreference?.()||'off'
+    });
     if (created.error && created.error.code !== '23505') { status('Could not create chess profile: '+created.error.message,true); return; }
     $('cgDisplayName').value = display_name;
     $('cgNameValue').textContent = display_name;
