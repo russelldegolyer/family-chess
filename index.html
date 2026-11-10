@@ -800,7 +800,9 @@ body.compact.chat-keyboard #chatInput{
 body.compact.chat-keyboard #board2d .b2svg{
   transform:scale(var(--chat-keyboard-scale,1))!important;
   transform-origin:top center!important}
-body.compact.chat-keyboard #board2d{pointer-events:auto}
+body.compact.chat-keyboard #board2d{
+  pointer-events:auto;transform:translateY(var(--chat-keyboard-offset,0px))!important
+}
 body.compact.chat-keyboard .bottom-bar,
 body.compact.chat-keyboard .chat-empty-state{display:none!important}
 
@@ -6815,6 +6817,8 @@ function updateChatKeyboard(){
   const bottom=Math.max(0,window.innerHeight-
     ((vv?.offsetTop||0)+(vv?.height||window.innerHeight)));
   document.documentElement.style.setProperty('--chat-keyboard-bottom',bottom+'px');
+  document.documentElement.style.setProperty('--chat-keyboard-offset',
+    Math.max(0,vv?.offsetTop||0)+'px');
   const visibleBottom=(vv?.offsetTop||0)+(vv?.height||window.innerHeight);
   const board=document.querySelector('#board2d .b2svg');
   if(board){
@@ -6838,6 +6842,7 @@ $('chatInput').addEventListener('blur',()=>{
   document.body.classList.remove('chat-keyboard');
   document.documentElement.style.removeProperty('--chat-keyboard-scale');
   document.documentElement.style.removeProperty('--chat-keyboard-bottom');
+  document.documentElement.style.removeProperty('--chat-keyboard-offset');
   setTimeout(()=>{if(compact&&VIEW==='2d')layout2D();},160);
 });
 window.visualViewport?.addEventListener('resize',updateChatKeyboard);
