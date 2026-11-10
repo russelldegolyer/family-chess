@@ -61,7 +61,9 @@ Deno.serve(async(req)=>{
     parts[1]=actor==='w'?'b':'w';
     if(actor==='b')parts[5]=String(Number(parts[5])+1);
   }
-  const next_fen=parts.join(' ');
+  // If no pawn remains, resume without a board change. Preserve the
+  // exact server FEN, including its en-passant and move counters.
+  const next_fen=pawn_square===null?g.current_fen:parts.join(' ');
   try{new Chess(next_fen);}catch{return reply(422,{error:'Pawn removal would create an invalid board'});}
   const {data:id,error:commitError}=await db.rpc('chess_commit_clock_action',{
     p_game_id:game_id,p_player_id:user,p_kind:action,p_square:pawn_square,
