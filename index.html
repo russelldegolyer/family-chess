@@ -7300,6 +7300,9 @@ function pgSetLevel(v) {
   $('pgTicks').querySelectorAll('span').forEach((t, i) => t.classList.toggle('on', i + 1 === v));
 }
 function openPregame() {
+  /* the chooser is a 3D moment: close the chat sheet and leave the flat board first */
+  if (sheetOpen) setSheet(false);
+  if (VIEW === '2d') applyView('3d', false);
   PG.on = true; PG.swing = false; PG.az = PG_BASE; PG.polar = compact && window.innerWidth < window.innerHeight ? 0.98 : 0.9;
   document.body.classList.add('pregame');
   const el = $('pregame'); el.classList.remove('leaving'); el.hidden = false;
