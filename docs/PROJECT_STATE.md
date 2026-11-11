@@ -28,7 +28,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Feature | Where | Notes |
 | --- | --- | --- |
 | Game state, moves, undo | `index.html` (`G`, `applyMove`, `playMove`, `undo`, `resetLocalGame`) | practice + online share one board |
-| Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu` | UI shows numbers only; engine branches on `level === 4/5` for the two extreme styles |
+| Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu` | UI shows numbers only; engine branches on `level === 4/5` for the two extreme styles; each has its own opening book (`BOOK`: 4 = Gukesh repertoire, 5 = Magnus repertoire) and both avoid draws |
 | 3D board/pieces/themes | `index.html` `THEMES`, `#masterSrc` (`sdfMesh` surface nets + vertex snapping; knight/bishop/queen heads are SDF), `applyTheme`, `fitCamera` | themes: unnamed (Default), matte, cats, royal, northern, infernal |
 | 2D board | `index.html` `draw2D`, `applyView`, `PREF2D` | |
 | Side chooser (start screen) | `index.html` `PG`, `openPregame`, `closePregame`, `pgStep`, `goHome`, `newGame` | swipe or tap White/Black + difficulty slider |
