@@ -1082,6 +1082,21 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
   body.compact .bottom-bar .ctl:hover:not(:disabled), body.compact .bottom-bar .icon-btn.round:hover { background: transparent; }
   .ctl:focus:not(:focus-visible), .icon-btn:focus:not(:focus-visible) { outline: none; }
 }
+/* chat header mirrors the main toolbar: New · Undo · resign · pause · reset view, then clear and close */
+.chat-tools { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; }
+.panel-head .chat-tool { flex: none; display: inline-grid; place-items: center; min-width: 36px; height: 38px; padding: 0 6px; border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important; color: var(--ink) !important; cursor: pointer; }
+.panel-head .chat-word { padding: 0 8px; font: 600 15px/1 var(--body); letter-spacing: -0.01em; }
+.panel-head .chat-tool:disabled { opacity: 0.38; cursor: default; }
+.panel-head .chat-tool:active:not(:disabled) { background: var(--fill-2) !important; }
+.panel-head #btnChatResign { width: 36px; height: 38px; min-width: 36px; color: #e8a0a0 !important; }
+.panel-head #btnChatResign svg { width: 16px; height: 16px; }
+.panel-head #btnChatPause { width: 36px; min-width: 36px; padding: 0 !important; }
+.panel-head #btnChatPause .pause-label { display: none; }
+.panel-head #btnChatPause.is-paused { color: #ffdea2 !important; }
+.panel-head .chat-clear { margin-left: 0; color: var(--ink-2) !important; }
+.panel-head #btnSheetClose, .panel-head #btnChatClose { background: transparent; border: 0; }
+.panel-head .chat-tools + .chat-clear { margin-left: 4px; }
+@media (max-width: 420px) { body.compact .panel-head .chat-word { padding: 0 6px; } }
 </style>
 
 </head>
@@ -1159,16 +1174,20 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
       <button class="chip" id="btnHistory" type="button" aria-pressed="false">History</button>
       <button class="chip" id="btnFocus" type="button" hidden>Focus</button><span class="chat-title">Chat</span>
       <span class="head-gap"></span>
-      <button class="icon-btn chat-pause game-pause" id="btnChatPause" type="button" aria-label="Pause game" title="Pause game" hidden><svg class="pause-symbol" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><g class="pause-bars"><rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/></g><path class="resume-triangle" d="M8 5.1a1 1 0 0 1 1.55-.85l10 6.9a1.05 1.05 0 0 1 0 1.7l-10 6.9A1 1 0 0 1 8 18.9Z" fill="currentColor"/></svg><span class="pause-label">Pause</span></button>
-      <button class="icon-btn chat-new" id="btnChatNew" type="button" aria-label="New game" title="New game"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-      <button class="icon-btn chat-clear" id="btnChatClear" type="button" aria-label="Clear chat" title="Clear chat"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
-      <button class="icon-btn chat-resign" id="btnChatResign" type="button"
+      <span class="chat-tools" role="group" aria-label="Game controls">
+      <button class="chat-tool chat-word" id="btnChatNew" type="button" aria-label="New game" title="New game">New</button>
+      <button class="chat-tool chat-word" id="btnChatUndo" type="button" aria-label="Undo" title="Undo" disabled>Undo</button>
+      <button class="chat-tool chat-resign" id="btnChatResign" type="button"
         aria-label="Resign game" title="Resign game" hidden>
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor"
             stroke-width="2.7" stroke-linecap="round"/>
         </svg>
       </button>
+      <button class="chat-tool chat-pause game-pause" id="btnChatPause" type="button" aria-label="Pause game" title="Pause game" hidden><svg class="pause-symbol" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><g class="pause-bars"><rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/></g><path class="resume-triangle" d="M8 5.1a1 1 0 0 1 1.55-.85l10 6.9a1.05 1.05 0 0 1 0 1.7l-10 6.9A1 1 0 0 1 8 18.9Z" fill="currentColor"/></svg><span class="pause-label">Pause</span></button>
+      <button class="chat-tool" id="btnChatCam" type="button" aria-label="Reset view" title="Reset view"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </span>
+      <button class="chat-tool chat-clear" id="btnChatClear" type="button" aria-label="Clear chat" title="Clear chat"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
       <button class="icon-btn chat-close" id="btnChatClose" type="button" aria-label="Close chat" title="Close chat"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button class="icon-btn sheet-close" id="btnSheetClose" type="button" aria-label="Close chat"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
@@ -3612,7 +3631,7 @@ function updateStatus() {
   if(s.textContent!==copy)s.textContent=copy;
   s.classList.toggle('notice',notice);
   s.classList.toggle('alert',alert||penalty);
-  $('btnUndo').disabled=!canUndo();
+  $('btnUndo').disabled=$('btnChatUndo').disabled=!canUndo();
 }
 function updatePlates() { fillPlate($('plateTop'), other(viewSide)); fillPlate($('plateBottom'), viewSide); updateStatus(); }
 
@@ -6455,6 +6474,8 @@ $('setupCancel').addEventListener('click', closeSetup);
 $('setupDialog').addEventListener('pointerdown', (e) => { if (e.target === $('setupDialog')) closeSetup(); });
 $('btnNew').addEventListener('click', openSetup);
 $('btnChatNew').addEventListener('click', openSetup);
+$('btnChatUndo').addEventListener('click', undo);
+$('btnChatCam').addEventListener('click', resetView);
 $('btnPause').addEventListener('click',()=>void toggleChessPause());
 $('btnChatPause').addEventListener('click',()=>void toggleChessPause());
 $('btnUndo').addEventListener('click', undo);
