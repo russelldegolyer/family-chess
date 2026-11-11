@@ -15,12 +15,14 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=5"></script>
-<script defer src="./chess-online.js?v=13"></script>
+<script defer src="./chess-clock.js?v=6"></script>
+<script defer src="./chess-online.js?v=14"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
-<script defer src="./chess-social.js?v=11"></script>
+<script defer src="./chess-social.js?v=12"></script>
+<link rel="stylesheet" href="./chess-training.css?v=2">
+<script defer src="./chess-training.js?v=2"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -2108,8 +2110,10 @@ const SIDE = { w: 'White', b: 'Black' };
 const other = (s) => (s === 'w' ? 'b' : 'w');
 const UCI = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
 
+/* training positions start from a FEN; every real game starts from the normal position */
+let START_FEN = null;
 function positionFrom(moves, ply = moves.length, actions = []) {
-  let chess = new Chess();
+  let chess = START_FEN ? new Chess(START_FEN) : new Chess();
   const captured = { w: [], b: [] };
   let last = null, processed = 0;
   const n = Math.min(ply, moves.length);
@@ -3447,11 +3451,12 @@ function previewDisplay() {
   return { chess: base.chess, board, captured: base.captured, last: base.last, ply: base.ply, preview: mv };
 }
 /* the side being played changed: the coordinate labels always face the camera, so a fresh frame is all it takes */
-function actingSide() { return G.mode === 'local' ? G.pos.chess.turn() : G.mode === 'cpu' ? cpu.human : mySeat; }
+function actingSide() { return G.mode === 'train' ? TRAIN.side : G.mode === 'local' ? G.pos.chess.turn() : G.mode === 'cpu' ? cpu.human : mySeat; }
 function inputBlocked() { return !!thinking || performance.now() < lockUntil; }
 function canAct() {
   if (PG.on || !piecesReady || review || G.status !== 'active' || G.onlineBusy || inputBlocked()) return false;
-  if(window.ChessClock?.snapshot?.().clockState!=='running')return false;
+  if(G.mode!=='train'&&window.ChessClock?.snapshot?.().clockState!=='running')return false;
+  if (G.mode === 'train') return !TRAIN.busy && G.pos.chess.turn() === TRAIN.side;
   if (G.mode === 'local') return true;
   if (G.mode === 'cpu') return G.pos.chess.turn() === cpu.human;
   return G.mode === 'live' && !!mySeat && bothSeated() && G.pos.chess.turn() === mySeat;
@@ -3464,6 +3469,7 @@ function legalFrom(sq) {
 }
 
 function seatName(side) {
+  if (G.mode === 'train') return side === TRAIN.side ? (cleanName(store.get('sg.name', '')) || 'You') : TRAIN.opponent;
   if (G.mode === 'local') return SIDE[side];
   if (G.mode === 'cpu') return side === cpu.human ? cleanName(store.get('sg.name', '')) || 'You' : 'Computer';
   const uid = G.seats[side];
@@ -3568,8 +3574,9 @@ function updateMarkers() {
     if (m.captured || m.flags.includes('e')) { if (ri < MK.rings.length) { placeSq(MK.rings[ri][0], m.to); placeSq(MK.rings[ri][1], m.to); ri++; } }
     else if (di < MK.dots.length) placeSq(MK.dots[di++], m.to);
   }
+  if (G.mode === 'train' && (TRAIN.marks.tint || []).length <= MK.dots.length - di) for (const sq of TRAIN.marks.tint || []) placeSq(MK.dots[di++], sq);
   for (; di < MK.dots.length; di++) MK.dots[di].visible = false;
-  for (; ri < MK.rings.length; ri++) { MK.rings[ri][0].visible = false; MK.rings[ri][1].visible = false; }
+  if (G.mode === 'train') { for (const sq of TRAIN.marks.rings || []) if (ri < MK.rings.length) { placeSq(MK.rings[ri][0], sq); placeSq(MK.rings[ri][1], sq); ri++; } if (TRAIN.marks.sel) { placeSq(MK.sel, TRAIN.marks.sel); placeSq(MK.selShadow, TRAIN.marks.sel); } for (const [a, z] of TRAIN.marks.arrows || []) { placeSq(MK.sel, a); if (ri < MK.rings.length) { placeSq(MK.rings[ri][0], z); placeSq(MK.rings[ri][1], z); ri++; } } }
   if (pawnPick) for (const sq of pawnPick.squares) if (ri < MK.rings.length) { placeSq(MK.rings[ri][0], sq); placeSq(MK.rings[ri][1], sq); ri++; }
   for (; ri < MK.rings.length; ri++) { MK.rings[ri][0].visible = false; MK.rings[ri][1].visible = false; }
   placeSq(MK.hover, live && VIEW === '3d' ? (pending ? pending.to : hoverSq) : null);
@@ -5264,6 +5271,17 @@ function markers2D() {
       else sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.15, fill: C2.dot }, g);
     }
   }
+  if (G.mode === 'train') {
+    for (const sq of TRAIN.marks.rings || []) { const [c, r] = sqCR(sq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.44, fill: 'none', stroke: TRAIN.marks.ringColor || '#ff453a', 'stroke-width': 0.07 }, g); }
+    if (TRAIN.marks.sel) cell(TRAIN.marks.sel, { fill: 'rgba(255,69,58,.38)' });
+    for (const sq of TRAIN.marks.tint || []) cell(sq, { fill: 'rgba(255,69,58,.16)' });
+    for (const [a, z, col] of TRAIN.marks.arrows || []) {
+      const [c1, r1] = sqCR(a), [c2, r2] = sqCR(z), dx = c2 - c1, dy = r2 - r1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+      const x2 = c2 + 0.5 - ux * 0.32, y2 = r2 + 0.5 - uy * 0.32, color = col || 'rgba(255,69,58,.85)';
+      sv('line', { x1: c1 + 0.5, y1: r1 + 0.5, x2, y2, stroke: color, 'stroke-width': 0.16, 'stroke-linecap': 'round' }, g);
+      sv('polygon', { points: [[x2 + ux * 0.3, y2 + uy * 0.3], [x2 - uy * 0.2, y2 + ux * 0.2], [x2 + uy * 0.2, y2 - ux * 0.2]].map((p) => p.join(',')).join(' '), fill: color }, g);
+    }
+  }
   if (pawnPick) for (const sq of pawnPick.squares) { const [c, r] = sqCR(sq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.45, fill: 'none', stroke: '#ff453a', 'stroke-width': 0.08 }, g); }
 }
 function layout2D() {
@@ -5705,6 +5723,7 @@ function playMove(uci, opts = {}) {
   const { end } = r;
 
   updateAll();
+  if (G.mode === 'train') { TRAIN.after(uci, r); return; }
   if (end) setTimeout(showEndCard, REDUCED ? 0 : 900);
   else if (G.mode === 'cpu') requestComputer();
 }
@@ -7175,6 +7194,70 @@ async function applyPawnTimeAction(kind,square){
   if(G.mode==='cpu'&&updated.chess.turn()!==cpu.human)
     setTimeout(requestComputer,250);
 }
+/* ------------------------------------------------------------------ training board bridge
+   Training (chess-training.js) borrows the real board: same 3D/2D view, theme and colours. Entering saves the
+   game in progress (practice clock paused, online match detached) and leaving restores it exactly. */
+const TRAIN = { side: 'w', opponent: 'Trainer', busy: false, marks: {}, saved: null, onMove: null,
+  after(uci, r) { updateMarkers(); const f = TRAIN.onMove; if (f) setTimeout(() => f(uci, { end: r.end, fen: G.pos.chess.fen() }), REDUCED ? 0 : Math.max(120, r.land || 0)); } };
+function trainEnter() {
+  if (G.mode === 'train') return true;
+  cancelComputer(); if (pending) cancelPreview(false); clearSelection(); endPawnPick?.();
+  if (review) endReview();
+  const clock = window.ChessClock?.snapshot?.();
+  let pausedClock = false;
+  if (G.onlineProvider !== 'supabase' && (G.mode === 'cpu' || G.mode === 'local') && clock?.clockState === 'running' && clock.mode !== 'off' && G.status === 'active') pausedClock = window.ChessClock.pauseLocal() === 'paused';
+  const online = G.onlineProvider === 'supabase' && G.gid ? { gid: G.gid, mode: window.familyChessCurrentMatchMode?.() || 'play' } : null;
+  if (online) window.familyChessOnlineStop?.();
+  const pregame = PG.on; if (pregame) closePregame();
+  TRAIN.saved = { G: { ...G }, cpu: { ...cpu }, mySeat, viewSide, flipped, pausedClock, online, startFen: START_FEN, pregame };
+  if (online) { G.onlineProvider = null; window.ChessClock?.reset?.(); }
+  document.body.classList.add('training');
+  return true;
+}
+function trainSetup({ fen, side, opponent = 'Trainer' }) {
+  if (!TRAIN.saved) trainEnter();
+  START_FEN = fen; TRAIN.side = side; TRAIN.opponent = opponent; TRAIN.busy = false; TRAIN.marks = {};
+  hide($('endCard'));
+  Object.assign(G, { mode: 'train', gid: null, key: 't' + Date.now().toString(36), moves: [], pos: positionFrom([]), status: 'active', result: null, reason: null, drawOffer: null, turnAt: Date.now(), clockActions: [] });
+  G.version++; mySeat = null;
+  if (viewSide !== side) { viewSide = side; requestRender(); }
+  syncBoard(G.pos, { animate: true, quick: true }); fitCamera(true); updateAll();
+}
+function trainPlay(uci, { quick = false } = {}) {
+  if (G.mode !== 'train') return null;
+  const r = applyMove(uci);
+  if (r && quick) lockUntil = 0;
+  updateAll(); return r ? { end: r.end, fen: G.pos.chess.fen(), land: r.land } : null;
+}
+function trainTakeBack(n = 1) {
+  if (G.mode !== 'train' || !G.moves.length) return;
+  G.moves = G.moves.slice(0, Math.max(0, G.moves.length - n)); G.pos = positionFrom(G.moves);
+  Object.assign(G, { status: 'active', result: null, reason: null }); G.version++;
+  syncBoard(G.pos, { animate: true, quick: true }); updateAll();
+}
+function trainExit() {
+  const sv = TRAIN.saved; if (!sv) return;
+  TRAIN.saved = null; TRAIN.onMove = null; TRAIN.marks = {}; START_FEN = sv.startFen || null;
+  document.body.classList.remove('training');
+  Object.assign(G, sv.G); Object.assign(cpu, sv.cpu); mySeat = sv.mySeat; flipped = sv.flipped;
+  G.version++;
+  if (viewSide !== sv.viewSide) { viewSide = sv.viewSide; requestRender(); }
+  syncBoard(G.pos, { animate: true, quick: true }); fitCamera(true); updateAll();
+  if (sv.pausedClock && window.ChessClock?.snapshot?.().clockState === 'paused') { window.ChessClock.pauseLocal(); updateAll(); }
+  if (sv.pregame) openPregame();
+  if (sv.online) Promise.resolve(window.familyChessOpenMatch?.(sv.online.gid, sv.online.mode)).catch((e) => toast(e?.message || 'Could not reopen your online match', 4200));
+  else if (G.mode === 'cpu' && G.status === 'active' && G.pos.chess.turn() !== cpu.human) requestComputer();
+}
+window.familyChessBoard = Object.freeze({
+  enter: trainEnter, setup: trainSetup, play: trainPlay, takeBack: trainTakeBack, exit: trainExit,
+  prevFen: () => positionFrom(G.moves.slice(0, -1)).chess.fen(),
+  fen: () => G.pos.chess.fen(), turn: () => G.pos.chess.turn(), moves: () => G.moves.slice(),
+  chess: () => new Chess(G.pos.chess.fen()), active: () => G.mode === 'train',
+  onMove(fn) { TRAIN.onMove = fn; }, userMove(uci) { if (G.mode === 'train' && canAct()) playMove(uci); }, busy(v) { TRAIN.busy = !!v; },
+  mark(m) { TRAIN.marks = m || {}; updateMarkers(); },
+  Chess, engineSource: () => $('engineSrc').textContent, toast: (m, t) => toast(m, t),
+  playerName: () => cleanName(store.get('sg.name', '')) || 'You',
+});
 /* pawn-for-time: the player taps the pawn on the board instead of choosing from a list */
 let pawnPick=null;
 function pawnPickBar(){
@@ -7236,6 +7319,17 @@ window.ChessClock?.setHandlers({
   decide:()=>{updateAll();promptDecision();}
 });
 
+/* a new clock setting applies to the game in progress too (and becomes the default for the next one) */
+function applyClockChange(mode) {
+  if (G.status !== 'active' || PG.on) return;
+  if (G.onlineProvider === 'supabase') {
+    if (!mySeat || !G.gid) return;
+    Promise.resolve(window.familyChessChangeClock?.(G.gid, mode)).then(() => updateAll())
+      .catch((e) => toast(e?.message || 'Could not change the clock', 4200));
+    return;
+  }
+  if ((G.mode === 'cpu' || G.mode === 'local') && window.ChessClock?.changeLocalMode?.(mode)) { updateAll(); window.dispatchEvent(new Event('resize')); }
+}
 /* Settings: one compact list, a control on each row, no explanations; fits on one phone screen */
 function openSettings() {
   closeMenu();
@@ -7261,6 +7355,7 @@ function openSettings() {
     body.replaceChildren();
     row('Chess clock', seg([['off', 'Off'], ['10m', '10'], ['12m', '12'], ['15m', '15'], ['move60', '60s']], window.ChessClock?.getPreference?.() || 'off', (v) => {
       window.ChessClock?.setPreference(v);
+      applyClockChange(v);
       window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(v));
       window.familyChessClockSavePromise.catch((e) => toast('Clock preference could not sync: ' + (e?.message || 'Try again'), 4200));
     }, 'Chess clock: off, 10, 12 or 15 minutes each, or 60 seconds per move'));

@@ -25,3 +25,5 @@ Dates are when the decision was made or shipped (2026).
 | D-17 | iPhone-style UI (system font, frosted panels, flat toolbar) | Russell's request | Nov 5 | UI | Active |
 | D-19 | Settings is one compact list (clock, computer speed, moving pieces, 2D pieces, last move, sound, board FX) with no explanatory text, fitting one phone screen | Russell's request | Nov 11 | settings | Active |
 | D-18 | Computer colour retired: one colour per account, used for White pieces only (completes D-07) | Russell confirmed Nov 11 | Nov 11 | colours, profiles | Active |
+| D-20 | Training mode (puzzles, Endgame Academy, Endgame Challenges) reuses the real board via a bridge; entering saves the game in progress and leaving restores it (online matches are detached and reopened) | Russell's spec, Nov 11 | Nov 11 | training | Active |
+| D-21 | Changing the clock applies to the game in progress: total→total shifts both clocks by the difference; switching to/from 60 s per move starts the new mode fresh; pauses stay paused | Russell's spec | Nov 11 | clocks | Active |

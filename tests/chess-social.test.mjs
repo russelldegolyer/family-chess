@@ -18,7 +18,9 @@ test('family spectator feature remains intact while adding direct challenges',()
  assert.match(page,/chess-social\.js\?v=\d+/);
 });
 test('online availability and user names are based on authenticated profiles and presence',()=>{
- assert.match(social,/api\.from\('chess_profiles'\)\.select\('id,display_name'\)/);
+ assert.match(social,/api\.from\('chess_profiles'\)\.select\(hasLastSeen\?'id,display_name,last_seen_at':'id,display_name'\)/);
+ assert.match(social,/Last online/);
+ assert.match(social,/chess_touch_last_seen/);
  assert.match(social,/api\.channel\('chess-family-presence-v1'/);
  assert.match(social,/presence\.presenceState\(\)/);
  assert.match(social,/document\.visibilityState==='hidden'/);

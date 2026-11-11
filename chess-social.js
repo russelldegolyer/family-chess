@@ -36,6 +36,25 @@
  let user=null,presence=null,challengeChannel=null,poll=null,ticker=null;
  let profiles=[],activeGames=[],challenges=[],onlineIds=new Set(),openAlertId=null;
  let openedGameIds=new Set(),requesting=false,loading=false;
+ /* Last online: the server heartbeat (chess_profiles.last_seen_at) plus the last time this device saw them online */
+ let hasLastSeen=true,heartbeat=null,touchOk=true;const seenOnline={};
+ function lastOnline(p){
+  const t=Math.max(Date.parse(p.last_seen_at||'')||0,seenOnline[p.id]||0);
+  if(!t)return 'Offline';
+  const mins=Math.max(0,Math.round((Date.now()-t)/60000));
+  if(mins<1)return 'Last online just now';
+  if(mins<60)return 'Last online '+mins+' minute'+(mins===1?'':'s')+' ago';
+  const d=new Date(t),today=new Date();today.setHours(0,0,0,0);
+  const day=new Date(d);day.setHours(0,0,0,0);
+  const days=Math.round((today-day)/86400000);
+  if(days===0){const h=Math.round(mins/60);return 'Last online '+h+' hour'+(h===1?'':'s')+' ago';}
+  if(days===1)return 'Last online yesterday';
+  return 'Last online '+d.toLocaleDateString([],{month:'long',day:'numeric',...(d.getFullYear()!==today.getFullYear()?{year:'numeric'}:{})});
+ }
+ function touchLastSeen(force){
+  if(!user||!touchOk||(!force&&document.visibilityState!=='visible'))return;
+  Promise.resolve(api.rpc('chess_touch_last_seen')).then(r=>{if(r?.error&&/function|schema cache/i.test(r.error.message||''))touchOk=false;}).catch(()=>{});
+ }
  /* invite buttons stay green with a countdown while the 60 s challenge is open */
  const sentUntil={};let sentTimer=null;
  function tickSent(){
@@ -64,6 +83,8 @@
  function refreshPresence(){
   onlineIds=new Set();
   if(presence){
+   const now=Date.now();
+   for(const values of Object.values(presence.presenceState()||{}))for(const v of values||[])if(v?.uid)seenOnline[v.uid]=now;
    for(const values of Object.values(presence.presenceState()||{})){
     for(const item of values||[])if(validUid(item.uid))onlineIds.add(item.uid);
    }
@@ -85,7 +106,7 @@
    const identity=node('div','cgSocialIdentity'),n=node('span','cgSocialName',p.display_name);
    const status=node('span','cgSocialMeta'),dot=node('i','cgSocialDot'+(online(p.id)?' online':''));
    dot.setAttribute('aria-hidden','true');
-   status.append(dot,document.createTextNode((online(p.id)?'Online':'Offline')+(game?' · In game':'')));
+   status.append(dot,document.createTextNode((online(p.id)?'Online':lastOnline(p))+(game?' · In game':'')));
    identity.append(n,status);row.append(identity);
    /* someone mid-game can still be challenged; Watch sits beside it as a smaller eye button */
    if(game){
@@ -189,7 +210,7 @@
   loading=true;const uid=user.id;
   try{
    const [pr,gm,ch]=await Promise.all([
-    api.from('chess_profiles').select('id,display_name').order('display_name'),
+    api.from('chess_profiles').select(hasLastSeen?'id,display_name,last_seen_at':'id,display_name').order('display_name'),
     api.from('chess_games').select('id,white_player_id,black_player_id,updated_at,status')
       .eq('status','active').not('black_player_id','is',null).order('updated_at',{ascending:false}).limit(30),
     api.from('chess_challenges')
@@ -198,6 +219,7 @@
       .order('created_at',{ascending:false}).limit(30)
    ]);
    if(user?.id!==uid)return;
+   if(pr.error&&hasLastSeen&&/last_seen_at/.test(pr.error.message||'')){hasLastSeen=false;loading=false;return refreshData({offerLobby});}
    if(pr.error||gm.error||ch.error)throw(pr.error||gm.error||ch.error);
    profiles=pr.data||[];activeGames=gm.data||[];challenges=ch.data||[];
    renderPlayers();renderAlert();tick();
@@ -232,6 +254,7 @@
  }
  async function syncVisibility(){
   if(!presence||!user)return;
+  touchLastSeen(true);
   if(document.visibilityState==='hidden')await presence.untrack();
   else {await presence.track({uid:user.id});await refreshData();}
  }
@@ -239,7 +262,7 @@
  async function startUser(u){
   const prev=user?.id;user=u||null;
   if(!user){
-   clearInterval(poll);clearInterval(ticker);poll=null;ticker=null;
+   clearInterval(poll);clearInterval(ticker);clearInterval(heartbeat);poll=null;ticker=null;heartbeat=null;
    if(presence){void api.removeChannel(presence);presence=null;}
    if(challengeChannel){void api.removeChannel(challengeChannel);challengeChannel=null;}
    onlineIds=new Set();alert.hidden=true;return;
@@ -257,6 +280,7 @@
       ()=>{void refreshData()}).subscribe();
   poll=setInterval(()=>{void refreshData()},3000);
   ticker=setInterval(tick,1000);
+  clearInterval(heartbeat);heartbeat=setInterval(touchLastSeen,60000);touchLastSeen();
   await refreshData({offerLobby:true});
   void restorePushSubscription();
  }

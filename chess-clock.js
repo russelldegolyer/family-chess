@@ -295,6 +295,26 @@
     state.actorSide=actorSide==='w'||actorSide==='b'?actorSide:null;
     redraw();
   }
+  /* change the time control of the game in progress (practice): total-time to total-time shifts both clocks
+     by the difference; switching to or from 60 s per move starts the new mode fresh. Never resumes a pause. */
+  const TOTAL=new Set(['10m','12m','15m']);
+  function changeLocalMode(next){
+    next=normalized(next);
+    if(state.source!=='local'||state.status!=='active'||next===state.mode)return false;
+    const old=state.mode,now=Date.now(),running=active();
+    if(old!=='off')state[state.turn]=remaining(state.turn,now);
+    if(TOTAL.has(old)&&TOTAL.has(next)){
+      const d=MODES[next]-MODES[old];
+      state.w=Math.max(0,state.w+d);state.b=Math.max(0,state.b+d);
+    }else if(next==='move60'){state.w=60000;state.b=60000;}
+    else if(next!=='off'){state.w=MODES[next];state.b=MODES[next];}
+    state.mode=next;state.decided={w:false,b:false};
+    if(next==='off'){state.startedAt=0;if(state.clockState==='penalty'||state.clockState==='decision')state.clockState='running';state.penaltySide=null;}
+    else if(state.clockState==='running')state.startedAt=running||state.history.length>1?now:0;
+    if(state.clockState==='decision'&&!TOTAL.has(next))state.clockState='running',state.startedAt=state.history.length>1?now:0;
+    state.history=state.history.map(()=>({w:state.w,b:state.b,turn:state.turn}));
+    tick();return true;
+  }
   function setHandlers(next){for(const [k,v] of Object.entries(next||{}))
     if(k in handlers)handlers[k]=v;}
   function pauseLocal(){
@@ -323,7 +343,7 @@
   }
   window.ChessClock=Object.freeze({MODES,getPreference,setPreference,startLocal,moveLocal,
     undoLocal,stopLocal,showOnline,reset,remaining,check:tick,setPerspective,setHandlers,
-    pauseLocal,resolveLocalPenalty,sacrificeLocal,endDecision,
+    pauseLocal,resolveLocalPenalty,sacrificeLocal,endDecision,changeLocalMode,
     snapshot:()=>({...state,history:state.history.slice()})});
   tick();
 })();

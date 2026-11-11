@@ -480,6 +480,13 @@
     if(!data?.ok)throw new Error(data?.error||'Pawn choice rejected');
     await syncMatch();return data;
   };
+  /* change the clock of the open online match; the server shifts both clocks and realtime syncs the opponent */
+  window.familyChessChangeClock = async (id,mode) => {
+    if(!player||matchId!==id||matchMode!=='play')throw new Error('Only a player can change this clock');
+    const {data,error}=await api.rpc('chess_change_clock',{p_game_id:id,p_mode:mode});
+    if(error)throw new Error(/function|schema cache/i.test(error.message||'')?'Live clock changes need the new database update.':(error.message||'Could not change the clock'));
+    await syncMatch();return data;
+  };
   window.familyChessSaveClockPreference = async mode => {
     if(!['off','10m','12m','15m','move60'].includes(mode))throw new Error('Invalid clock selection');
     if(!player)return false;
@@ -488,6 +495,7 @@
     return true;
   };
   window.familyChessCurrentMatch = () => matchId;
+  window.familyChessCurrentMatchMode = () => matchMode;
   // Only a signed-in player in this active shared match may resign.
   // The database RPC validates ownership and records the winner atomically.
   window.familyChessResign = async (id) => {

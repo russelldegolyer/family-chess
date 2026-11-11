@@ -42,7 +42,10 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Players, presence, challenges, push | `chess-social.js`, `chess-sw.js` | |
 | Chat | `chess-chat.js` (+ `renderChat`/`sendChat` delegates in `index.html`) | |
 | Sign-in | `auth-gate.js`, `auth.css`, `config.js` | |
-| Tests | `tests/*.test.mjs` | regex checks on source + VM clock/AI/colour tests; all 34 pass |
+| Training (puzzles, Endgame Academy, Endgame Challenges) | `chess-training.js` / `.css`; board bridge `window.familyChessBoard` + `TRAIN`/`START_FEN` (`G.mode === 'train'`) in `index.html`; dev puzzles `chess-puzzles-dev.json`; loader `tools/import-lichess-puzzles.py` | lightbulb beside the colour wheel; saves and restores the current game; progress in localStorage + `chess_training_progress` |
+| Live clock change | `ChessClock.changeLocalMode` (practice), `applyClockChange` in `index.html`, `familyChessChangeClock` → RPC `chess_change_clock` (online) | total→total shifts both clocks by the difference |
+| Last online | `chess-social.js` (`lastOnline`, `touchLastSeen` heartbeat → RPC `chess_touch_last_seen`) | falls back to "Offline" if the column is missing |
+| Tests | `tests/*.test.mjs` | regex checks on source + VM clock/AI/colour tests; all 37 pass |
 
 ## Feature Registry
 **Implemented and verified** (checked in a browser or by tests during 2026-11 sessions)
@@ -79,6 +82,8 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - **Timeout rule:** opponent removes a pawn, timed-out side gets 3:00 (`180000`) — matches. Below 30 s, sacrifice a pawn for +1:30 — matches.
 
 ## Known Issues
+- Pending migration `database/chess-training-clock-presence-2026-11-11.sql` (NOT applied): online clock changes, Last online heartbeat, puzzle DB and training sync need it; until then puzzles use the dev subset and progress stays on the device.
+- Endgame truth uses the Lichess tablebase API when reachable (live site); in the artifact it falls back to the engine.
 - Supabase advisor: leaked-password protection is off (Russell chose to leave it); League Lab functions flagged as executable by signed-in users (not Chess's to change).
 - Opening-screen swipe smoothness only checked in a slow headless browser; confirm on phone.
 
