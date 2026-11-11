@@ -15,7 +15,7 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=4"></script>
+<script defer src="./chess-clock.js?v=5"></script>
 <script defer src="./chess-online.js?v=13"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
@@ -1089,6 +1089,9 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
 .set-switch[aria-checked="true"] { background: #30d158; }
 .set-switch[aria-checked="true"]::after { transform: translateX(20px); }
 @media (max-width: 370px) { .set-label { font-size: 14px; } .set-seg button { padding: 0 6px; font-size: 12px; } }
+.pawn-pick-bar{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);padding:9px 10px 9px 14px;border-radius:14px;background:rgba(28,28,30,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#f2f2f7;font:600 13px/1.25 -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)}
+.pawn-pick-bar button{flex:none;border:0;border-radius:9px;padding:7px 11px;background:#3a3a3c;color:#f2f2f7;font:600 13px/1 -apple-system,sans-serif}
+.pawn-pick-bar button[hidden]{display:none}
 </style>
 
 </head>
@@ -3531,6 +3534,8 @@ function updateMarkers() {
   }
   for (; di < MK.dots.length; di++) MK.dots[di].visible = false;
   for (; ri < MK.rings.length; ri++) { MK.rings[ri][0].visible = false; MK.rings[ri][1].visible = false; }
+  if (pawnPick) for (const sq of pawnPick.squares) if (ri < MK.rings.length) { placeSq(MK.rings[ri][0], sq); placeSq(MK.rings[ri][1], sq); ri++; }
+  for (; ri < MK.rings.length; ri++) { MK.rings[ri][0].visible = false; MK.rings[ri][1].visible = false; }
   placeSq(MK.hover, live && VIEW === '3d' ? (pending ? pending.to : hoverSq) : null);
   MK.hover.material.opacity = pending ? 0.3 : 0.12;
   markers2D();
@@ -5223,6 +5228,7 @@ function markers2D() {
       else sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.15, fill: C2.dot }, g);
     }
   }
+  if (pawnPick) for (const sq of pawnPick.squares) { const [c, r] = sqCR(sq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.45, fill: 'none', stroke: '#ff453a', 'stroke-width': 0.08 }, g); }
 }
 function layout2D() {
   // Do not refit or reposition the board when iOS opens its keyboard.
@@ -5553,6 +5559,7 @@ function select(sq) {
 function clearSelection() { if (selected) select(null); }
 function onSquareClick(sq) {
   if (review) return;
+  if (pawnPick) { pickPawnSquare(sq); return; }
   if (pending) {
     const p = pending;
     if (sq === p.to) { confirmPreview(); return; }
@@ -7088,8 +7095,8 @@ async function applyPawnTimeAction(kind,square){
   }
   if(kind==='penalty'&&clock.clockState!=='penalty')return;
   if(kind==='sacrifice'&&
-    (clock.clockState!=='running'||clock.remaining===null||
-      window.ChessClock.remaining(clock.turn)>=30000))return;
+    ((clock.clockState!=='running'&&clock.clockState!=='decision')||
+      window.ChessClock.remaining(clock.turn)>30000))return;
   const victim=kind==='penalty'?clock.penaltySide:clock.turn;
   if(victim!=='w'&&victim!=='b')return;
   const before=new Chess(G.pos.chess.fen());
@@ -7117,6 +7124,7 @@ async function applyPawnTimeAction(kind,square){
   const actions=[...(G.clockActions||[]),action];
   const updated=positionFrom(G.moves,G.moves.length,actions);
   if(updated.invalid||updated.chess.fen()!==fen){toast('Could not apply pawn choice.');return;}
+  if(kind==='sacrifice')window.ChessClock.endDecision?.();
   const applied=kind==='penalty'?window.ChessClock.resolveLocalPenalty():
     window.ChessClock.sacrificeLocal(updated.chess.turn(),G.moves.length);
   if(!applied)return;
@@ -7128,6 +7136,26 @@ async function applyPawnTimeAction(kind,square){
   if(G.mode==='cpu'&&updated.chess.turn()!==cpu.human)
     setTimeout(requestComputer,250);
 }
+/* pawn-for-time: the player taps the pawn on the board instead of choosing from a list */
+let pawnPick=null;
+function pawnPickBar(){
+  let bar=$('pawnPickBar');
+  if(!bar){
+    bar=el('div','pawn-pick-bar');bar.id='pawnPickBar';bar.setAttribute('role','status');
+    const t=el('span','');t.id='pawnPickText';
+    const c=el('button','');c.type='button';c.id='pawnPickCancel';c.textContent='Back';
+    c.addEventListener('click',()=>{const k=pawnPick?.kind;endPawnPick();if(k==='sacrifice'&&window.ChessClock?.snapshot().clockState==='decision')promptDecision();});
+    bar.append(t,c);document.body.append(bar);
+  }
+  return bar;
+}
+function endPawnPick(){pawnPick=null;const b=$('pawnPickBar');if(b)b.hidden=true;updateMarkers();}
+function pickPawnSquare(sq){
+  const p=pawnPick;if(!p)return;
+  const piece=sq&&G.pos.chess.get(sq);
+  if(!piece||piece.type!=='p'||piece.color!==p.victim){toast(p.kind==='penalty'?'Tap one of the highlighted pawns.':'Tap one of your highlighted pawns.');return;}
+  endPawnPick();void applyPawnTimeAction(p.kind,sq);
+}
 function promptPawnTimeChoice(kind){
   if(G.status!=='active')return;
   const clock=window.ChessClock?.snapshot();
@@ -7136,30 +7164,37 @@ function promptPawnTimeChoice(kind){
   if(!victim)return;
   if(kind==='penalty'&&clock.clockState!=='penalty')return;
   const options=pawnCandidates(victim);
-  const title=kind==='penalty'?'Time expired — choose a pawn':'Forfeit a pawn for +1:30';
-  const info=kind==='penalty'
-    ? SIDE[victim]+' ran out of time. Select one of their pawns to remove. They receive three minutes and keep their turn.'
-    : 'Choose one of your own pawns to remove. This uses your turn and adds 1 minute 30 seconds.';
-  const d=dialog(title,[info],[['Cancel','quiet',null]]);
-  d.card.classList.add('chess-pawn-picker');
-  const list=el('div','chess-pawn-options');
-  if(!options.length&&kind==='penalty'){
-    const b=button('No pawns left — continue +3:00','gold',()=>{d.close();void applyPawnTimeAction('penalty',null);});
-    list.append(b);
-  }else{
-    for(const sq of options){
-      const b=button('♟ '+sq.toUpperCase(),'small',()=>{d.close();void applyPawnTimeAction(kind,sq);});
-      b.setAttribute('aria-label','Remove '+SIDE[victim]+' pawn on '+sq);
-      list.append(b);
-    }
+  if(!options.length){
+    if(kind==='penalty'){toast('No pawns left · 3:00 restored');void applyPawnTimeAction('penalty',null);}
+    else toast('You have no pawns to give up.');
+    return;
   }
-  d.card.insertBefore(list,d.card.lastChild);
-  if(options.length)list.querySelector('button')?.focus();
+  clearSelection();
+  pawnPick={kind,victim,squares:options};
+  const bar=pawnPickBar();bar.hidden=false;
+  $('pawnPickText').textContent=kind==='penalty'
+    ?SIDE[victim]+' ran out of time · tap a '+SIDE[victim].toLowerCase()+' pawn to remove'
+    :'Tap one of your pawns to give up for +1:30';
+  $('pawnPickCancel').hidden=kind==='penalty';
+  updateMarkers();
+}
+/* at 0:30 the practice clock stops: give a pawn now for +1:30, or keep playing and take 3:00 at zero */
+function promptDecision(){
+  if(G.status!=='active'||window.ChessClock?.snapshot().clockState!=='decision')return;
+  const block=(e)=>{if(e.target===d.card.parentNode)e.stopPropagation();};
+  const done=()=>document.removeEventListener('pointerdown',block,true);
+  const d=dialog('0:30 left',[],[
+    ['Give a pawn · +1:30','gold',()=>{done();promptPawnTimeChoice('sacrifice');}],
+    ['3:00','quiet',()=>{done();window.ChessClock?.endDecision?.();updateAll();}]]);
+  d.card.classList.add('pawn-decision');
+  document.addEventListener('pointerdown',block,true);
+  d.card.querySelectorAll('button')[1]?.setAttribute('aria-label','Keep playing. At 0:00 your opponent removes one of your pawns and you get 3:00');
 }
 window.ChessClock?.setHandlers({
   pause:()=>void toggleChessPause(),
   trade:()=>promptPawnTimeChoice('sacrifice'),
-  select:()=>promptPawnTimeChoice('penalty')
+  select:()=>promptPawnTimeChoice('penalty'),
+  decide:()=>{updateAll();promptDecision();}
 });
 
 /* Settings: one compact list, a control on each row, no explanations; fits on one phone screen */

@@ -29,7 +29,7 @@
   const tradeBtn=document.createElement('button');tradeBtn.type='button';
   const chooseBtn=document.createElement('button');chooseBtn.type='button';
   actions.append(pauseBtn,tradeBtn,chooseBtn);hud.append(actions);
-  const handlers={pause:null,trade:null,select:null};
+  const handlers={pause:null,trade:null,select:null,decide:null};
   pauseBtn.addEventListener('click',()=>handlers.pause?.());
   tradeBtn.addEventListener('click',()=>handlers.trade?.());
   chooseBtn.addEventListener('click',()=>handlers.select?.());
@@ -97,7 +97,7 @@
   const state = { source:null, mode:'off', status:'waiting', turn:'w', gameId:null,
     w:0,b:0,startedAt:0,history:[],onLocalTimeout:null,onOnlineTimeout:null,
     claimedAt:0, claimInFlight:false,clockState:'running',penaltySide:null,
-    actorSide:null,viewSide:'w',bonusW:0,bonusB:0 };
+    decided:{w:false,b:false},actorSide:null,viewSide:'w',bonusW:0,bonusB:0 };
   const parseDate = v => v ? new Date(v).getTime() || 0 : 0;
   const normalized = mode => VALID.has(mode) ? mode : 'off';
   const active = () => state.mode!=='off' && state.status==='active'
@@ -180,7 +180,22 @@
       n.node.setAttribute('aria-label',(side==='w'?'White':'Black')+' '+t+(selected?' to move':''));
     }
   }
+  /* practice: at 0:30 the clock stops once so the player can pick: pawn for +1:30, or play on to 3:00 */
+  function checkDecision(){
+    if(state.source!=='local'||!active()||!['10m','12m','15m'].includes(state.mode))return;
+    const side=state.turn,left=remaining(side);
+    if(left>30000){state.decided[side]=false;return;}
+    if(left<=0||state.decided[side]||state.actorSide!==side)return;
+    state.decided[side]=true;
+    state[side]=left;state.startedAt=0;state.clockState='decision';
+    redraw();handlers.decide?.(side);
+  }
+  function endDecision(){
+    if(state.clockState!=='decision')return false;
+    state.clockState='running';state.startedAt=Date.now();redraw();return true;
+  }
   function tick() {
+    checkDecision();
     redraw();
     if (!active() || remaining(state.turn)>0) return;
     if (state.source==='local') {
@@ -219,7 +234,7 @@
       /* a practice clock waits for the game's first move before it starts counting */
       w:limit,b:limit,startedAt:0,
       history:[{w:limit,b:limit,turn:'w'}],onLocalTimeout:onTimeout,onOnlineTimeout:null,
-      claimedAt:0,claimInFlight:false});
+      claimedAt:0,claimInFlight:false,decided:{w:false,b:false}});
     tick();
   }
   function moveLocal(nextTurn,ply,ended=false) {
@@ -283,7 +298,7 @@
   function setHandlers(next){for(const [k,v] of Object.entries(next||{}))
     if(k in handlers)handlers[k]=v;}
   function pauseLocal(){
-    if(state.source!=='local'||state.status!=='active'||state.clockState==='penalty')return null;
+    if(state.source!=='local'||state.status!=='active'||state.clockState==='penalty'||state.clockState==='decision')return null;
     const now=Date.now();
     if(state.clockState==='running'){
       if(state.mode!=='off')state[state.turn]=remaining(state.turn,now);
@@ -294,12 +309,12 @@
   }
   function resolveLocalPenalty(){
     if(state.source!=='local'||state.clockState!=='penalty'||!['10m','12m','15m'].includes(state.mode))return false;
-    state[state.penaltySide]=180000;
+    state[state.penaltySide]=180000;state.decided[state.penaltySide]=false;
     state.clockState='running';state.penaltySide=null;state.startedAt=Date.now();tick();return true;
   }
   function sacrificeLocal(nextTurn,ply){
     if(state.source!=='local'||state.clockState!=='running'||!['10m','12m','15m'].includes(state.mode)
-      ||remaining(state.turn)<=0||remaining(state.turn)>=30000)return false;
+      ||remaining(state.turn)<=0||remaining(state.turn)>30000)return false;
     const actor=state.turn,rem=remaining(actor);
     state[actor]=rem+90000;
     state.turn=nextTurn;state.startedAt=Date.now();
@@ -308,7 +323,7 @@
   }
   window.ChessClock=Object.freeze({MODES,getPreference,setPreference,startLocal,moveLocal,
     undoLocal,stopLocal,showOnline,reset,remaining,check:tick,setPerspective,setHandlers,
-    pauseLocal,resolveLocalPenalty,sacrificeLocal,
+    pauseLocal,resolveLocalPenalty,sacrificeLocal,endDecision,
     snapshot:()=>({...state,history:state.history.slice()})});
   tick();
 })();
