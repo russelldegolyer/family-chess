@@ -6501,8 +6501,25 @@ $('setupStart').addEventListener('click', () => {
 });
 $('setupCancel').addEventListener('click', closeSetup);
 $('setupDialog').addEventListener('pointerdown', (e) => { if (e.target === $('setupDialog')) closeSetup(); });
-$('btnNew').addEventListener('click', openSetup);
-$('btnChatNew').addEventListener('click', openSetup);
+/* New: back to the opening screen (side-on board, swipe to pick a side, difficulty slider).
+   With moves on the board it asks first, so a game is never thrown away by a stray tap. */
+function goHome() {
+  closeMenu();
+  endPracticeGame();
+  resetLocalGame('local', 1);
+  openPregame();
+}
+function newGame() {
+  if (PG.on) return;
+  const playing = G.moves.length > 0 && G.status === 'active';
+  if (!playing) { goHome(); return; }
+  const online = G.onlineProvider === 'supabase';
+  dialog(online ? 'Leave this match?' : 'Start a new game?',
+    [online ? 'You can come back to it from Play online.' : 'This game will end and you’ll go back to the start screen.'],
+    [['Keep playing', 'quiet', null], [online ? 'Leave match' : 'New game', 'gold', goHome]]);
+}
+$('btnNew').addEventListener('click', newGame);
+$('btnChatNew').addEventListener('click', newGame);
 $('btnChatUndo').addEventListener('click', undo);
 $('btnChatCam').addEventListener('click', resetView);
 $('btnPause').addEventListener('click',()=>void toggleChessPause());
@@ -6548,7 +6565,7 @@ function maybeShowEndCard() {
   const acts = $('endActions');
   acts.replaceChildren();
   if (G.mode !== 'live') acts.append(button('Play Again', 'gold', () => rematch(false)), button('Swap colors', '', () => rematch(true)));
-  acts.append(button('New game', '', () => { endDismissed = endKey(); card.hidden = true; openSetup(); }));
+  acts.append(button('New game', '', () => { endDismissed = endKey(); card.hidden = true; goHome(); }));
   acts.append(button('▶ Game review', 'gold', () => { endDismissed = endKey(); beginGameReview(); }));
   acts.append(button('Close', 'quiet', () => { endDismissed = endKey(); card.hidden = true; }));
   card.hidden = false;
