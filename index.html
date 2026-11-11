@@ -6918,6 +6918,7 @@ function playerBoard(uid) {
   const inst = OTHER_EQ[uid] && PROG.boards[OTHER_EQ[uid]];
   return inst && BOARD[themeId(inst.themeId)] ? themeId(inst.themeId) : 'unnamed';
 }
+let pickedBoard = null;
 function presentTheme() {
   if (previewTheme) { if (previewTheme !== THEME) applyTheme(previewTheme); return; }
   /* each player sees their own equipped board; someone watching sees the board of the player whose side
@@ -6925,7 +6926,9 @@ function presentTheme() {
   const watchedUid = G.mode === 'live' && !mySeat ? G.seats[viewSide] || G.seats[other(viewSide)] : null;
   const watched = watchedUid ? playerBoard(watchedUid) : null;
   const liveBoard = watched && BOARD[watched] ? watched : null;
-  const want = liveBoard || (PROG.ready ? equippedInstance().themeId : 'unnamed');
+  /* the board you tapped wins even if saved progress isn't available (blocked storage, slow load) */
+  const own = BOARD[pickedBoard] ? pickedBoard : (PROG.ready ? equippedInstance().themeId : 'unnamed');
+  const want = liveBoard || own;
   if (want !== THEME) applyTheme(want);
 }
 
@@ -7068,7 +7071,7 @@ function renderCollection() {
   for (const b of enabledBoards()) {
     const inst = b.id === 'unnamed' ? instanceOf('starter-' + myId()) : myBoards().find((x) => x.themeId === b.id);
     const rec = inst && (inst.wins || inst.losses || inst.draws) ? `${inst.wins || 0}W · ${inst.losses || 0}L · ${inst.draws || 0}D` : '';
-    tile(g3, boardArt(b.id), b.name, rec, VIEW === '3d' && eq.themeId === b.id, async () => { if (inst) await equip(inst.instanceId); applyView('3d'); closeCollection(); updateBoardChip(); });
+    tile(g3, boardArt(b.id), b.name, rec, VIEW === '3d' && eq.themeId === b.id, async () => { pickedBoard = b.id; if (inst) await equip(inst.instanceId); presentTheme(); applyView('3d'); closeCollection(); updateBoardChip(); });
   }
 }
 function dialog(title, paras, actions) {
