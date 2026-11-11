@@ -1074,6 +1074,7 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
 .pg-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .pg-side { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; border: 0; border-radius: 20px; background: var(--fill-2); color: var(--ink); font: 600 17px/1 var(--body); letter-spacing: -0.01em; cursor: pointer; transition: background 0.15s ease, transform 0.12s ease; }
 .pg-side:active { transform: scale(0.97); background: var(--fill); }
+.pg-side.lean { background: var(--fill); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.35); }
 .pg-side .orb { width: 18px; height: 18px; flex: none; }
 .pg-side small { font: 500 12px/1 var(--body); color: var(--ink-3); }
 .pg-diff { padding: 18px 14px 0; }
@@ -4802,10 +4803,10 @@ function sideColors() {
   const mine = myColor(), opp = oppColor();
   /* choosing a side: both armies in plain white and black until the board leans one way; the army turning
      toward you takes your colour then, so it is already yours when the game starts */
-  if (PG.on) {
-    if (!PG.lean) return { w: '#ece7dc', b: '#26262a' };
-    const c = CPU_COLOR || opp;
-    return PG.lean === 'w' ? { w: mine, b: c } : { w: c, b: mine };
+  if (PG.on) return PG_PLAIN;
+  if (PG.fade) {
+    const t = PG.fade.k, c = CPU_COLOR || opp, end = cpu.human === 'w' ? { w: mine, b: c } : { w: c, b: mine };
+    return { w: mixHex(PG_PLAIN.w, end.w, t), b: mixHex(PG_PLAIN.b, end.b, t) };
   }
   if (G.mode === 'live') {
     const c = G.colors || {}, pick = (side, fb) => (G.seats[side] && G.seats[side] === me.id ? mine : chromaOk(c[G.seats[side]]) ? c[G.seats[side]] : fb);
@@ -5482,7 +5483,9 @@ function fitCamera(animate) {
   let topR = landscapePhone ? 12 : compact ? 88 : 104, botR = landscapePhone ? 10 : compact ? 76 : 84;
   if (compact && !landscapePhone) { const r = uiReserve(); topR = r.top; botR = r.bottom; }
   if (PG.on) { const r = pregameReserve(); topR = r.top; botR = r.bottom; }
+  const shiftFrom = viewYShift;
   viewYShift = compact && !landscapePhone ? -Math.round((topR - botR) / 2) : 0;
+  const shiftTo = viewYShift;
   applyProjection();
   /* the play view is high and readable, like looking down at a real board; the close view is lower and
      nearer; the showcase view is each board's reference-photo angle */
@@ -5515,6 +5518,7 @@ function fitCamera(animate) {
   const dest = at(hi * (cv === 'close' ? 0.74 : 1));
   camera.position.copy(start); camera.quaternion.copy(startQ); camera.updateMatrixWorld(true);
   if (!animate || REDUCED) { camera.position.copy(dest); camera.lookAt(0, 0, 0); controls.update(); requestRender(); return; }
+  if (shiftFrom !== shiftTo) { viewYShift = shiftFrom; applyProjection(); }
   const s0 = new THREE.Spherical().setFromVector3(camera.position.clone().sub(fromTarget));
   const s1 = new THREE.Spherical().setFromVector3(dest);
   let dth = s1.theta - s0.theta;
@@ -5525,8 +5529,8 @@ function fitCamera(animate) {
   camTween = tween({
     dur: PG.swing ? PG.swingDur : 850,
     ease: PG.swing ? easeOut : easeInOut,
-    update: (k) => { const e = k; controls.target.lerpVectors(fromTarget, new THREE.Vector3(), e); sp.set(s0.radius + (s1.radius - s0.radius) * e, s0.phi + (s1.phi - s0.phi) * e, s0.theta + dth * e); camera.position.setFromSpherical(sp).add(controls.target); camera.lookAt(controls.target); },
-    done: () => { camTween = null; controls.update(); },
+    update: (k) => { const e = k; if (shiftFrom !== shiftTo) { viewYShift = shiftFrom + (shiftTo - shiftFrom) * e; applyProjection(); } controls.target.lerpVectors(fromTarget, new THREE.Vector3(), e); sp.set(s0.radius + (s1.radius - s0.radius) * e, s0.phi + (s1.phi - s0.phi) * e, s0.theta + dth * e); camera.position.setFromSpherical(sp).add(controls.target); camera.lookAt(controls.target); },
+    done: () => { camTween = null; if (viewYShift !== shiftTo) { viewYShift = shiftTo; applyProjection(); } controls.update(); },
   });
 }
 /* the camera button: after you've moved the camera it returns to the current view; otherwise it steps
@@ -7316,7 +7320,7 @@ let firstFrame = true, warmFrames = 0;
 function requestRender() { needsRender = true; }
 function frame(now) {
   requestAnimationFrame(frame);
-  const animating = stepTweens(now) | (VIEW === '3d' && stepEntrance(now)) | pgStep(now);
+  const animating = stepTweens(now) | (VIEW === '3d' && stepEntrance(now)) | pgStep(now) | pgFadeStep(now);
   const fx = VIEW === '3d' && THEMES[THEME].anim && fxTick(now);
   const moved = VIEW === '3d' && !ENTRANCE && controls.update();
   const paused = false;
@@ -7382,6 +7386,7 @@ function openPregame() {
   document.body.classList.add('pregame');
   const el = $('pregame'); el.classList.remove('leaving', 'touched'); el.hidden = false;
   pgSetLevel(cpu.level);
+  PG.fade = null;
   controls.enabled = false;
   userCam = false;
   if (camTween) { tweens.delete(camTween); camTween = null; }
@@ -7404,13 +7409,23 @@ function pgPlace() {
   camera.lookAt(0, 0, 0); controls.target.set(0, 0, 0);
   requestRender();
 }
+const PG_PLAIN = { w: '#ece7dc', b: '#26262a' };
+/* after a side is picked, the plain armies ease into the players' colours over the swing */
+function pgFadeStep(now) {
+  const f = PG.fade; if (!f) return false;
+  f.k = Math.min(1, (now - f.t0) / f.dur); f.k = f.k * f.k * (3 - 2 * f.k);
+  applySideColors(true); if (VIEW === '2d') draw2D(true);
+  if (f.k >= 1) { PG.fade = null; applySideColors(true); }
+  return true;
+}
 /* which army you are turning toward you (White when the camera swings toward az 0, Black toward π) */
 function pgLean(force) {
-  /* follows where your finger is taking the board, not the intro glide */
+  /* colours stay put while you choose; lean is kept only for the button highlight */
   const t = PG.drag ? PG.target : PG_BASE;
   const lean = t < PG_BASE - 0.14 ? 'w' : t > PG_BASE + 0.14 ? 'b' : null;
+  if (lean !== PG.lean) { $('pgWhite').classList.toggle('lean', lean === 'w'); $('pgBlack').classList.toggle('lean', lean === 'b'); }
   if (lean === PG.lean && !force) return;
-  PG.lean = lean; applySideColors(true); if (VIEW === '2d') draw2D(true); requestRender();
+  PG.lean = lean;
 }
 /* called every animation frame: the board eases toward where your finger is, so uneven touch events
    (and 60 vs 120 Hz screens) still give one continuous motion */
@@ -7433,8 +7448,8 @@ function pregameGlide() {
 }
 function closePregame(side) {
   if (!PG.on) return;
-  if (side) PG.lean = side;
   PG.on = false; PG.swing = true;
+  if (side) PG.fade = { t0: performance.now() + 60, dur: Math.max(420, PG.swingDur * 0.75), k: 0 };
   controls.enabled = true;
   const el = $('pregame'); el.classList.add('leaving');
   document.body.classList.remove('pregame');
