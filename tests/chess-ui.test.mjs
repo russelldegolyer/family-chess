@@ -49,7 +49,7 @@ test('each authenticated player can publish their own hex color',()=>{
 });
 test('live game reads both seated players colors, including changes to their current match',()=>{
  assert.match(online,/const colors=Object\.fromEntries/);
- assert.match(online,/await native\.present\(g,moves\.map\(m=>m\.move_uci\),uid,labels,colors,\{spectating:isWatcher\}\)/);
+ assert.match(online,/await native\.present\(g,moves\.map\(m=>m\.move_uci\),uid,labels,colors,\s*\{spectating:isWatcher,actions:actions\|\|\[\]\}\)/);
  assert.match(html,/G\.colors=filteredColors/);
  assert.match(html,/if\(colorsChanged\)\{/);
  assert.match(html,/applySideColors\(true\)/);
@@ -57,9 +57,8 @@ test('live game reads both seated players colors, including changes to their cur
  assert.match(html,/setAccountColor\(hex\)/);
 });
 test('joining and leaving a private match updates the chat empty-state text',()=>{
- assert.match(html,/updateAll\(\);\s*\/\/ The original practice renderer initializes before Supabase connects\./);
  assert.match(html,/\/\/ Refresh the empty\/chat state as soon as a private match is displayed\./);
- assert.match(html,/resetLocalGame\('local',1\);\s*renderChat\(\);\s*updateChatEnabled\(\);/);
+ assert.match(html,/resetLocalGame\('local',1\);\s*openPregame\(\);\s*renderChat\(\);\s*updateChatEnabled\(\);/);
 });
 test('database field uses player-own RLS and hex constraint',()=>{
  const migration=read('database/chess-profile-colors.sql');
@@ -80,7 +79,7 @@ test('signed-in members see active games, saved display names and watch actions'
 });
 test('spectator mode never submits a move, changes seats or joins games',()=>{
  assert.match(online,/matchMode!=='play'\) throw new Error\('Only participating players can submit moves\.'/);
- assert.match(online,/await native\.present\(g,moves\.map\(m=>m\.move_uci\),uid,labels,colors,\{spectating:isWatcher\}\)/);
+ assert.match(online,/await native\.present\(g,moves\.map\(m=>m\.move_uci\),uid,labels,colors,\s*\{spectating:isWatcher,actions:actions\|\|\[\]\}\)/);
  assert.match(html,/const watching=options\.spectating===true/);
  assert.match(html,/mySeat = watching \? null : white === userId/);
  assert.match(html,/me\.canWrite = !watching/);

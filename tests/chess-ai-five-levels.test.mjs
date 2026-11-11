@@ -18,13 +18,11 @@ const movesFromStart=new Set([
   'b1a3','b1c3','g1f3','g1h3'
 ]);
 
-test('the setup screen offers exactly five numbered computer levels',()=>{
- const block=html.match(/id="optLevel"([\s\S]*?)<\/div>/)?.[1];
- assert.ok(block);
- const choices=[...block.matchAll(/data-v="(\d+)"[^>]*>([^<]+)<\/button>/g)];
- assert.deepEqual(choices.map(x=>x[1]),['1','2','3','4','5']);
- assert.deepEqual(choices.map(x=>x[2]),['1','2','3','4','5']);
- assert.doesNotMatch(block,/Gukesh|Magnus|Easy|Average|Hard/i);
+test('the opening screen offers exactly five computer levels, 4 and 5 named for their styles',()=>{
+ assert.match(html,/id="pgLevel" type="range" min="1" max="5" step="1"/);
+ const ticks=html.match(/id="pgTicks">([\s\S]*?)<\/div>/)?.[1];
+ assert.deepEqual([...ticks.matchAll(/<span>(\d)<\/span>/g)].map(x=>x[1]),['1','2','3','4','5']);
+ assert.match(html,/PG_LEVEL_NAME = \{ 1: 'Easy', 2: 'Casual', 3: 'Hard', 4: 'Expert · Gukesh style', 5: 'Expert · Magnus style' \}/);
  assert.match(html,/clamp\(Number\(store\.get\('sg\.level', 2\)\) \|\| 2, 1, 5\)/);
  assert.match(html,/cpuLevels: \[1, 2, 3, 4, 5\]/);
 });

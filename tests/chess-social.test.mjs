@@ -13,9 +13,9 @@ test('family spectator feature remains intact while adding direct challenges',()
  assert.match(online,/if\s*\(!player \|\| !matchId \|\| id !== matchId \|\| matchMode!=='play'\)/);
  assert.match(online,/window\.familyChessOpenMatch = \(id,mode='play'\) => startMatch\(id,mode\)/);
  assert.match(online,/id="cgSocialMount"/);
- assert.match(online,/<details id="cgLegacy">/);
+ assert.match(online,/<details class="cgSettings" id="cgSettings">/);
  assert.doesNotMatch(social,/id="cgLiveGames"/);
- assert.match(page,/chess-social\.js\?v=4/);
+ assert.match(page,/chess-social\.js\?v=\d+/);
 });
 test('online availability and user names are based on authenticated profiles and presence',()=>{
  assert.match(social,/api\.from\('chess_profiles'\)\.select\('id,display_name'\)/);

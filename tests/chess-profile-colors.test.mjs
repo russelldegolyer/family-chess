@@ -28,59 +28,56 @@ function makeColors(storage){
   applySideColors(){},updatePlates(){},draw2D(){}
  };
  const api=vm.runInNewContext(fragment+
-  "\n({activateChessColorProfile,clearChessColorProfile,myColor,oppColor,setMyColor,setOppColor,cpuColor:()=>CPU_COLOR})",
+  "\n({activateChessColorProfile,clearChessColorProfile,myColor,setMyColor})",
   ctx,{timeout:1000});
  return {api,events};
 }
 
-test('new sessions restore both piece colors for the same signed-in profile',()=>{
+test('a new session restores the White piece colour for the same signed-in profile',()=>{
  const storage=new Map();
- let {api}=makeColors(storage);
+ let {api,events}=makeColors(storage);
  api.activateChessColorProfile('account-A');
  api.setMyColor('#2857aa');
- api.setOppColor('#e7a938');
  assert.equal(api.myColor(),'#2857aa');
- assert.equal(api.oppColor(),'#e7a938');
+ assert.deepEqual(events,['familyChessPieceColorChanged']);
  ({api}=makeColors(storage));
  api.activateChessColorProfile('account-A');
  assert.equal(api.myColor(),'#2857aa');
- assert.equal(api.oppColor(),'#e7a938');
- assert.equal(api.cpuColor(),'#e7a938');
 });
 
-test('a different account does not inherit the previous account colors',()=>{
+test('a different account does not inherit the previous account colour',()=>{
  const storage=new Map();
  const {api}=makeColors(storage);
  api.activateChessColorProfile('first-account');
- api.setMyColor('#2857aa');api.setOppColor('#e7a938');
+ api.setMyColor('#2857aa');
  api.activateChessColorProfile('second-account');
  assert.equal(api.myColor(),'#c60018');
- assert.equal(api.oppColor(),'#141414');
  api.setMyColor('#aa5678');
  api.activateChessColorProfile('first-account');
  assert.equal(api.myColor(),'#2857aa');
- assert.equal(api.oppColor(),'#e7a938');
 });
 
-test('the first account migrates custom colors saved before profile support',()=>{
- const storage=new Map([['sg.myColor','#3a679c'],['sg.oppColor','#d79933']]);
+test('the first account migrates a colour saved before profile support',()=>{
+ const storage=new Map([['sg.myColor','#3a679c']]);
  const {api}=makeColors(storage);
  api.activateChessColorProfile('first');
  assert.equal(api.myColor(),'#3a679c');
- assert.equal(api.oppColor(),'#d79933');
  api.activateChessColorProfile('other');
  assert.equal(api.myColor(),'#c60018');
- assert.equal(api.oppColor(),'#141414');
 });
 
-test('player and practice color selections are persisted through signed-in events',()=>{
+test('Black pieces are always black; the player colour paints only White',()=>{
+ assert.match(page,/const BLACK_PIECES = COLOR_DEF\.opp;/);
+ assert.match(page,/return \{ w, b: BLACK_PIECES \};/);
+ assert.match(page,/return \{ w: mine, b: BLACK_PIECES \};/);
+ assert.doesNotMatch(page,/setOppColor|CPU_COLOR|familyChessPracticeColorChanged/);
+});
+
+test('the White colour is persisted through signed-in events',()=>{
  assert.match(page,/familyChessPieceColorChanged/);
- assert.match(page,/familyChessPracticeColorChanged/);
- assert.match(page,/CPU_COLOR = oppColor\(\)/);
- assert.match(online,/piece_color,practice_opponent_color,clock_preference/);
+ assert.match(online,/select\('display_name,piece_color,clock_preference'\)/);
+ assert.doesNotMatch(online,/practice_opponent_color|getPracticeOpponentColor/);
  assert.match(online,/savePendingColor\(kind,id\)/);
  assert.match(online,/localStorage\.setItem\(colorPendingKey\(kind,id\)/);
  assert.match(online,/native\.activateColorProfile\?\.\(id\)/);
- assert.match(migration,/ADD COLUMN IF NOT EXISTS practice_opponent_color/);
- assert.match(migration,/chess_profiles_practice_opponent_color_hex/);
 });

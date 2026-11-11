@@ -1,6 +1,6 @@
 # Chess — Project State
 
-Authoritative description of what is currently implemented. Last reviewed 2026-11-11.
+Authoritative description of what is currently implemented. Last reviewed 2026-11-11 (after old-code cleanup).
 Setup, deployment and secrets: see README.md (not repeated here).
 
 ## Architecture
@@ -28,11 +28,11 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Feature | Where | Notes |
 | --- | --- | --- |
 | Game state, moves, undo | `index.html` (`G`, `applyMove`, `playMove`, `undo`, `resetLocalGame`) | practice + online share one board |
-| Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu` | levels 4/5 branch on `level === 4/5` |
+| Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu`; names in `PG_LEVEL_NAME` | 1 Easy, 2 Casual, 3 Hard, 4 Expert · Gukesh style, 5 Expert · Magnus style; engine branches on `level === 4/5` |
 | 3D board/pieces/themes | `index.html` `THEMES`, `#masterSrc`, `applyTheme`, `fitCamera` | themes: unnamed (Default), matte, cats, royal, northern, infernal |
 | 2D board | `index.html` `draw2D`, `applyView`, `PREF2D` | |
 | Side chooser (start screen) | `index.html` `PG`, `openPregame`, `closePregame`, `pgStep`, `goHome`, `newGame` | swipe or tap White/Black + difficulty slider |
-| Piece colours | `index.html` `sideColors`, `applySideColors`, `openQuickColors`; sync in `chess-online.js` | White only; Black fixed |
+| Piece colours | `index.html` `myColor`, `setMyColor`, `sideColors` (`BLACK_PIECES`), `openQuickColors`; sync in `chess-online.js` (`piece_color`) | one colour per account, paints White only |
 | Toolbar / chat header / ⋯ menu | `index.html` `.controls`, `.chat-tools`, `openMenu` | |
 | Settings dialog | `index.html` `openSettings` | clock, move mode, last-move, 2D pieces, sound, computer speed, board FX |
 | Game review | `index.html` `startReview`, `reviewStep`, `renderHistory`; `chess-review-analysis.js` | key-moments stepping |
@@ -41,7 +41,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Players, presence, challenges, push | `chess-social.js`, `chess-sw.js` | |
 | Chat | `chess-chat.js` (+ `renderChat`/`sendChat` delegates in `index.html`) | |
 | Sign-in | `auth-gate.js`, `auth.css`, `config.js` | |
-| Tests | `tests/*.test.mjs` | regex checks on source + VM clock/AI tests |
+| Tests | `tests/*.test.mjs` | regex checks on source + VM clock/AI/colour tests; all 34 pass |
 
 ## Feature Registry
 **Implemented and verified** (checked in a browser or by tests during 2026-11 sessions)
@@ -63,24 +63,22 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - Online pause (either player), timeout claims, pawn-for-time and penalty rules on 10/12/15-min clocks.
 - Profile colours persisting across reopen and showing to opponents.
 
-**Partially implemented / unreachable**
-- Two players on one screen (`mode 'local'`): code exists, but the old New-game sheet (`openSetup`, `#setupDialog`) is no longer reachable from the UI.
+**Partially implemented**
+- `mode 'local'` (two players on one screen) is now only the idle state behind the opening screen; there is no way to start a same-screen two-player game (by decision D-09).
 
-**Deprecated**
-- Computer/"practice opponent" colour (`CPU_COLOR`, `setOppColor`, `practice_opponent_color` column) — no longer affects pieces.
-- Preferred starting side setting (`sg.side`) — side is chosen by swipe each game.
+**Removed** (don't restore)
+- Computer/"practice opponent" colour — code removed 2026-11-11; DB column `chess_profiles.practice_opponent_color` is left in place, unused.
+- Old New-game sheet (Two Players / Play Computer / starting side) and the "Preferred starting position" setting — removed 2026-11-11.
 - The pre-Supabase in-page live layer (seats, shared doc, archive, Claude feedback) — removed 2026-11-10.
 
 ## Requirements vs implementation (discrepancies)
-- **Level labels:** requirement says show numbers 1–5 only; the opening slider shows "Level N · Easy/Casual/Average/Hard/Expert".
+- **Level labels:** the opening slider shows "Level N · name" (Easy, Casual, Hard, Expert · Gukesh style, Expert · Magnus style), as Russell confirmed on 2026-11-11.
 - **Visual identity:** requirement is black-and-red; current UI accent is iOS blue (#0a84ff) on buttons, slider, badges.
 - **Custom colours:** requirement lists custom board and piece colours; pieces now allow only the White colour (by decision D-07). 2D board styles (green/bw/wood/custom) and 3D themes remain.
 - **60 s per move:** requirement describes the pawn timeout rules generally; `move60` uses sudden-death loss on timeout (per `database/chess-move60-sudden-death-2026-11-09.sql`); pawn rules apply to 10/12/15-min modes.
 - **Timeout rule:** opponent removes a pawn, timed-out side gets 3:00 (`180000`) — matches. Below 30 s, sacrifice a pawn for +1:30 — matches.
 
 ## Known Issues
-- 4 tests fail because they assert old source text (tests 18, 28, 29, 32: `chess-social.js?v=4`, old `native.present(...)` call shape, an old comment). Behaviour is fine; tests are stale.
-- Dead code: `openSetup` + `#setupDialog`, `CPU_COLOR`/`setOppColor` (lint "unused" warnings).
 - Supabase advisor: leaked-password protection is off (Russell chose to leave it); League Lab functions flagged as executable by signed-in users (not Chess's to change).
 - Opening-screen swipe smoothness only checked in a slow headless browser; confirm on phone.
 

@@ -196,9 +196,9 @@
   let shownMatch = null, matchId = null, matchMode = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
   let livePromptSeen=false, liveCount=0, livePoll=null;
   const validColor=(v)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
-  const colorColumns={mine:'piece_color',practice:'practice_opponent_color'};
-  const colorSaveTimers={mine:null,practice:null};
-  const colorSaveChains={mine:Promise.resolve(),practice:Promise.resolve()};
+  const colorColumns={mine:'piece_color'};
+  const colorSaveTimers={mine:null};
+  const colorSaveChains={mine:Promise.resolve()};
   const colorPendingKey=(kind,id)=>'sg.pendingChessColor.'+kind+'.'+id;
   const pendingColor=(kind,id)=>{
     try{return localStorage.getItem(colorPendingKey(kind,id));}
@@ -242,11 +242,9 @@
   }
   window.addEventListener('familyChessPieceColorChanged',
     ev=>queueProfileColor('mine',ev.detail?.color));
-  window.addEventListener('familyChessPracticeColorChanged',
-    ev=>queueProfileColor('practice',ev.detail?.color));
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden||!player)return;
-    for(const kind of ['mine','practice']){
+    for(const kind of ['mine']){
       clearTimeout(colorSaveTimers[kind]);
       if(validColor(pendingColor(kind,player.id)))
         void savePendingColor(kind,player.id);
@@ -531,7 +529,7 @@
     if(player?.id!==id)return;
     native.activateColorProfile?.(id);
     const {data,error}=await api.from('chess_profiles')
-      .select('display_name,piece_color,practice_opponent_color,clock_preference')
+      .select('display_name,piece_color,clock_preference')
       .eq('id',id).maybeSingle();
     if(player?.id!==id)return;
     if(error){status('Could not load chess profile: '+error.message,true);return;}
@@ -541,9 +539,7 @@
       $('cgDisplayName').value=data.display_name;
       $('cgNameValue').textContent=data.display_name;
       const hydrate=[
-        ['mine',data.piece_color,'getAccountColor','setAccountColor'],
-        ['practice',data.practice_opponent_color,
-          'getPracticeOpponentColor','setPracticeOpponentColor']
+        ['mine',data.piece_color,'getAccountColor','setAccountColor']
       ];
       for(const [kind,remote,getter,setter] of hydrate){
         const pending=pendingColor(kind,id);
@@ -566,7 +562,6 @@
     const created=await api.from('chess_profiles').insert({
       id,display_name,
       piece_color:native.getAccountColor?.()||'#c60018',
-      practice_opponent_color:native.getPracticeOpponentColor?.()||'#141414',
       clock_preference:window.ChessClock?.getPreference?.()||'off'
     });
     if(created.error && created.error.code!=='23505'){
@@ -769,7 +764,7 @@
     if (old && old!==player?.id) {
       // Queue any unsynced edits for the account being left. They remain
       // stored locally if the request cannot finish before Safari closes.
-      for(const kind of ['mine','practice']){
+      for(const kind of ['mine']){
         clearTimeout(colorSaveTimers[kind]);
         if(validColor(pendingColor(kind,old)))
           void savePendingColor(kind,old);

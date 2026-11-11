@@ -15,12 +15,12 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=3"></script>
-<script defer src="./chess-online.js?v=10"></script>
+<script defer src="./chess-clock.js?v=4"></script>
+<script defer src="./chess-online.js?v=11"></script>
 <script defer src="./chess-chat.js?v=7"></script>
-<script defer src="./chess-review-analysis.js?v=2"></script>
-<link rel="stylesheet" href="./chess-social.css?v=2">
-<script defer src="./chess-social.js?v=9"></script>
+<script defer src="./chess-review-analysis.js?v=3"></script>
+<link rel="stylesheet" href="./chess-social.css?v=3">
+<script defer src="./chess-social.js?v=10"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -216,9 +216,6 @@ body.focus:not(.compact) .panel { display: none; }
 .review-thinking,.review-engine-note{margin:5px 0 7px;color:#9898a2;
   font:400 11px/1.45 var(--body)}
 .review-engine-note{margin:6px 0 10px}
-.review-issue-navigation{display:flex;gap:7px;margin:6px 0 10px}
-.review-issue-navigation .btn{flex:1 1 50%;min-height:34px;
-  padding:7px 8px;font-size:11.5px;white-space:normal;border-radius:9px}
 .review-move-scroll .review-flag-inaccuracy{box-shadow:inset 3px 0 #cbb766;background:rgba(203,183,102,.08)}
 .review-move-scroll .review-flag-mistake{box-shadow:inset 3px 0 #e6a25c;background:rgba(230,162,92,.10)}
 .review-move-scroll .review-flag-blunder{box-shadow:inset 3px 0 #d76e74;background:rgba(215,110,116,.12)}
@@ -232,7 +229,6 @@ body.focus:not(.compact) .panel { display: none; }
 .review-move-scroll .mv.on{font-weight:750}
 body.compact .review-analysis-head{margin:3px 0 6px;padding:4px 0}
 body.compact .review-insight{padding:10px 11px;margin:6px 0}
-body.compact .review-issue-navigation .btn{min-height:34px;padding:6px}
 
 body.compact .review-summary{padding:11px 12px;margin:0 0 8px}
 body.compact .review-detail{font-size:12px;line-height:1.4}
@@ -257,7 +253,6 @@ body.compact .review-move-scroll{max-height:18dvh}
 .menu[hidden] { display: none; }
 .menu button { padding: 11px 12px; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }
 .menu button:hover { background: rgba(255, 255, 255, 0.06); }
-.menu .danger { color: var(--warn); }
 .menu hr { margin: 6px 4px; border: 0; }
 .menu p { margin: 6px 12px 8px; font: 400 16px/1.4 var(--body); color: var(--ink-2); }
 .menu .row { display: flex; gap: 6px; padding: 0 4px 4px; }
@@ -280,15 +275,10 @@ body.compact .review-move-scroll{max-height:18dvh}
 .card.setup { gap: 14px; text-align: left; }
 .card.setup h2 { text-align: center; font-size: 34px; }
 .opt-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.opt-group.stack { grid-template-columns: 1fr; }
 .opt { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 10px 14px; border-radius: 11px; background: rgba(255, 255, 255, 0.03); color: var(--ink-2); font: 500 17px/1.2 var(--body); text-align: left; cursor: pointer; }
 .opt:hover { color: var(--ink); border-color: var(--gold); }
 .opt .orb { width: 16px; height: 16px; }
 .opt-label { margin-top: 4px; font: 500 12px/1 var(--body); letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3); }
-.cpu-opts { display: flex; flex-direction: column; gap: 10px; }
-.cpu-opts[hidden] { display: none; }
-.setup-note { font-size: 16px !important; text-align: center; }
-.setup-note:empty { display: none; }
 
 .fab, .exit-focus { position: absolute; display: none; align-items: center; justify-content: center; gap: 8px; cursor: pointer; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .fab { right: var(--gr); bottom: var(--gb); width: 54px; height: 54px; border-radius: 50%; }
@@ -579,14 +569,9 @@ body.compact .bottom-bar .ctl, body.compact .bottom-bar .icon-btn.round { border
 .opt-group:not(.stack):not(.four) .opt[aria-checked="true"] { background: #636366; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25); color: #fff; }
 
 /* stacked choices = inset grouped list with checkmarks */
-.opt-group.stack, .opt-group.four { gap: 0; border-radius: 12px; overflow: hidden; background: var(--fill-2); }
-.opt-group.stack .opt, .opt-group.four .opt { position: relative; min-height: 46px; padding: 11px 40px 11px 16px; border-radius: 0; background: transparent; font: 400 17px/1.25 var(--body); color: var(--ink); }
-.opt-group.stack .opt + .opt, .opt-group.four .opt + .opt { box-shadow: inset 0 0.5px 0 var(--line-2); }
-.opt-group.stack .opt:hover, .opt-group.four .opt:hover { background: rgba(255, 255, 255, 0.04); }
-.opt-group.stack .opt[aria-checked="true"]::after, .opt-group.four .opt[aria-checked="true"]::after { content: ""; position: absolute; right: 16px; top: 50%; width: 7px; height: 13px; margin-top: -9px; border: solid var(--acc); border-width: 0 2.4px 2.4px 0; transform: rotate(45deg); }
+ .opt-group.four { gap: 0; border-radius: 12px; overflow: hidden; background: var(--fill-2); } .opt-group.four .opt { position: relative; min-height: 46px; padding: 11px 40px 11px 16px; border-radius: 0; background: transparent; font: 400 17px/1.25 var(--body); color: var(--ink); } .opt-group.four .opt + .opt { box-shadow: inset 0 0.5px 0 var(--line-2); } .opt-group.four .opt:hover { background: rgba(255, 255, 255, 0.04); } .opt-group.four .opt[aria-checked="true"]::after { content: ""; position: absolute; right: 16px; top: 50%; width: 7px; height: 13px; margin-top: -9px; border: solid var(--acc); border-width: 0 2.4px 2.4px 0; transform: rotate(45deg); }
 .opt { border: 0; }
-.opt[aria-checked="true"] { color: var(--ink); border-color: transparent; background: var(--acc-tint); }
-.opt-group.stack .opt[aria-checked="true"], .opt-group.four .opt[aria-checked="true"] { background: transparent; color: var(--ink); }
+.opt[aria-checked="true"] { color: var(--ink); border-color: transparent; background: var(--acc-tint); } .opt-group.four .opt[aria-checked="true"] { background: transparent; color: var(--ink); }
 .set-group .opt { font-size: 16px; }
 
 /* buttons */
@@ -671,7 +656,6 @@ body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); 
 .panel.reviewing .hist{overscroll-behavior:contain}
 .panel.reviewing .review-move-scroll{margin-bottom:8px}
 .panel.reviewing .panel-head .chat-title{font-weight:700}
-.panel.reviewing .panel-head .chat-new,
 .panel.reviewing .panel-head .chat-clear,
 .panel.reviewing .panel-head .chat-resign{display:none!important}
 @media(max-width:899px){
@@ -703,9 +687,6 @@ body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); 
   body.compact .review-analysis-head>span:first-child{font-size:10.5px}
   body.compact .review-side-count{padding:3px 7px;font-size:10px}
   body.compact .review-engine-note{margin:3px 0 7px;font-size:10px}
-  body.compact .review-issue-navigation{gap:6px;margin:4px 0 6px}
-  body.compact .review-issue-navigation .btn{min-height:30px;padding:5px;
-    font-size:10.5px}
   body.compact .review-move-scroll{max-height:18dvh}
 }
 @media(max-width:340px){
@@ -1029,27 +1010,6 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
   body.compact .bottom-bar .controls{gap:3px!important}
 }
 
-/* Five understated difficulty selections: numbered only in the interface. */
-#optLevel.cpu-levels{
-  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;
-  background:transparent;padding:0;border:0;overflow:visible;
-}
-#optLevel.cpu-levels .opt{
-  min-width:0;min-height:48px;border-radius:11px;
-  border:1px solid rgba(255,255,255,.16);
-  background:#232327;color:#d0d0d4;
-  font:700 17px/1 var(--body);text-align:center;
-}
-#optLevel.cpu-levels .opt[aria-checked="true"]{
-  background:#57575e;color:#fff;border-color:#999aa2;
-  box-shadow:0 0 0 1px #ffffff25;
-}
-@media(max-width:360px){
-  #optLevel.cpu-levels{gap:4px}
-  #optLevel.cpu-levels .opt{min-height:43px;font-size:15px;padding:6px 0}
-}
-
-
 /* ---- opening: swipe the board to pick a side, difficulty slider ---- */
 .pregame { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; opacity: 1; transition: opacity 0.45s ease; }
 .pregame[hidden] { display: none; }
@@ -1240,36 +1200,6 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
     </div>
   </div>
 
-  <div class="overlay" id="setupDialog" hidden>
-    <div class="card setup" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
-      <h2 id="setupTitle">New game</h2>
-      <div class="opt-group" role="radiogroup" aria-label="Game mode" id="optMode">
-        <button class="opt" type="button" role="radio" data-v="two">Two Players</button>
-        <button class="opt" type="button" role="radio" data-v="cpu">Play Computer</button>
-      </div>
-      <div class="cpu-opts" id="cpuOpts">
-        <div class="opt-label" id="sideLabel">Starting position</div>
-        <div class="opt-group stack" role="radiogroup" aria-labelledby="sideLabel" id="optSide">
-          <button class="opt" type="button" role="radio" data-v="w"><span class="orb white"></span>First — you make the opening move</button>
-          <button class="opt" type="button" role="radio" data-v="b"><span class="orb"></span>Second — the computer opens</button>
-          <button class="opt" type="button" role="radio" data-v="r">Random — a fair coin decides</button>
-        </div>
-        <div class="opt-label" id="levelLabel">Computer difficulty</div>
-        <div class="opt-group cpu-levels" role="radiogroup" aria-labelledby="levelLabel" id="optLevel">
-          <button class="opt" type="button" role="radio" data-v="1" aria-label="Difficulty 1">1</button>
-          <button class="opt" type="button" role="radio" data-v="2" aria-label="Difficulty 2">2</button>
-          <button class="opt" type="button" role="radio" data-v="3" aria-label="Difficulty 3">3</button>
-          <button class="opt" type="button" role="radio" data-v="4" aria-label="Difficulty 4">4</button>
-          <button class="opt" type="button" role="radio" data-v="5" aria-label="Difficulty 5">5</button>
-        </div>
-      </div>
-      <p class="setup-note" id="setupNote"></p>
-      <div class="end-actions">
-        <button class="btn gold" id="setupStart" type="button">Start New Game</button>
-        <button class="btn quiet" id="setupCancel" type="button">Cancel</button>
-      </div>
-    </div>
-  </div>
 
   <div class="overlay" id="endCard" hidden>
     <div class="card" role="dialog" aria-labelledby="endTitle">
@@ -4743,15 +4673,10 @@ const myColor = () => {
   return chromaOk(c) ? c : activeChessColorProfile ? COLOR_DEF.mine :
     PROG.P&&chromaOk(PROG.P.color) ? PROG.P.color : COLOR_DEF.mine;
 };
-const oppColor = () => {
-  const c=activeChessColorProfile ? savedProfileColor('practice') : store.get('sg.oppColor',null);
-  return chromaOk(c) ? c : COLOR_DEF.opp;
-};
-let CPU_COLOR = null;
 function rememberPieceColor(kind,hex) {
   const normalized=hex.toLowerCase();
   if(activeChessColorProfile)store.set(colorProfileKey(kind),normalized);
-  store.set(kind==='mine'?'sg.myColor':'sg.oppColor',normalized);
+  store.set('sg.myColor',normalized);
 }
 function activateChessColorProfile(id) {
   if(!id || typeof id!=='string')return;
@@ -4759,20 +4684,18 @@ function activateChessColorProfile(id) {
   // Move a pre-upgrade selection into the FIRST account only, rather than
   // borrowing an unrelated account's color on subsequent sign-ins.
   if(!store.get('sg.accountColorMigrated',false)){
-    for(const [kind,legacy] of [['mine','sg.myColor'],['practice','sg.oppColor']]){
+    for(const [kind,legacy] of [['mine','sg.myColor']]){
       const c=store.get(legacy,null);
       if(chromaOk(c)&&!chromaOk(savedProfileColor(kind)))
         store.set(colorProfileKey(kind),c.toLowerCase());
     }
     store.set('sg.accountColorMigrated',true);
   }
-  CPU_COLOR=oppColor();
   applySideColors(true);updatePlates();
   if(VIEW==='2d')draw2D(true);
 }
 function clearChessColorProfile(){
   activeChessColorProfile=null;
-  CPU_COLOR=oppColor();
   applySideColors(true);updatePlates();
   if(VIEW==='2d')draw2D(true);
 }
@@ -4786,17 +4709,6 @@ function setMyColor(hex) {
   if (G.onlineProvider==='supabase' && VIEW==='2d') draw2D(true);
   if (changed) window.dispatchEvent(new CustomEvent(
     'familyChessPieceColorChanged',{detail:{color:normalized}}));
-}
-function setOppColor(hex) {
-  if(!chromaOk(hex))return;
-  const normalized=hex.toLowerCase();
-  const changed=oppColor().toLowerCase()!==normalized;
-  rememberPieceColor('practice',normalized);
-  CPU_COLOR=normalized;
-  applySideColors(true);updatePlates();
-  if(VIEW==='2d')draw2D(true);
-  if(changed)window.dispatchEvent(new CustomEvent(
-    'familyChessPracticeColorChanged',{detail:{color:normalized}}));
 }
 /* the colour shown for each logical side in the current game */
 /* Black pieces are always black. A player's colour only ever paints the White pieces:
@@ -6448,12 +6360,10 @@ function startComputerGame(side, level, openDelay = 340) {
   cpu.human = side === 'r' ? (Math.random() < 0.5 ? 'w' : 'b') : side;
   cpuIntro = side === 'r' ? `Random side: you're playing ${SIDE[cpu.human]}${cpu.human === 'w' ? ' and move first' : '. The computer opens'}.` : '';
   store.set('sg.level', level); store.set('sg.side', side);
-  CPU_COLOR = oppColor();
   resetLocalGame('cpu', (G.mode === 'cpu' ? G.n : 0) + 1);
   if (cpuIntro) toast(cpuIntro, 4200);
   if (cpu.human === 'b') setTimeout(requestComputer, REDUCED ? 0 : openDelay);
 }
-function startTwoPlayer() { resetLocalGame('local', (G.mode === 'local' ? G.n : 0) + 1); }
 function rematch(swap) {
   hide($('endCard'));
   endDismissed = null;
@@ -6462,53 +6372,6 @@ function rematch(swap) {
   if (G.mode === 'local') { if (swap) { localView = other(localView); store.set('sg.orient', localView); } resetLocalGame('local', G.n + 1); }
 }
 
-/* setup sheet: choices are staged and only applied by Start New Game */
-const staged = { mode: 'two', side: 'w', level: 2 };
-function openSetup() {
-  closeMenu();
-  staged.mode = G.mode === 'cpu' ? 'cpu' : 'two';
-  staged.side = store.get('sg.side', 'w');
-  if (!['w', 'b', 'r'].includes(staged.side)) staged.side = 'w';
-  staged.level = cpu.level;
-  renderSetup();
-  show($('setupDialog'));
-  const on = $('optMode').querySelector('[aria-checked="true"]');
-  if (on) on.focus();
-}
-function renderSetup() {
-  const mark = (groupId, val) => { for (const b of $(groupId).querySelectorAll('.opt')) { const yes = b.dataset.v === String(val); b.setAttribute('aria-checked', String(yes)); b.tabIndex = yes ? 0 : -1; } };
-  mark('optMode', staged.mode); mark('optSide', staged.side); mark('optLevel', staged.level);
-  $('cpuOpts').hidden = staged.mode !== 'cpu';
-  const active = G.status === 'active' && G.moves.length > 0 && G.mode !== 'connecting';
-  $('setupNote').textContent = staged.mode === 'two' && G.mode === 'live' && !mySeat ? 'Two Players uses the shared live board. Take a seat there to play.'
-    : active ? 'Your current game stays as it is until you start the new one.' : '';
-}
-function closeSetup() { hide($('setupDialog')); $('btnNew').focus(); }
-for (const id of ['optMode', 'optSide', 'optLevel']) {
-  const group = $(id);
-  group.addEventListener('click', (e) => {
-    const b = e.target.closest('.opt'); if (!b) return;
-    const key = id === 'optMode' ? 'mode' : id === 'optSide' ? 'side' : 'level';
-    staged[key] = key === 'level' ? Number(b.dataset.v) : b.dataset.v;
-    renderSetup();
-    b.focus();
-  });
-  group.addEventListener('keydown', (e) => {
-    if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(e.key)) return;
-    e.preventDefault();
-    const opts = [...group.querySelectorAll('.opt')], i = opts.findIndex((o) => o.getAttribute('aria-checked') === 'true');
-    const next = opts[(i + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : opts.length - 1)) % opts.length];
-    next.click();
-  });
-}
-$('setupStart').addEventListener('click', () => {
-  hide($('setupDialog'));
-  store.set('sg.side', staged.side);
-  if (staged.mode === 'cpu') startComputerGame(staged.side, staged.level);
-  else startTwoPlayer();
-});
-$('setupCancel').addEventListener('click', closeSetup);
-$('setupDialog').addEventListener('pointerdown', (e) => { if (e.target === $('setupDialog')) closeSetup(); });
 /* New: back to the opening screen (side-on board, swipe to pick a side, difficulty slider).
    With moves on the board it asks first, so a game is never thrown away by a stray tap. */
 function goHome() {
@@ -6803,7 +6666,6 @@ document.addEventListener('keydown', (e) => {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z' && !e.target.isContentEditable) { e.preventDefault(); undo(); return; }
   if (e.key === 'Escape') {
-    if (!$('setupDialog').hidden) { closeSetup(); return; }
     if (!$('menu').hidden) { closeMenu(); $('btnMenu').focus(); return; }
     if (!$('promoDialog').hidden) { $('promoCancel').click(); return; }
     if (pending) { cancelPreview(); return; }
@@ -7353,7 +7215,7 @@ async function boot() {
    let go past the threshold and it swings round to that side and the game starts. */
 const PG = { lean: null, on: false, az: Math.PI / 2, target: Math.PI / 2, polar: 0.98, dist: 0, swing: false, swingDur: 950, drag: null, glide: null };
 const PG_BASE = Math.PI / 2;
-const PG_LEVEL_NAME = { 1: 'Easy', 2: 'Casual', 3: 'Average', 4: 'Hard', 5: 'Expert' };
+const PG_LEVEL_NAME = { 1: 'Easy', 2: 'Casual', 3: 'Hard', 4: 'Expert · Gukesh style', 5: 'Expert · Magnus style' };
 function pregameReserve() {
   const H = window.innerHeight, top = $('pregame').querySelector('.pg-top').getBoundingClientRect().bottom;
   const card = $('pgBottom').getBoundingClientRect();
@@ -7604,17 +7466,9 @@ window.familyChessNative = {
   activateColorProfile(id){activateChessColorProfile(id);},
   clearColorProfile(){clearChessColorProfile();},
   getAccountColor(){return myColor();},
-  getPracticeOpponentColor(){return oppColor();},
   setAccountColor(hex){
     if(!chromaOk(hex))return;
     rememberPieceColor('mine',hex);
-    applySideColors(true);updatePlates();
-    if(VIEW==='2d')draw2D(true);
-  },
-  setPracticeOpponentColor(hex){
-    if(!chromaOk(hex))return;
-    rememberPieceColor('practice',hex);
-    CPU_COLOR=oppColor();
     applySideColors(true);updatePlates();
     if(VIEW==='2d')draw2D(true);
   },
