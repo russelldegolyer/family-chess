@@ -72,7 +72,7 @@ test('signed-in members see active games, saved display names and watch actions'
  assert.match(online,/\.eq\('status','active'\)\.not\('black_player_id','is',null\)/);
  assert.match(online,/\.select\('id,display_name'\)\.in\('id',ids\)/);
  assert.match(online,/title\.textContent=white\+' vs '\+black/);
- assert.match(online,/button\.textContent=participant\?'Return to my game':'Watch live'/);
+ assert.match(online,/button\.textContent=participant\?'Open':'Watch'/);
  assert.match(online,/void refreshLive\(true\)/);
  assert.match(online,/livePoll=setInterval\(/);
  assert.match(online,/id="cgLiveGames"/);

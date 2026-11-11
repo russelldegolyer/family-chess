@@ -223,6 +223,12 @@ body.focus:not(.compact) .panel { display: none; }
 .review-move-scroll .review-flag-mistake{box-shadow:inset 3px 0 #e6a25c;background:rgba(230,162,92,.10)}
 .review-move-scroll .review-flag-blunder{box-shadow:inset 3px 0 #d76e74;background:rgba(215,110,116,.12)}
 .review-move-scroll .review-flag-best{color:#b8d5c1}
+.review-move-scroll .review-flag-strong{box-shadow:inset 3px 0 #30d158;background:rgba(48,209,88,.1);color:#c9f7d6}
+.review-insight-strong{border-left:3px solid #30d158}
+.review-insight-strong .review-insight-title{color:#a3e8b4}
+.review-mode{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;margin:10px 0 2px;border-radius:12px;background:var(--fill-2)}
+.review-mode .btn{min-height:32px;border-radius:9px;background:transparent;color:var(--ink-2);font-size:14px;font-weight:600}
+.review-mode .btn[aria-pressed="true"]{background:#636366;color:#fff}
 .review-move-scroll .mv.on{font-weight:750}
 body.compact .review-analysis-head{margin:3px 0 6px;padding:4px 0}
 body.compact .review-insight{padding:10px 11px;margin:6px 0}
@@ -5922,7 +5928,18 @@ function reviewTo(ply, auto = false) {
   if (forward) fxForMove(review.pos.last, land, false);
   updateAll();
 }
-function reviewStep(d, auto = false) { reviewTo((review ? review.ply : G.moves.length) + d, auto); }
+let reviewKeyOnly = store.get('sg.reviewKeys', true) !== false;
+function reviewStep(d, auto = false) {
+  const at = review ? review.ply : G.moves.length;
+  if (review && reviewKeyOnly && !auto) {
+    const A = window.ChessReviewAnalyzer, keys = A?.keyMoments?.() || [], st = A?.status?.();
+    const target = d > 0 ? keys.find((p) => p > at) : [...keys].reverse().find((p) => p < at);
+    if (target != null) { reviewTo(target, auto); return; }
+    /* nothing left to stop on: go to the end (or the start), unless analysis is still filling in */
+    if (st && st.complete) { reviewTo(d > 0 ? review.moves.length : 0, auto); return; }
+  }
+  reviewTo(at + d, auto);
+}
 function stopReviewPlayback(render = true) {
   if (!reviewTimer) return;
   clearInterval(reviewTimer);
@@ -6153,9 +6170,9 @@ function renderHistory() {
           : '↗ Show ' + best.san + ' on board', 'small', toggleTeachingMove);
         compare.classList.add('review-compare');
         insight.append(compare);
-      } else if (verdict.kind === 'best') {
+      } else if (verdict.kind === 'best' || verdict.kind === 'strong') {
         const p = el('p', 'review-teaching');
-        p.textContent = 'Best move found at this search depth.';
+        p.textContent = verdict.kind === 'strong' ? 'The best move here, and a strong one: it takes full advantage of the position.' : 'Best move found at this search depth.';
         insight.append(p);
       } else if (verdict.kind === 'unknown') {
         const p = el('p', 'review-teaching');
@@ -6173,18 +6190,14 @@ function renderHistory() {
       const note = el('p', 'review-engine-note');
       note.textContent = 'Quick offline estimates; deeper analysis may differ.';
       frag.append(note);
-      const issues = analyzer.issues();
-      if (issues.length) {
-        const earlier = issues.filter(x => x.ply < review.ply).pop();
-        const later = issues.find(x => x.ply > review.ply);
-        const nav = el('div', 'review-issue-navigation');
-        const prev = button('← Previous missed chance', 'small', () => earlier && reviewTo(earlier.ply));
-        prev.disabled = !earlier;
-        const next = button('Next missed chance →', 'small', () => later && reviewTo(later.ply));
-        next.disabled = !later;
-        nav.append(prev, next);
-        frag.append(nav);
-      }
+      /* Next and Previous skip ordinary moves and stop only on mistakes and strong replies, unless you ask for every move */
+      const keys = analyzer.keyMoments ? analyzer.keyMoments() : [];
+      const mode = el('div', 'review-mode');
+      const kOn = button(`Key moments${keys.length ? ' · ' + keys.length : ''}`, 'small', () => { reviewKeyOnly = true; store.set('sg.reviewKeys', true); renderHistory(); });
+      const aOn = button('Every move', 'small', () => { reviewKeyOnly = false; store.set('sg.reviewKeys', false); renderHistory(); });
+      kOn.setAttribute('aria-pressed', String(reviewKeyOnly)); aOn.setAttribute('aria-pressed', String(!reviewKeyOnly));
+      mode.append(kOn, aOn);
+      frag.append(mode);
     }
   } else if (G.status === 'over' && sans.length) {
     const action = button('▶ Review game', 'gold small', beginGameReview);
@@ -6202,7 +6215,7 @@ function renderHistory() {
         const b = el('button', 'mv' + (cur === j + 1 ? ' on' : ''));
         b.type = 'button'; b.textContent = sans[j];
         const grade = review ? window.ChessReviewAnalyzer?.get(j + 1) : null;
-        if (grade && ['inaccuracy','mistake','blunder','best'].includes(grade.kind)) {
+        if (grade && ['inaccuracy','mistake','blunder','best','strong'].includes(grade.kind)) {
           b.classList.add('review-flag-' + grade.kind);
           b.title = (j % 2 ? 'Black' : 'White') + ': ' + grade.label;
         }

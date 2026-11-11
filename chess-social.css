@@ -40,3 +40,20 @@
  .cgAlertCard{border-radius:18px}
  #cgChallengeAlert{padding:14px}
 }
+/* simplified lobby: players as an inset grouped list */
+.cgSocialSection{padding:0;border-top:0}
+.cgPlayersHead{margin-top:6px}
+.cgPlayersHead .cgSocialMeta{margin:0;font-size:13px;color:#30d158;text-transform:none;letter-spacing:0}
+.cgSocialList{gap:0;border-radius:14px;overflow:hidden;background:#2c2c2e}
+.cgSocialRow{min-height:60px;padding:10px 12px;border:0;border-radius:0;background:none}
+.cgSocialRow+.cgSocialRow{box-shadow:inset 52px .5px 0 -52px #3a3a3c, inset 0 .5px 0 #3a3a3c}
+.cgSocialAvatar{width:36px;height:36px;background:#48484a;font-size:13px}
+.cgSocialName{font-size:16px;font-weight:600}
+.cgSocialMeta{font-size:12px;color:#8e8e93}
+.cgSocialAction{padding:9px 14px;border-radius:999px;background:#0a84ff;color:#fff;font-size:14px;font-weight:600}
+.cgSocialAction.alt{background:#3a3a3c;color:#f2f2f7}
+.cgSocialEmpty{border:0;background:none;color:#8e8e93}
+.cgSocialNotice{margin:8px 4px 0;color:#8e8e93}
+.cgSocialNotice:empty{display:none}
+.cgSocialMeta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cgEye{display:grid;place-items:center;width:36px;height:36px;padding:0!important}

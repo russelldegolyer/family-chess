@@ -7,34 +7,11 @@
   const style = document.createElement('style');
   style.textContent = `
     #cgCreatedLink[hidden] {display:none!important}
-    .cgLobbyActions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 20px}
-    .cgLobbyActions button {min-height:65px;border-radius:12px;padding:10px 7px;color:#f5f5f5;
-      border:1px solid #4a4a4e;background:#242428;font:700 12px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      cursor:pointer}
-    .cgLobbyActions button:first-child {background:#5b0e18;border-color:#a52537}
     .cgCreatedLink {border:1px solid #55585d;background:#202024;border-radius:12px;padding:12px;
       display:flex;flex-direction:column;gap:11px;margin:0 0 16px}
     .cgCreatedLink strong {font-size:14px}
     .cgCreatedLink a {font-size:12px;color:#e9e9ff;overflow-wrap:anywhere;text-decoration:underline}
     .cgCreatedLink .cgButton {flex:1}
-    /* Show account name near the top of the lobby, not below long player lists. */
-    #cgProfileSettings,#cgAccountSettings{
-      margin:10px 0;border:1px solid #38383c;border-radius:12px;
-      background:#1c1c20;padding:0 12px;
-    }
-    #cgProfileSettings summary,#cgAccountSettings summary{
-      display:flex;justify-content:space-between;align-items:center;gap:8px;
-      list-style:none;cursor:pointer;color:#f0f0f3;font-size:13px;
-      font-weight:600;min-height:46px;
-    }
-    #cgProfileSettings summary::-webkit-details-marker,
-    #cgAccountSettings summary::-webkit-details-marker{display:none}
-    #cgProfileSettings summary::after,#cgAccountSettings summary::after{
-      content:"Edit";color:#f2a0a9;font-size:12px;font-weight:700;
-    }
-    #cgAccountSettings summary::after{content:"Manage"}
-    #cgNameValue{color:#aaa;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%}
-    .cgAccountBody{padding:0 0 13px;display:flex;flex-direction:column;gap:11px}
     #cgAccountEmail{color:#a1a1a9;font-size:12px;overflow-wrap:anywhere;line-height:1.5}
     #cgSignOutSlot{width:100%}
     #cgSignOutSlot #authSignOut.cgAccountSignOut{
@@ -44,11 +21,8 @@
       cursor:pointer;box-shadow:none;
     }
     #cgSignOutSlot #authSignOut.cgAccountSignOut:disabled{opacity:.5;cursor:wait}
-    #cgProfileSettings #cgProfileForm{padding:0 0 14px}
-    #cgProfileSettings .cgLabel{margin-top:0}
     .cgInput {font-size:16px!important}
     #cgWatchShortcut{display:none!important}
-    @media(max-width:600px){.cgLobbyActions button {font-size:11.5px;padding:8px 4px}}
 
     #cgLaunch {background:#f2f2f2;color:#111;border:0;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
     #cgLobby[hidden]{display:none!important}
@@ -83,11 +57,14 @@
     .cgLiveHeading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}
     .cgLiveCount{color:#b2f1c2;font-size:12px;font-weight:600;white-space:nowrap}
     .cgLiveList{display:flex;flex-direction:column;gap:9px}
-    .cgLiveCard{border:1px solid #343a35;border-radius:12px;padding:14px;background:linear-gradient(130deg,#1b231e,#171719)}
-    .cgLiveTitle{font-size:16px;line-height:1.3;font-weight:650;overflow-wrap:anywhere}
-    .cgLiveMeta{display:block;margin:6px 0 12px;color:#b7c3b8;font-size:12px}
-    .cgLiveTag{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.05em;color:#a6ebba;text-transform:uppercase}
-    .cgLiveTag::before{content:"";width:7px;height:7px;border-radius:50%;background:#31cf71;box-shadow:0 0 8px #31cf7177}
+    .cgLiveList{gap:0!important;border-radius:14px;overflow:hidden;background:#2c2c2e}
+    .cgLiveCard{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:56px}
+    .cgLiveCard+.cgLiveCard{box-shadow:inset 0 .5px 0 #3a3a3c}
+    .cgLiveText{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .cgLiveCard .cgButton.cgWatch{flex:none;width:auto!important;margin:0!important;min-height:34px;padding:0 14px;border:0;border-radius:999px;background:#3a3a3c;color:#fff;font-size:14px}
+    .cgLiveTitle{font-size:15px;line-height:1.25;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cgLiveMeta{display:block;color:#8e8e93;font-size:12px}
+    .cgLiveTag{flex:none;width:9px;height:9px;margin:0 6px;border-radius:50%;background:#30d158;box-shadow:0 0 0 4px rgba(48,209,88,.15)}
     .cgWatch{width:100%;background:#e9f2eb;color:#101811;border:0;font-weight:700}
     #cgWatchShortcut{position:fixed;z-index:70;top:max(72px,calc(env(safe-area-inset-top,0px) + 62px));left:max(12px,env(safe-area-inset-left,0px));
       border:1px solid #3b7650;border-radius:999px;padding:10px 14px;background:#15251b;color:#d8f9e4;
@@ -97,6 +74,45 @@
       border:1px solid #38443c;border-radius:12px;background:#142019;color:#def4e5;font-size:12px;box-shadow:0 8px 28px #0009}
     #cgSpectatorBar .cgLeave{border:0;border-radius:8px;background:#303b33;color:#fff;padding:8px 11px;min-height:34px;cursor:pointer}
     @media(max-width:600px){.cgPanel{top:auto;bottom:0;left:0;transform:none;width:100%;border-radius:16px 16px 0 0;max-height:calc(100dvh - 15px);padding-bottom:max(22px,env(safe-area-inset-bottom,0px))}}
+    /* ---- simplified lobby: one sheet, players first, everything else quiet ---- */
+    .cgPanel{background:#1c1c1e;border:0;border-radius:22px;padding:8px 16px 18px}
+    @media(max-width:600px){.cgPanel{border-radius:22px 22px 0 0;padding-bottom:max(18px,env(safe-area-inset-bottom,0px))}}
+    .cgGrab{width:36px;height:5px;border-radius:3px;background:#48484a;margin:0 auto 10px}
+    @media(min-width:601px){.cgGrab{display:none}}
+    .cgTop{display:flex;align-items:center;justify-content:space-between;margin:2px 0 14px}
+    .cgTop h2{margin:0;font:700 24px/1.1 -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;letter-spacing:-.02em}
+    .cgX{display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:50%;background:#2c2c2e;color:#aeaeb2;cursor:pointer}
+    .cgSection{display:flex;align-items:baseline;justify-content:space-between;margin:20px 4px 8px;font:600 13px/1 -apple-system,BlinkMacSystemFont,sans-serif;color:#8e8e93;text-transform:uppercase;letter-spacing:.04em}
+    .cgSection .cgLiveCount{text-transform:none;letter-spacing:0}
+    .cgLink{border:0;background:none;color:#0a84ff;font:500 15px/1 -apple-system,BlinkMacSystemFont,sans-serif;padding:4px 0;cursor:pointer;text-transform:none;letter-spacing:0}
+    .cgQuick{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 0}
+    .cgQuick button:not([hidden]){display:flex;align-items:center;justify-content:center;gap:7px;min-height:46px;border:0;border-radius:14px;background:#2c2c2e;color:#f2f2f7;font:600 14px/1 -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer}
+    .cgQuick button span{font-size:15px}
+    .cgQuick b{font-weight:600;color:#30d158;margin-left:2px}
+    .cgQuick b:empty{display:none}
+    .cgQuick button:disabled{opacity:.45;cursor:default}
+    .cgCreatedLink{margin:10px 0 0;padding:14px;border:0;border-radius:16px;background:#2c2c2e;gap:10px}
+    .cgCreatedHead{display:flex;flex-direction:column;gap:3px}
+    .cgCreatedLink a{font-size:12px;color:#8e8e93;text-decoration:none}
+    .cgCreatedLink .cgButton{min-height:42px;border:0;border-radius:12px;background:#3a3a3c}
+    .cgCreatedLink .cgButton.primary{background:#0a84ff;color:#fff;width:auto}
+    .cgNotifyRow .cgInput{min-height:42px;border:0;border-radius:12px;background:#3a3a3c}
+    #cgMessage{min-height:0;margin:8px 4px 0;color:#8e8e93}
+    #cgMessage:empty{display:none}
+    #cgLiveBlock:not(:has(.cgLiveCard)){display:none}
+    .cgSettings{margin:22px 0 0;border-radius:14px;background:#2c2c2e;padding:0 14px}
+    .cgSettings>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;list-style:none;cursor:pointer;font:500 16px/1 -apple-system,BlinkMacSystemFont,sans-serif;color:#f2f2f7}
+    .cgSettings>summary::-webkit-details-marker{display:none}
+    .cgSettings>summary::after{content:"›";color:#636366;font-size:20px;transition:transform .2s}
+    .cgSettings[open]>summary::after{transform:rotate(90deg)}
+    .cgSettingsName{margin-left:auto;color:#8e8e93;font-size:15px;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cgSettingsBody{display:flex;flex-direction:column;gap:16px;padding:4px 0 16px;border-top:.5px solid #3a3a3c}
+    .cgSettingsBody .cgLabel{margin:12px 0 7px;color:#8e8e93;font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:11px}
+    .cgSettingsBody .cgInput{min-height:42px;border:0;border-radius:12px;background:#3a3a3c}
+    .cgSettingsBody .cgButton{min-height:42px;border:0;border-radius:12px;background:#3a3a3c}
+    #cgNotifySlot .cgButton{width:100%;margin-top:8px}
+    #cgNotifySlot .cgSocialSub{margin:8px 2px 0}
+    .cgBack{display:block;margin:16px auto 0;font-size:15px}
   `;
   document.head.appendChild(style);
   const launch = document.createElement('button');
@@ -110,60 +126,54 @@
   root.id = 'cgLobby'; root.hidden = true; root.setAttribute('role','dialog'); root.setAttribute('aria-modal','true'); root.setAttribute('aria-label','Chess online games');
   root.innerHTML = `
     <div class="cgShade"></div><section class="cgPanel">
-      <div class="cgHeader"><div><h2>Online chess</h2><span class="cgMuted">Private invitations</span></div>
-        <button class="cgButton" id="cgClose" type="button" aria-label="Close">Close</button></div>
-      <p class="cgMuted">Challenge someone, share an invite, or spectate live.</p>
-      <div id="cgLobbyActions" class="cgLobbyActions" aria-label="Online chess options">
-        <button id="cgGoChallenge" type="button">Challenge a player</button>
-        <button id="cgGoLink" type="button">Send game link</button>
-        <button id="cgGoWatch" type="button">Spectate live</button>
+      <div class="cgGrab" aria-hidden="true"></div>
+      <div class="cgTop"><h2>Play online</h2>
+        <button class="cgX" id="cgClose" type="button" aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button></div>
+      <div id="cgSocialMount"></div>
+      <div id="cgLobbyActions" class="cgQuick" aria-label="More ways to play">
+        <button id="cgGoLink" type="button"><span aria-hidden="true">🔗</span>Share invite link</button>
+        <button id="cgGoWatch" type="button" hidden><b id="cgWatchCount"></b></button>
+        <button id="cgGoChallenge" type="button" hidden>Challenge a player</button>
       </div>
       <div id="cgCreatedLink" class="cgCreatedLink" hidden>
-        <strong>Your invitation is ready</strong>
+        <div class="cgCreatedHead"><strong>Invite link ready</strong><span class="cgMuted">Anyone with it can join as your opponent</span></div>
         <a id="cgNewInviteURL" href="#" rel="nofollow" target="_blank"></a>
         <div class="cgRow">
-          <button id="cgCopyNewInvite" class="cgButton" type="button">Copy link</button>
-          <button id="cgShareNewInvite" class="cgButton" type="button">Share invite</button>
+          <button id="cgShareNewInvite" class="cgButton primary" type="button">Share</button>
+          <button id="cgCopyNewInvite" class="cgButton" type="button">Copy</button>
         </div>
-        <label class="cgLabel" for="cgInviteRecipient">Notify a player directly (60-second challenge)</label>
-        <div class="cgRow">
-          <select id="cgInviteRecipient" class="cgInput" aria-label="Choose family player">
-            <option value="">Choose a player…</option>
+        <div class="cgRow cgNotifyRow">
+          <select id="cgInviteRecipient" class="cgInput" aria-label="Notify a player">
+            <option value="">Or notify a player…</option>
           </select>
           <button id="cgNotifyInvite" class="cgButton" type="button">Notify</button>
         </div>
-        <p class="cgMuted">Sending another invite closes your previous games. Only the newest link remains joinable.</p>
       </div>
-      <details id="cgProfileSettings">
-        <summary><span>Chess name</span><span id="cgNameValue">Loading…</span></summary>
-        <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Change your display name</label>
-          <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" autocomplete="nickname"
-            autocapitalize="words" required minlength="2" maxlength="40">
-          <button class="cgButton" type="submit">Save</button></div></form>
-      </details>
-      <details id="cgAccountSettings">
-        <summary>Account settings</summary>
-        <div class="cgAccountBody">
-          <span id="cgAccountEmail"></span>
-          <div id="cgSignOutSlot"></div>
+      <div id="cgMessage" role="status" aria-live="polite"></div>
+      <div class="cgBlock" id="cgLiveBlock">
+        <div class="cgSection"><span>Live now</span><span id="cgLiveCount" class="cgLiveCount" aria-live="polite"></span></div>
+        <div id="cgLiveGames" class="cgLiveList"><span class="cgMuted">Checking for live matches…</span></div>
+      </div>
+      <div class="cgBlock">
+        <div class="cgSection"><span>My matches</span><button class="cgLink" id="cgRefresh" type="button">Refresh</button></div>
+        <div id="cgGames" class="cgMuted">No matches yet.</div>
+      </div>
+      <details class="cgSettings" id="cgSettings">
+        <summary>Settings<span class="cgSettingsName" id="cgNameValue">Loading…</span></summary>
+        <div class="cgSettingsBody">
+          <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Chess name</label>
+            <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" autocomplete="nickname"
+              autocapitalize="words" required minlength="2" maxlength="40">
+            <button class="cgButton" type="submit">Save</button></div></form>
+          <div id="cgNotifySlot"><span class="cgLabel">Challenge notifications</span></div>
+          <form id="cgJoinForm"><label class="cgLabel" for="cgJoinId">Join with a link</label>
+            <div class="cgRow"><input id="cgJoinId" class="cgInput" type="text" placeholder="Paste a game link" required>
+            <button class="cgButton" type="submit">Join</button></div></form>
+          <button id="cgCreate" type="button" hidden>Create private match</button>
+          <div class="cgAccountBody" id="cgAccountSettings"><span class="cgLabel">Account</span><span id="cgAccountEmail"></span><div id="cgSignOutSlot"></div></div>
         </div>
       </details>
-      <div id="cgSocialMount"></div>
-      <details id="cgLegacy">
-        <summary>Invite with a private link (backup)</summary>
-      <button id="cgCreate" class="cgButton primary" type="button">Create private match</button>
-      <form id="cgJoinForm"><label class="cgLabel" for="cgJoinId">Join an invitation</label>
-        <div class="cgRow"><input id="cgJoinId" class="cgInput" type="text" placeholder="Paste a game link or game ID" required>
-        <button class="cgButton" type="submit">Join</button></div></form>
-      </details>
-      <div id="cgMessage" role="status" aria-live="polite"></div>
-      <button id="cgPractice" class="cgButton" style="width:100%;margin:8px 0 0" type="button">Return to practice game</button>
-      <hr class="cgDivider">
-      <div class="cgLiveHeading"><strong>Live games</strong><span id="cgLiveCount" class="cgLiveCount" aria-live="polite"></span></div>
-      <div id="cgLiveGames" class="cgLiveList"><span class="cgMuted">Checking for live matches…</span></div>
-      <hr class="cgDivider">
-      <div class="cgHeader"><strong>My matches</strong><button class="cgButton" id="cgRefresh" type="button">Refresh</button></div>
-      <div id="cgGames" class="cgMuted">No matches yet.</div>
+      <button id="cgPractice" class="cgLink cgBack" type="button">Back to playing the computer</button>
     </section>`;
   document.body.appendChild(root);
   // Preserve the authenticated sign-out handler by moving the original
@@ -183,7 +193,7 @@
   const $ = id => document.getElementById(id);
   const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let player = null, invitePresented = false;
-  let matchId = null, matchMode = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
+  let shownMatch = null, matchId = null, matchMode = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
   let livePromptSeen=false, liveCount=0, livePoll=null;
   const validColor=(v)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
   const colorColumns={mine:'piece_color',practice:'practice_opponent_color'};
@@ -362,7 +372,10 @@
         .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_white_ms,clock_black_ms,clock_turn_started_at,clock_state,clock_penalty_side,clock_paused_by')
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
-      if (!g) throw new Error('This match is private or no longer available.');
+      if (!g) {
+        if (shownMatch===id) { stopMatch(); window.familyChessNative?.leaveToPractice(); root.hidden=true; status('That match was closed.'); return false; }
+        throw new Error('This match is private or no longer available.');
+      }
       const isPlayer=g.white_player_id===uid||g.black_player_id===uid;
       const isWatcher=matchMode==='watch';
       if(isWatcher){
@@ -389,6 +402,7 @@
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
       await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors,
         {spectating:isWatcher,actions:actions||[]});
+      shownMatch=id;
       if(isWatcher){
         spectatorLabel.textContent=`Watching · ${labels[g.white_player_id]||'White'} vs ${labels[g.black_player_id]||'Black'}`;
         spectatorBar.hidden=false;
@@ -571,7 +585,7 @@
       const {error} = await api.from('chess_profiles').update({display_name}).eq('id',player.id);
       if(error){status('Could not save your name: '+error.message,true);return;}
       $('cgNameValue').textContent=display_name;
-      $('cgProfileSettings').open=false;
+      $('cgSettings').open=false;
       status('Chess name updated to '+display_name+'.');
       void refresh();
       window.dispatchEvent(new Event('familyChessProfileUpdated'));
@@ -602,7 +616,10 @@
       names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
     }
     liveCount=others.length;
-    counter.textContent=others.length?`${others.length} available to watch`:'';
+    counter.textContent=others.length?`${others.length} to watch`:'';
+    $('cgWatchCount').textContent=others.length?'· '+others.length:'';
+    $('cgGoWatch').disabled=!others.length;
+    $('cgGoWatch').title=others.length?'Watch a game in progress':'No one is playing right now';
     watchShortcut.textContent=`● Watch live${others.length>1?` · ${others.length}`:''}`;
     watchShortcut.hidden=others.length===0||!!matchId;
     container.replaceChildren();
@@ -610,23 +627,25 @@
       const n=document.createElement('span');n.className='cgMuted';
       n.textContent='No games are being played right now.';container.append(n);
     }
-    for(const game of matches){
+    /* your own live games are in My matches; this list is for watching others */
+    for(const game of others){
       const card=document.createElement('div');card.className='cgLiveCard';
       const white=displayedName(names,game.white_player_id,'White');
       const black=displayedName(names,game.black_player_id,'Black');
       const title=document.createElement('div');title.className='cgLiveTitle';
       title.textContent=white+' vs '+black;
       const subtitle=document.createElement('span');subtitle.className='cgLiveMeta';
-      subtitle.textContent='White: '+white+' · Black: '+black;
-      const badge=document.createElement('span');badge.className='cgLiveTag';badge.textContent='Live now';
+      subtitle.textContent='Playing now';
+      const badge=document.createElement('span');badge.className='cgLiveTag';badge.setAttribute('aria-hidden','true');
+      const text=document.createElement('span');text.className='cgLiveText';text.append(title,subtitle);
       const button=document.createElement('button');
       button.className='cgButton cgWatch';button.type='button';
       const participant=game.white_player_id===uid||game.black_player_id===uid;
-      button.textContent=participant?'Return to my game':'Watch live';
+      button.textContent=participant?'Open':'Watch';
       button.addEventListener('click',()=>{
         void startMatch(game.id,participant?'play':'watch').catch(e=>status(e.message,true));
       });
-      card.append(badge,title,subtitle,button);container.append(card);
+      card.append(badge,text,button);container.append(card);
     }
     if(prompt&&!livePromptSeen&&others.length&&!pattern.test(invite)&&!matchId){
       livePromptSeen=true;
@@ -645,15 +664,17 @@
     if (!player) return;
     if (error) { games.textContent = 'Could not load matches: ' + error.message; return; }
     games.replaceChildren();
-    if (!data?.length) { games.textContent='No matches yet.'; return; }
-    const players=[...new Set(data.flatMap(g=>[g.white_player_id,g.black_player_id]).filter(Boolean))];
+    /* abandoned matches (closed by a newer invite) are not kept */
+    const kept=(data||[]).filter(g=>g.end_reason!=='replaced');
+    if (!kept.length) { games.textContent='No matches yet.'; return; }
+    const players=[...new Set(kept.flatMap(g=>[g.white_player_id,g.black_player_id]).filter(Boolean))];
     const {data:profiles}=await api.from('chess_profiles').select('id,display_name').in('id',players);
     if(!player)return;
     const names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
     const when=(t)=>{const d=new Date(t);return isNaN(d)?'':d.toLocaleDateString([], {month:'short',day:'numeric'});};
     const REASON={checkmate:'Checkmate',resignation:'Resigned',timeout:'On time',stalemate:'Stalemate',
       agreement:'Agreed draw',repetition:'Repetition','insufficient material':'Insufficient material'};
-    for (const g of data) {
+    for (const g of kept) {
       const mine=g.white_player_id===player.id?'w':'b';
       const oppId=mine==='w'?g.black_player_id:g.white_player_id;
       const opp=oppId?displayedName(names,oppId,mine==='w'?'Black':'White'):'No opponent yet';

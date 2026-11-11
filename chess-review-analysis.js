@@ -58,11 +58,27 @@
     if (loss >= 100) return { kind: 'inaccuracy', label: 'Inaccuracy', loss };
     return { kind: 'good', label: 'Reasonable move', loss };
   }
-  const get = ply => {
+  const graded = ply => {
     if (!(ply >= 1 && ply <= results.length)) return null;
     const r = results[ply - 1];
     return r ? { ...r, ...classify(r) } : null;
   };
+  /* a best move that wins outright, or that punishes the opponent's mistake, is worth stopping on too */
+  const get = ply => {
+    const v = graded(ply);
+    if (!v || v.kind !== 'best' || v.forced) return v;
+    if (v.playedScore > 98500) return { ...v, kind: 'strong', label: 'Found the winning line' };
+    const before = graded(ply - 1);
+    if (before && (before.kind === 'mistake' || before.kind === 'blunder'))
+      return { ...v, kind: 'strong', label: 'Punished the mistake' };
+    return v;
+  };
+  /* the moves worth stopping on in a review: mistakes of any size, and strong replies */
+  function keyMoments() {
+    const out = [];
+    for (let i = 1; i <= results.length; i++) { const v = get(i); if (v && (isIssue(v) || v.kind === 'strong')) out.push(i); }
+    return out;
+  }
   const isIssue = r => r && ['inaccuracy', 'mistake', 'blunder'].includes(r.kind);
   function issues() {
     const all = [];
@@ -167,5 +183,5 @@
     }
   }
   function focus(ply) { focusPly = Math.max(0, ply || 0); }
-  window.ChessReviewAnalyzer = Object.freeze({ start, stop, focus, get, issues, counts, status });
+  window.ChessReviewAnalyzer = Object.freeze({ start, stop, focus, get, issues, counts, status, keyMoments });
 })();

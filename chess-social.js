@@ -8,16 +8,16 @@
  const VAPID_PUBLIC_KEY='BBJfBdOHnTHFbKTs2KEqCyr_aCKMOM0l3IxpJYtaIimFJzJMswcLwD90K1_IVH7WrUDbLM5miTcs8K74vuXobTA';
  mount.innerHTML=`
  <section class="cgSocialSection">
-  <h3 class="cgSocialHeading">Players <small id="cgOnlineCount" class="cgSocialMeta">Checking status…</small></h3>
+  <div class="cgSection cgPlayersHead"><span>Players</span><small id="cgOnlineCount" class="cgSocialMeta">Checking…</small></div>
   <div id="cgPlayerList" class="cgSocialList"><div class="cgSocialEmpty">Loading players…</div></div>
- </section>
- <section class="cgSocialSection">
-  <h3 class="cgSocialHeading">Challenges <small class="cgSocialTimer">60 seconds</small></h3>
-  <div id="cgChallengeStatus" class="cgSocialNotice" role="status" aria-live="polite">Send a challenge to an online or offline player.</div>
-  <button id="cgAllowPush" class="cgButton" type="button" style="margin-top:13px;width:100%">Enable challenge notifications</button>
-  <button id="cgTestPush" class="cgButton" type="button" style="margin-top:8px;width:100%">Send a test notification to my phone</button>
-  <span class="cgSocialSub" id="cgPushInfo">Offline notifications require permission. On iPhone, install this website to your Home Screen first.</span>
+  <div id="cgChallengeStatus" class="cgSocialNotice" role="status" aria-live="polite"></div>
  </section>`;
+ /* notification set-up lives in Settings, out of the way of choosing an opponent */
+ const notifySlot=document.getElementById('cgNotifySlot')||mount;
+ notifySlot.insertAdjacentHTML('beforeend',`
+  <button id="cgAllowPush" class="cgButton" type="button">Enable challenge notifications</button>
+  <button id="cgTestPush" class="cgButton" type="button">Send a test notification</button>
+  <span class="cgSocialSub" id="cgPushInfo">On iPhone, add this site to your Home Screen first.</span>`);
  const alert=document.createElement('div');
  alert.id='cgChallengeAlert';alert.hidden=true;alert.setAttribute('role','dialog');
  alert.setAttribute('aria-modal','true');alert.setAttribute('aria-label','Incoming chess challenge');
@@ -65,7 +65,8 @@
   list.replaceChildren();
   const others=profiles.filter(p=>p.id!==user.id);
   others.sort((a,b)=>Number(online(b.id))-Number(online(a.id))||a.display_name.localeCompare(b.display_name));
-  $('cgOnlineCount').textContent=others.filter(p=>online(p.id)).length+' online';
+  const on=others.filter(p=>online(p.id)).length;
+  $('cgOnlineCount').textContent=on?on+' online':'';
   if(!others.length){empty(list,'No other family accounts yet. Invite someone to create an account.');return;}
   for(const p of others){
    const game=activeGames.find(g=>g.white_player_id===p.id||g.black_player_id===p.id);
@@ -76,15 +77,19 @@
    dot.setAttribute('aria-hidden','true');
    status.append(dot,document.createTextNode((online(p.id)?'Online':'Offline')+(game?' · In game':'')));
    identity.append(n,status);row.append(identity);
+   /* someone mid-game can still be challenged; Watch sits beside it as a smaller eye button */
    if(game){
-     const watchBtn=node('button','cgSocialAction alt','Watch');watchBtn.type='button';
+     const watchBtn=node('button','cgSocialAction alt cgEye','');watchBtn.type='button';
+     watchBtn.setAttribute('aria-label','Watch '+p.display_name);watchBtn.title='Watch';
+     watchBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>';
      watchBtn.addEventListener('click',()=>{void watch(game.id);});
      row.append(watchBtn);
    }
-   const challengeBtn=node('button','cgSocialAction',online(p.id)?'Challenge':'Invite');
+   const challengeBtn=node('button','cgSocialAction','Challenge');
    challengeBtn.type='button';
    challengeBtn.addEventListener('click',()=>{void sendChallenge(p.id);});
-   row.append(challengeBtn);list.append(row);
+   row.append(challengeBtn);
+   list.append(row);
   }
  }
  async function watch(id){
