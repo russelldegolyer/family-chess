@@ -16,7 +16,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=4"></script>
-<script defer src="./chess-online.js?v=11"></script>
+<script defer src="./chess-online.js?v=12"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=3">
@@ -1726,6 +1726,20 @@ function sdfMesh(f, [x0, y0, z0], [x1, y1, z1], h, symX = false) {
     if ((V[id(i, j, k)] < 0) === (V[id(i, j, k + 1)] < 0)) continue;
     quad(cell[cid(i - 1, j - 1, k)], cell[cid(i, j - 1, k)], cell[cid(i, j, k)], cell[cid(i - 1, j, k)]);
   }
+  /* snap every vertex onto the real surface (two Newton steps along the field's gradient, never more than
+     a cell): removes the stair-stepping surface nets leave along carved edges like the slit and the crown rim */
+  const ep = h * 0.25;
+  for (let v = 0; v < pos.length; v += 3) {
+    let x = pos[v], y = pos[v + 1], z = pos[v + 2];
+    for (let it = 0; it < 2; it++) {
+      const d = f(x, y, z);
+      const gx = (f(x + ep, y, z) - f(x - ep, y, z)) / (2 * ep), gy = (f(x, y + ep, z) - f(x, y - ep, z)) / (2 * ep), gz = (f(x, y, z + ep) - f(x, y, z - ep)) / (2 * ep);
+      const g2 = gx * gx + gy * gy + gz * gz; if (g2 < 1e-8) break;
+      let s = d / g2; const step = Math.abs(s) * Math.sqrt(g2); if (step > h * 0.75) s *= (h * 0.75) / step;
+      x -= gx * s; y -= gy * s; z -= gz * s;
+    }
+    pos[v] = x; pos[v + 1] = y; pos[v + 2] = z;
+  }
   const nrm = new Float32Array(pos.length), e = h * 0.5;
   for (let v = 0; v < pos.length; v += 3) {
     const x = pos[v], y = pos[v + 1], z = pos[v + 2];
@@ -1817,10 +1831,10 @@ function knightFields() {
     d = smin(d, ellipsoid(x, y, z, 0, 0.655, -0.3, 0.061, 0.063, 0.066), 0.03);
     d = smin(d, ellipsoid(x, y, z, 0, 0.615, -0.27, 0.046, 0.033, 0.052), 0.02);
     d = smin(d, ellipsoid(ax, y, z, 0.056, 0.82, -0.125, 0.022, 0.02, 0.046), 0.02);
-    d = smax(d, -sphere(ax, y, z, 0.082, 0.81, -0.13, 0.025), 0.01);
-    d = Math.min(d, sphere(ax, y, z, 0.072, 0.81, -0.13, 0.0175));
-    d = smax(d, -ellipsoid(ax, y, z, 0.033, 0.668, -0.356, 0.013, 0.018, 0.02), 0.008);
-    d = smax(d, -cone(ax, y, z, 0.05, 0.62, -0.322, 0.062, 0.636, -0.228, 0.0075, 0.006), 0.006);
+    d = smax(d, -sphere(ax, y, z, 0.082, 0.81, -0.13, 0.025), 0.018);
+    d = SDF.smin(d, sphere(ax, y, z, 0.072, 0.81, -0.13, 0.0175), 0.006);
+    d = smax(d, -ellipsoid(ax, y, z, 0.033, 0.668, -0.356, 0.013, 0.018, 0.02), 0.014);
+    d = smax(d, -cone(ax, y, z, 0.05, 0.62, -0.322, 0.062, 0.636, -0.228, 0.0075, 0.006), 0.01);
     const ear = smax(cone(ax, y, z, 0.038, 0.88, -0.02, 0.052, 0.995, 0.003, 0.03, 0.005), -cone(ax, y, z, 0.038, 0.886, -0.036, 0.052, 0.985, -0.01, 0.018, 0.003), 0.006);
     d = smin(d, ear, 0.015);
     return smax(d, 0.142 - y, 0.01);
@@ -1925,10 +1939,10 @@ function masterPiece(type) {
       d = smin(d, cone(x, y, z, 0, 0.7, 0, 0, 0.77, 0, 0.074, 0.098), 0.03);
       /* the slit: a slab tilted across the mitre, cut through the right half to just past the centre */
       const slab = Math.max(Math.abs(nx * x + ny * (y - 0.905)) - 0.017, -(x + 0.028));
-      d = smax(d, -slab, 0.004);
+      d = smax(d, -slab, 0.011); /* rounded lips on the slit */
       return smax(d, 0.7 - y, 0.006);
     };
-    body.push(sdfMesh(mitre, [-0.14, 0.69, -0.14], [0.14, 1.07, 0.14], 0.0078));
+    body.push(sdfMesh(mitre, [-0.14, 0.69, -0.14], [0.14, 1.07, 0.14], 0.0052));
     trim.push(sdfMesh((x, y, z) => SDF.smin(sphere(x, y, z, 0, 1.09, 0, 0.034), cone(x, y, z, 0, 1.03, 0, 0, 1.075, 0, 0.012, 0.016), 0.012), [-0.05, 1.02, -0.05], [0.05, 1.13, 0.05], 0.005));
   } else if (type === 'q') {
     masterBase(P, 0.35);
@@ -1939,9 +1953,9 @@ function masterPiece(type) {
     const Rr = (y) => 0.196 + (y - 1.07) * 0.32;
     const crown = (x, y, z) => {
       const rad = len2(x, z), th = Math.atan2(z, x), f = 0.5 + 0.5 * Math.cos(8 * th), top = 1.098 + 0.098 * f * f;
-      return smax(smax(Math.abs(rad - Rr(y)) - 0.013, 1.064 - y, 0.006), y - top, 0.012);
+      return smax(smax(Math.abs(rad - Rr(y)) - 0.013, 1.064 - y, 0.008), y - top, 0.016);
     };
-    body.push(sdfMesh(crown, [-0.26, 1.055, -0.26], [0.26, 1.215, 0.26], 0.008, true));
+    body.push(sdfMesh(crown, [-0.26, 1.055, -0.26], [0.26, 1.215, 0.26], 0.0048, true));
     const balls = [];
     for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2, r = Rr(1.2); const s = new THREE.SphereGeometry(0.021, 12, 9); s.translate(Math.cos(a) * r, 1.212, Math.sin(a) * r); balls.push(s); }
     const top = new THREE.SphereGeometry(0.04, 18, 14); top.translate(0, 1.252, 0); balls.push(top);
@@ -1967,7 +1981,7 @@ function masterPiece(type) {
     P.tag('b').cubic(0.23, 0.14, 0.215, 0.152, 0.2, 0.158, 4).pt(0, 0.16);
     turn(P, body, trim);
     const { body: kb } = knightFields();
-    body.push(sdfMesh(kb, [-0.2, 0.13, -0.41], [0.2, 1.01, 0.29], 0.0098, true));
+    body.push(sdfMesh(kb, [-0.2, 0.13, -0.41], [0.2, 1.01, 0.29], 0.0072, true));
     trim.push(...knightMane());
   }
   const prep = (g) => { g = g.index ? g.toNonIndexed() : g; for (const a of Object.keys(g.attributes)) if (a !== 'position' && a !== 'normal') g.deleteAttribute(a); if (!g.attributes.normal) g.computeVertexNormals(); return g; };

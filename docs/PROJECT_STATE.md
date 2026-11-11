@@ -29,7 +29,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | --- | --- | --- |
 | Game state, moves, undo | `index.html` (`G`, `applyMove`, `playMove`, `undo`, `resetLocalGame`) | practice + online share one board |
 | Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu` | UI shows numbers only; engine branches on `level === 4/5` for the two extreme styles |
-| 3D board/pieces/themes | `index.html` `THEMES`, `#masterSrc`, `applyTheme`, `fitCamera` | themes: unnamed (Default), matte, cats, royal, northern, infernal |
+| 3D board/pieces/themes | `index.html` `THEMES`, `#masterSrc` (`sdfMesh` surface nets + vertex snapping; knight/bishop/queen heads are SDF), `applyTheme`, `fitCamera` | themes: unnamed (Default), matte, cats, royal, northern, infernal |
 | 2D board | `index.html` `draw2D`, `applyView`, `PREF2D` | |
 | Side chooser (start screen) | `index.html` `PG`, `openPregame`, `closePregame`, `pgStep`, `goHome`, `newGame` | swipe or tap White/Black + difficulty slider |
 | Piece colours | `index.html` `myColor`, `setMyColor`, `sideColors` (`BLACK_PIECES`), `openQuickColors`; sync in `chess-online.js` (`piece_color`) | one colour per account, paints White only |
@@ -53,7 +53,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - ⋯ menu: Choose board, Move history, Settings.
 - Colour rule: White = player colour (practice: yours; online: White player's), Black always black.
 - Play online sheet: players (Challenge / watch), Share invite link, Live now, My matches (W/L/D/LIVE/WAIT), Settings disclosure (name, notifications, join by link, sign out).
-- Abandoned (replaced) matches are deleted, not stored.
+- Abandoned (replaced) matches are deleted, not stored. A waiting invite can be cancelled (box after Share invite link, or Cancel on a WAIT row) via RPC `chess_cancel_invite`.
 - Opening an online match ends the practice game; returning from online opens the side chooser.
 - Review: Next/Prev stop only on inaccuracies, mistakes, blunders and strong replies; "Every move" toggle.
 - Five computer levels; 4 and 5 use different decision criteria (tests in `chess-ai-five-levels.test.mjs`).

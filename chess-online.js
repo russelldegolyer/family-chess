@@ -87,7 +87,8 @@
     .cgLink{border:0;background:none;color:#0a84ff;font:500 15px/1 -apple-system,BlinkMacSystemFont,sans-serif;padding:4px 0;cursor:pointer;text-transform:none;letter-spacing:0}
     .cgQuick{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 0}
     .cgQuick button:not([hidden]){display:flex;align-items:center;justify-content:center;gap:7px;min-height:46px;border:0;border-radius:14px;background:#2c2c2e;color:#f2f2f7;font:600 14px/1 -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer}
-    .cgQuick button span{font-size:15px}
+    .cgCancelInvite{align-self:center;color:#ff6961;font-size:15px}
+    .cgGameCopy.cgGameCancel{color:#ff6961}
     .cgQuick b{font-weight:600;color:#30d158;margin-left:2px}
     .cgQuick b:empty{display:none}
     .cgQuick button:disabled{opacity:.45;cursor:default}
@@ -131,7 +132,7 @@
         <button class="cgX" id="cgClose" type="button" aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button></div>
       <div id="cgSocialMount"></div>
       <div id="cgLobbyActions" class="cgQuick" aria-label="More ways to play">
-        <button id="cgGoLink" type="button"><span aria-hidden="true">🔗</span>Share invite link</button>
+        <button id="cgGoLink" type="button">Share invite link</button>
         <button id="cgGoWatch" type="button" hidden><b id="cgWatchCount"></b></button>
         <button id="cgGoChallenge" type="button" hidden>Challenge a player</button>
       </div>
@@ -148,6 +149,7 @@
           </select>
           <button id="cgNotifyInvite" class="cgButton" type="button">Notify</button>
         </div>
+        <button id="cgCancelInvite" class="cgLink cgCancelInvite" type="button">Cancel invite</button>
       </div>
       <div id="cgMessage" role="status" aria-live="polite"></div>
       <div class="cgBlock" id="cgLiveBlock">
@@ -697,6 +699,12 @@
         copyBtn.textContent=g.status==='waiting'?'Copy invite':'Copy link';
         copyBtn.addEventListener('click',(e)=>{e.stopPropagation();void copy(link(g.id));});
         row.append(copyBtn);
+        if(g.status==='waiting'){
+          const cancelBtn=document.createElement('button');cancelBtn.type='button';cancelBtn.className='cgGameCopy cgGameCancel';
+          cancelBtn.textContent='Cancel';cancelBtn.setAttribute('aria-label','Cancel this invite');
+          cancelBtn.addEventListener('click',(e)=>{e.stopPropagation();void cancelInvite(g.id);});
+          row.append(cancelBtn);
+        }
       }
       const chev=document.createElement('span');chev.className='cgChevron';chev.textContent='›';chev.setAttribute('aria-hidden','true');row.append(chev);
       const open=()=>{void startMatch(g.id,'play',g.status==='finished').catch(e=>status(e.message,true));};
@@ -707,7 +715,18 @@
     }
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
-  let creating = false;
+  let creating = false, openInviteId = null;
+  /* take back an invitation nobody has joined: the server deletes the waiting game and its pending challenge */
+  async function cancelInvite(id){
+    if(!player||!id)return;
+    const {data,error}=await api.rpc('chess_cancel_invite',{p_game_id:id});
+    if(error){status('Could not cancel the invite: '+error.message,true);return;}
+    if(openInviteId===id){openInviteId=null;$('cgCreatedLink').hidden=true;$('cgNewInviteURL').href='#';$('cgNewInviteURL').textContent='';}
+    if(matchId===id){stopMatch();window.familyChessNative?.leaveToPractice();}
+    status(data?'Invite cancelled. That link no longer works.':'That invite was already joined or closed.');
+    void refresh();
+  }
+  $('cgCancelInvite').addEventListener('click',()=>{void cancelInvite(openInviteId);});
   async function createInvite() {
     if(!player || creating) return;
     creating = true;
@@ -719,6 +738,7 @@
       const {data:id,error}=await api.rpc('chess_create_private_game');
       if(error)throw error;
       const url=link(id);
+      openInviteId=id;
       const a=$('cgNewInviteURL');
       a.href=url;
       a.textContent=url;
