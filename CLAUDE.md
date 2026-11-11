@@ -46,7 +46,9 @@ contradiction can't be resolved.
 4. Verify proportionally: `node --check` changed JS, run the specific relevant test or a quick
    headless check. Full suites/browser runs only for gameplay or multiplayer changes.
    Never claim a check passed unless it ran.
-5. Push to main deploys; confirm the live site serves the change when it matters.
+5. **Batch deploys.** Every push to `main` is a paid Vercel deployment. Commit each change locally, keep
+   working, and push once per batch, when Russell says to deploy or a batch of requests is finished.
+   Never push documentation-only commits on their own. Confirm the live site after the batch push.
 6. Database changes: apply via a reviewed migration, save a copy in `database/`, never blind-replay old scripts.
 
 ## Keeping memory accurate
