@@ -44,6 +44,7 @@ test('60 seconds per move has no pawn trade or penalty and expires as a loss',()
   const a=makeClock();
   let expired=null;
   a.clock.startLocal('move60',side=>{expired=side});
+  a.clock.moveLocal('b',1);a.clock.moveLocal('w',2);
   a.clock.setPerspective('w','w');
   a.advance(45_000);
   assert.equal(a.clock.sacrificeLocal('b',1),false);
@@ -55,9 +56,20 @@ test('60 seconds per move has no pawn trade or penalty and expires as a loss',()
   assert.equal(a.clock.resolveLocalPenalty(),false);
 });
 
+test('a practice clock waits for the first move before counting down',()=>{
+  const a=makeClock();
+  a.clock.startLocal('10m',()=>{});
+  a.advance(120_000);a.clock.check();
+  assert.equal(a.clock.snapshot().w,600_000);
+  a.clock.moveLocal('b',1);
+  a.advance(5_000);a.clock.moveLocal('w',2);
+  assert.equal(a.clock.snapshot().b,595_000);
+});
+
 test('normal timed chess retains pawn +1:30 below 30 seconds',()=>{
   const a=makeClock();
   a.clock.startLocal('10m',()=>{});
+  a.clock.moveLocal('b',1);a.clock.moveLocal('w',2);
   a.clock.setPerspective('w','w');
   a.advance(575_000);
   assert.equal(a.clock.sacrificeLocal('b',1),true);
@@ -69,6 +81,7 @@ test('a normal time-out still requests a pawn penalty',()=>{
   const a=makeClock();
   let expired=null;
   a.clock.startLocal('10m',side=>{expired=side});
+  a.clock.moveLocal('b',1);a.clock.moveLocal('w',2);
   a.advance(601_000);a.clock.check();
   assert.equal(expired,'w');
   assert.equal(a.clock.snapshot().clockState,'penalty');

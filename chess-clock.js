@@ -216,7 +216,8 @@
     const limit=MODES[mode];
     Object.assign(state,{source:'local',mode,status:'active',turn:'w',gameId:null,
       clockState:'running',penaltySide:null,bonusW:0,bonusB:0,
-      w:limit,b:limit,startedAt:mode==='off'?0:Date.now(),
+      /* a practice clock waits for the game's first move before it starts counting */
+      w:limit,b:limit,startedAt:0,
       history:[{w:limit,b:limit,turn:'w'}],onLocalTimeout:onTimeout,onOnlineTimeout:null,
       claimedAt:0,claimInFlight:false});
     tick();
@@ -244,7 +245,7 @@
     state.w=snap.w;state.b=snap.b;
     state.turn=nextTurn;
     state.status='active';state.clockState='running';state.penaltySide=null;
-    state.startedAt=Date.now();
+    state.startedAt=ply>0?Date.now():0;
     tick();
   }
   function stopLocal() {
@@ -288,7 +289,7 @@
       if(state.mode!=='off')state[state.turn]=remaining(state.turn,now);
       if(state.mode!=='off'&&state[state.turn]<=0){tick();return state.mode==='move60'?'timeout':'penalty';}
       state.clockState='paused';state.startedAt=0;
-    }else {state.clockState='running';state.startedAt=state.mode==='off'?0:now;}
+    }else {state.clockState='running';state.startedAt=state.mode==='off'||(state.source==='local'&&state.history.length<2)?0:now;}
     redraw();return state.clockState;
   }
   function resolveLocalPenalty(){
