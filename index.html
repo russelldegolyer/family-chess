@@ -7391,8 +7391,11 @@ function openPregame() {
   userCam = false;
   if (camTween) { tweens.delete(camTween); camTween = null; }
   PG.target = PG.az; PG.lean = null;
+  $('pgWhite').classList.remove('lean'); $('pgBlack').classList.remove('lean');
   pgMeasure();
   pgLean(true);
+  /* plain white and black armies (and button dots) while choosing: re-tint now, the game's colours were already on */
+  applySideColors(true); if (VIEW === '2d') draw2D(true);
   if (!firstFrame) pregameGlide();
 }
 /* the board turns at one fixed distance (the farther of side-on and end-on), so it never breathes in and out as it
