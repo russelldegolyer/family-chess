@@ -65,8 +65,19 @@
     .cgButton.primary{background:#eee;color:#111;border-color:#eee;width:100%;font-weight:700}
     .cgButton:disabled{opacity:.5;cursor:default}
     .cgDivider{border:0;border-top:1px solid #383838;margin:20px 0}
-    .cgGame{padding:12px;border:1px solid #383838;border-radius:10px;margin:10px 0}
-    .cgGame a{display:block;color:#bebebe;word-break:break-all;font-size:11px;margin:8px 0}
+    #cgGames{margin-top:6px;border-radius:12px;overflow:hidden;background:#1a1a1c}
+    .cgGame{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:0;background:none;color:#fff;font:inherit;text-align:left;cursor:pointer}
+    .cgGame+.cgGame{box-shadow:inset 0 .5px 0 #3a3a3c}
+    .cgGame:active{background:#232326}
+    .cgBadge{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;font:800 14px/1 inherit;letter-spacing:-.02em}
+    .cgBadge.win{background:#1f6f3a;color:#c9f7d6}.cgBadge.loss{background:#7a2323;color:#ffd0d0}
+    .cgBadge.draw{background:#3a3a3e;color:#e5e5ea}.cgBadge.live{background:#0a5fc2;color:#fff;font-size:9px}
+    .cgBadge.wait{background:#5b4513;color:#ffe2a3;font-size:9px}.cgBadge.void{background:#262628;color:#8e8e93}
+    .cgGameText{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .cgGameText b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cgGameText span{font-size:12px;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cgGameCopy{flex:none;min-height:30px;padding:0 10px;border:0;border-radius:999px;background:#2c2c2e;color:#0a84ff;font:600 12px inherit;cursor:pointer}
+    .cgChevron{flex:none;color:#636366;font-size:18px}
     #cgMessage{min-height:20px;color:#ccc;font-size:12px;line-height:1.5;margin-top:12px}
     #cgMessage.error{color:#ffa7a7}
     .cgLiveHeading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}
@@ -401,6 +412,7 @@
     for (let i=0;i<25 && pendingRead;i++) await new Promise(resolve=>setTimeout(resolve,120));
     if (pendingRead) throw new Error('A previous game is still loading.');
     stopMatch();
+    window.familyChessNative?.endPractice?.();
     matchId=id;matchMode=mode;
     window.dispatchEvent(new CustomEvent('familyChessMatchChanged',{detail:{id,mode}}));
     watchShortcut.hidden=true;
@@ -627,7 +639,7 @@
     void refreshLive(false);
     const games = $('cgGames'); games.replaceChildren(); games.textContent = 'Loading…';
     const {data,error} = await api.from('chess_games')
-      .select('id,status,end_reason,white_player_id,black_player_id,created_at')
+      .select('id,status,result,end_reason,white_player_id,black_player_id,created_at,updated_at')
       .or('white_player_id.eq.'+player.id+',black_player_id.eq.'+player.id)
       .order('created_at',{ascending:false}).limit(20);
     if (!player) return;
@@ -638,25 +650,44 @@
     const {data:profiles}=await api.from('chess_profiles').select('id,display_name').in('id',players);
     if(!player)return;
     const names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
+    const when=(t)=>{const d=new Date(t);return isNaN(d)?'':d.toLocaleDateString([], {month:'short',day:'numeric'});};
+    const REASON={checkmate:'Checkmate',resignation:'Resigned',timeout:'On time',stalemate:'Stalemate',
+      agreement:'Agreed draw',repetition:'Repetition','insufficient material':'Insufficient material'};
     for (const g of data) {
-      const card=document.createElement('div'); card.className='cgGame';
-      const title=document.createElement('strong');
-      const w=displayedName(names,g.white_player_id,'White');
-      const b=g.black_player_id?displayedName(names,g.black_player_id,'Black'):'Waiting for opponent';
-      title.textContent=w+' vs '+b;
-      const description=document.createElement('div');description.className='cgMuted';
-      description.textContent=(g.white_player_id===player.id?'You play White':'You play Black')+' · '+
-        (g.status==='waiting'?'Awaiting opponent':g.status==='active'?'Playing now':g.end_reason==='replaced'?'Ended · new invite created':'Finished');
-      const a=document.createElement('a'); a.href=link(g.id); a.textContent=link(g.id);
-      const button=document.createElement('button');button.type='button';button.className='cgButton';
-      button.textContent=g.status==='waiting'?'Copy invite':'Copy game link';
-      if(g.status==='finished')button.title='This match is over. The link cannot be joined.';
-      button.addEventListener('click',()=>{void copy(link(g.id));});
-      const play=document.createElement('button');play.className='cgButton';play.type='button';
-      play.textContent=g.status==='waiting'?'Open waiting board':g.status==='finished'?'View history':'Play board';
-      play.style.marginLeft='8px';
-      play.addEventListener('click',()=>{void startMatch(g.id,'play',g.status==='finished').catch(e=>status(e.message,true));});
-      card.append(title,description,a,button,play);games.append(card);
+      const mine=g.white_player_id===player.id?'w':'b';
+      const oppId=mine==='w'?g.black_player_id:g.white_player_id;
+      const opp=oppId?displayedName(names,oppId,mine==='w'?'Black':'White'):'No opponent yet';
+      /* one outcome mark per row: W / L / D for finished games, LIVE / WAIT while open */
+      let mark='–',cls='void',outcome='Abandoned';
+      if(g.status==='waiting'){mark='WAIT';cls='wait';outcome='Waiting for opponent';}
+      else if(g.status==='active'){mark='LIVE';cls='live';outcome='Playing now';}
+      else if(g.end_reason!=='replaced'&&g.result){
+        const won=(g.result==='1-0'&&mine==='w')||(g.result==='0-1'&&mine==='b');
+        if(g.result==='1/2-1/2'){mark='D';cls='draw';outcome='Draw';}
+        else if(won){mark='W';cls='win';outcome='Won';}else{mark='L';cls='loss';outcome='Lost';}
+        if(REASON[g.end_reason])outcome+=' · '+REASON[g.end_reason];
+      }
+      const row=document.createElement('div');row.className='cgGame';row.setAttribute('role','button');row.tabIndex=0;
+      const badge=document.createElement('span');badge.className='cgBadge '+cls;badge.textContent=mark;
+      badge.setAttribute('aria-label',outcome);
+      const text=document.createElement('span');text.className='cgGameText';
+      const title=document.createElement('b');title.textContent='vs '+opp;
+      const sub=document.createElement('span');
+      sub.textContent=[mine==='w'?'White':'Black',outcome,when(g.updated_at||g.created_at)].filter(Boolean).join(' · ');
+      text.append(title,sub);row.append(badge,text);
+      /* only open games have a link worth sharing */
+      if(g.status==='waiting'||g.status==='active'){
+        const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='cgGameCopy';
+        copyBtn.textContent=g.status==='waiting'?'Copy invite':'Copy link';
+        copyBtn.addEventListener('click',(e)=>{e.stopPropagation();void copy(link(g.id));});
+        row.append(copyBtn);
+      }
+      const chev=document.createElement('span');chev.className='cgChevron';chev.textContent='›';chev.setAttribute('aria-hidden','true');row.append(chev);
+      const open=()=>{void startMatch(g.id,'play',g.status==='finished').catch(e=>status(e.message,true));};
+      row.addEventListener('click',open);
+      row.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+      row.title=g.status==='finished'?'View this game':'Open this game';
+      games.append(row);
     }
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
