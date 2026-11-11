@@ -77,7 +77,6 @@ test('player and practice color selections are persisted through signed-in event
  assert.match(page,/familyChessPieceColorChanged/);
  assert.match(page,/familyChessPracticeColorChanged/);
  assert.match(page,/CPU_COLOR = oppColor\(\)/);
- assert.match(page,/set: \(hx\) => setOppColor\(hx\)/);
  assert.match(online,/piece_color,practice_opponent_color,clock_preference/);
  assert.match(online,/savePendingColor\(kind,id\)/);
  assert.match(online,/localStorage\.setItem\(colorPendingKey\(kind,id\)/);

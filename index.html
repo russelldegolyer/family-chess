@@ -4799,21 +4799,18 @@ function setOppColor(hex) {
     'familyChessPracticeColorChanged',{detail:{color:normalized}}));
 }
 /* the colour shown for each logical side in the current game */
+/* Black pieces are always black. A player's colour only ever paints the White pieces:
+   on this screen (practice, the side chooser, the computer) White wears your colour whichever side you play;
+   online, White wears the colour of whoever is playing White. Nothing changes colour when you pick a side. */
+const BLACK_PIECES = COLOR_DEF.opp;
 function sideColors() {
-  const mine = myColor(), opp = oppColor();
-  /* choosing a side: both armies in plain white and black until the board leans one way; the army turning
-     toward you takes your colour then, so it is already yours when the game starts */
-  if (PG.on) return PG_PLAIN;
-  if (PG.fade) {
-    const t = PG.fade.k, c = CPU_COLOR || opp, end = cpu.human === 'w' ? { w: mine, b: c } : { w: c, b: mine };
-    return { w: mixHex(PG_PLAIN.w, end.w, t), b: mixHex(PG_PLAIN.b, end.b, t) };
+  const mine = myColor();
+  if (G.mode === 'live' && !PG.on) {
+    const c = G.colors || {}, uid = G.seats.w;
+    const w = uid && uid === me.id ? mine : chromaOk(c[uid]) ? c[uid] : COLOR_DEF.mine;
+    return { w, b: BLACK_PIECES };
   }
-  if (G.mode === 'live') {
-    const c = G.colors || {}, pick = (side, fb) => (G.seats[side] && G.seats[side] === me.id ? mine : chromaOk(c[G.seats[side]]) ? c[G.seats[side]] : fb);
-    return { w: pick('w', COLOR_DEF.mine), b: pick('b', COLOR_DEF.opp) };
-  }
-  if (G.mode === 'cpu') { const c = CPU_COLOR || opp; return cpu.human === 'w' ? { w: mine, b: c } : { w: c, b: mine }; }
-  return { w: mine, b: opp };
+  return { w: mine, b: BLACK_PIECES };
 }
 /* themes whose pieces wear the players' colours */
 const COLOR_THEMES = new Set(['unnamed']);
@@ -6644,23 +6641,15 @@ $('btnChatClear').addEventListener('click', () => {
   }
   toast('Open an online match to clear chat.');
 });
-/* tap a name plate to change that side's colour */
-/* the colour wheel on the bottom bar: your pieces, and the other side when it's on this device */
+/* the colour wheel and the name plates: your colour paints the White pieces; Black is always black */
 function openQuickColors() {
-  const tabs = [{ label: 'My pieces', get: myColor, set: (hx) => { setMyColor(hx); updatePlates(); }, against: () => oppSideColor() }];
-  if (G.mode === 'cpu') tabs.push({ label: 'Computer', get: () => CPU_COLOR || oppColor(), set: (hx) => setOppColor(hx), against: myColor });
-  else if (G.mode !== 'live') tabs.push({ label: 'Opponent', get: oppColor, set: (hx) => { setOppColor(hx); updatePlates(); }, against: myColor });
-  openColorPicker('Piece colours', null, null, null, tabs);
-  if (THEME !== 'unnamed') toast('Piece colours show on the Default board.', 2400);
+  openColorPicker('White piece colour', myColor(), (hx) => { setMyColor(hx); updatePlates(); }, BLACK_PIECES);
+  toast(THEME !== 'unnamed' ? 'Piece colours show on the Default board.' : 'Your colour paints the White pieces. Black stays black.', 2600);
 }
-function oppSideColor() { const c = sideColors(), me2 = G.mode === 'live' ? mySeat || 'w' : G.mode === 'cpu' ? cpu.human : 'w'; return c[other(me2)]; }
 function plateColor(side) {
-  const mine = G.mode === 'live' ? mySeat === side : G.mode === 'cpu' ? cpu.human === side : side === 'w';
-  const cur = sideColors();
-  if (mine) { openColorPicker('Your piece colour', myColor(), (hex) => setMyColor(hex), cur[other(side)]); return; }
-  if (G.mode === 'live') { toast('Each player picks their own colour. Tap your own name to change yours.'); return; }
-  if (G.mode === 'cpu') { openColorPicker("Computer's colour", cur[side], setOppColor, myColor()); return; }
-  openColorPicker('Second player colour', oppColor(), (hex) => setOppColor(hex), myColor());
+  if (side === 'b') { toast('Black pieces are always black. Your colour paints the White pieces.', 2600); return; }
+  if (G.mode === 'live' && mySeat !== 'w') { toast('White wears the colour of whoever plays White.', 2600); return; }
+  openQuickColors();
 }
 $('plateTop').addEventListener('click', () => plateColor(other(viewSide)));
 $('plateBottom').addEventListener('click', () => plateColor(viewSide));
@@ -7320,7 +7309,7 @@ let firstFrame = true, warmFrames = 0;
 function requestRender() { needsRender = true; }
 function frame(now) {
   requestAnimationFrame(frame);
-  const animating = stepTweens(now) | (VIEW === '3d' && stepEntrance(now)) | pgStep(now) | pgFadeStep(now);
+  const animating = stepTweens(now) | (VIEW === '3d' && stepEntrance(now)) | pgStep(now);
   const fx = VIEW === '3d' && THEMES[THEME].anim && fxTick(now);
   const moved = VIEW === '3d' && !ENTRANCE && controls.update();
   const paused = false;
@@ -7386,7 +7375,6 @@ function openPregame() {
   document.body.classList.add('pregame');
   const el = $('pregame'); el.classList.remove('leaving', 'touched'); el.hidden = false;
   pgSetLevel(cpu.level);
-  PG.fade = null;
   controls.enabled = false;
   userCam = false;
   if (camTween) { tweens.delete(camTween); camTween = null; }
@@ -7411,15 +7399,6 @@ function pgPlace() {
   camera.position.set(Math.sin(p) * Math.sin(a) * d, Math.cos(p) * d, Math.sin(p) * Math.cos(a) * d);
   camera.lookAt(0, 0, 0); controls.target.set(0, 0, 0);
   requestRender();
-}
-const PG_PLAIN = { w: '#ece7dc', b: '#26262a' };
-/* after a side is picked, the plain armies ease into the players' colours over the swing */
-function pgFadeStep(now) {
-  const f = PG.fade; if (!f) return false;
-  f.k = Math.min(1, (now - f.t0) / f.dur); f.k = f.k * f.k * (3 - 2 * f.k);
-  applySideColors(true); if (VIEW === '2d') draw2D(true);
-  if (f.k >= 1) { PG.fade = null; applySideColors(true); }
-  return true;
 }
 /* which army you are turning toward you (White when the camera swings toward az 0, Black toward π) */
 function pgLean(force) {
@@ -7452,7 +7431,6 @@ function pregameGlide() {
 function closePregame(side) {
   if (!PG.on) return;
   PG.on = false; PG.swing = true;
-  if (side) PG.fade = { t0: performance.now() + 60, dur: Math.max(420, PG.swingDur * 0.75), k: 0 };
   controls.enabled = true;
   const el = $('pregame'); el.classList.add('leaving');
   document.body.classList.remove('pregame');
