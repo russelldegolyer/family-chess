@@ -6595,6 +6595,7 @@ function openMenu() {
   const add = (label, fn, cls = '') => { const b = el('button', cls); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.textContent = label; b.addEventListener('click', fn); m.append(b); return b; };
   add('Choose board…', () => { closeMenu(); $('btnCollection').click(); });
   add('Move history', () => { closeMenu(); if (focusMode) setFocus(false); if (compact) setSheet(true); openHistory(); });
+  add('Settings…', () => { closeMenu(); openSettings(); });
   placeMenu();
   m.hidden = false;
   $('btnMenu').setAttribute('aria-expanded', 'true');
@@ -7284,7 +7285,6 @@ function openSettings() {
       window.familyChessClockSavePromise
         .catch((e)=>toast('Clock preference could not sync: '+(e?.message||'Try again'),4200));
     },'10/12/15 minutes: each player has that much total time. 60-second mode resets the active clock for each turn. Applies to your next new computer game or online invitation; existing games keep their clock.'));
-    s0.append(group('Preferred starting position', [['w', 'First'], ['b', 'Second'], ['r', 'Random']], store.get('sg.side', 'w'), (v) => store.set('sg.side', v), 'Used for games against the computer. Online, the challenge rules decide who opens.'));
     s2.append(group('2D pieces', [['classic', 'Classic pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v })));
     s2.append(group('Sound', [[true, 'On'], [false, 'Off']], Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) Sound.ensure(); }));
     body.append(s0, s2, s1);
