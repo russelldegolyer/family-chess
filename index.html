@@ -16,11 +16,11 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=4"></script>
-<script defer src="./chess-online.js?v=12"></script>
+<script defer src="./chess-online.js?v=13"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
-<link rel="stylesheet" href="./chess-social.css?v=3">
-<script defer src="./chess-social.js?v=10"></script>
+<link rel="stylesheet" href="./chess-social.css?v=4">
+<script defer src="./chess-social.js?v=11"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -6458,8 +6458,21 @@ function describeResult() {
 }
 const endKey = () => (G.gid || G.mode) + ':' + G.version;
 function showEndCard() { endDismissed = null; maybeShowEndCard(); }
+/* lifetime record vs the computer, kept on this device */
+function recordCpuResult() {
+  if (G.mode !== 'cpu' || G.status !== 'over' || !G.result || !G.moves.length) return;
+  const rec = store.get('chess.cpuRecord', { w: 0, l: 0, d: 0, last: '' });
+  const k = endKey();
+  if (rec.last === k) return;
+  rec.last = k;
+  if (G.result === '1/2-1/2') rec.d++;
+  else if ((G.result === '1-0') === (cpu.human === 'w')) rec.w++;
+  else rec.l++;
+  store.set('chess.cpuRecord', rec);
+}
+window.familyChessCpuRecord = () => store.get('chess.cpuRecord', { w: 0, l: 0, d: 0 });
 function maybeShowEndCard() {
-  if (G.status === 'over') processFinishedGame();
+  if (G.status === 'over') { processFinishedGame(); recordCpuResult(); }
   const card = $('endCard');
   if (G.status !== 'over' || review || endDismissed === endKey()) { card.hidden = true; return; }
   const { title, line } = describeResult();

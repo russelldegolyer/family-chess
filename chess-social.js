@@ -36,6 +36,16 @@
  let user=null,presence=null,challengeChannel=null,poll=null,ticker=null;
  let profiles=[],activeGames=[],challenges=[],onlineIds=new Set(),openAlertId=null;
  let openedGameIds=new Set(),requesting=false,loading=false;
+ /* invite buttons stay green with a countdown while the 60 s challenge is open */
+ const sentUntil={};let sentTimer=null;
+ function tickSent(){
+  clearInterval(sentTimer);
+  sentTimer=setInterval(()=>{
+   const now=Date.now();if(!Object.values(sentUntil).some(t=>t>now-1000)){clearInterval(sentTimer);sentTimer=null;}
+   for(const k in sentUntil)if(sentUntil[k]<=now-1000)delete sentUntil[k];
+   renderPlayers();
+  },1000);
+ }
  const validUid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(v);
  const nameFor=id=>profiles.find(p=>p.id===id)?.display_name||'Family player';
  const message=(msg)=>{$('cgChallengeStatus').textContent=msg;};
@@ -85,8 +95,9 @@
      watchBtn.addEventListener('click',()=>{void watch(game.id);});
      row.append(watchBtn);
    }
-   const challengeBtn=node('button','cgSocialAction','Challenge');
-   challengeBtn.type='button';
+   const until=sentUntil[p.id]||0,live=until>Date.now();
+   const challengeBtn=node('button','cgSocialAction'+(live?' sent':''),live?'Invited '+Math.ceil((until-Date.now())/1000)+'s':'Invite');
+   challengeBtn.type='button';challengeBtn.disabled=live;
    challengeBtn.addEventListener('click',()=>{void sendChallenge(p.id);});
    row.append(challengeBtn);
    list.append(row);
@@ -157,18 +168,19 @@
    await window.familyChessClockSavePromise;
    const {data:id,error}=await api.rpc('chess_send_challenge',{p_target:targetId});
    if(error)throw error;
-   message('Challenge sent to '+nameFor(targetId)+'. They have 60 seconds to respond.');
+   message('Invite sent to '+nameFor(targetId)+'. They have 60 seconds to respond.');
+   sentUntil[targetId]=Date.now()+60000;tickSent();
    await refreshData();
    // Always request push, even if Presence still shows the target as online.
    // A backgrounded iPhone can retain a stale green presence indicator.
    const response=await api.functions.invoke('chess-notify-challenge',{body:{challenge_id:id}});
    const sent=Number(response.data?.sent||0),failed=Number(response.data?.failed||0);
-   if(response.error)message('Challenge created, but the push service could not be reached. Check the other device.');
-   else if(response.data?.configured===false)message('Challenge created. Server push credentials still need repair.');
-   else if(sent>0)message('Challenge sent to '+nameFor(targetId)+'. Push accepted for '+sent+' device'+(sent===1?'':'s')+'. They have 60 seconds.');
-   else if(failed>0)message('Challenge created, but push delivery failed for '+failed+' device(s). Re-enable notifications on that phone.');
-   else if(response.data?.already_sent)message('Challenge created. A push was already attempted for this invitation.');
-   else message('Challenge created, but the recipient has no working push subscription. They can still accept in-app within 60 seconds.');
+   if(response.error)message('Invite sent, but the push service could not be reached. Check the other device.');
+   else if(response.data?.configured===false)message('Invite sent. Server push credentials still need repair.');
+   else if(sent>0)message('Invite sent to '+nameFor(targetId)+'. Push accepted for '+sent+' device'+(sent===1?'':'s')+'. They have 60 seconds.');
+   else if(failed>0)message('Invite sent, but push delivery failed for '+failed+' device(s). Re-enable notifications on that phone.');
+   else if(response.data?.already_sent)message('Invite sent. A push was already attempted for this invitation.');
+   else message('Invite sent. They have 60 seconds to accept in the app.');
   }catch(e){message(e.message||'Unable to send challenge.');}
   finally{requesting=false;}
  }

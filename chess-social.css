@@ -57,3 +57,5 @@
 .cgSocialNotice:empty{display:none}
 .cgSocialMeta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cgEye{display:grid;place-items:center;width:36px;height:36px;padding:0!important}
+
+.cgSocialAction.sent,.cgSocialAction.sent:disabled{background:#30d158;color:#04210d;opacity:1;font-variant-numeric:tabular-nums}

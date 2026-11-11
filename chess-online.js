@@ -89,6 +89,13 @@
     .cgQuick button:not([hidden]){display:flex;align-items:center;justify-content:center;gap:7px;min-height:46px;border:0;border-radius:14px;background:#2c2c2e;color:#f2f2f7;font:600 14px/1 -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer}
     .cgCancelInvite{align-self:center;color:#ff6961;font-size:15px}
     .cgGameCopy.cgGameCancel{color:#ff6961}
+    .cgQuick button.cgSmallLink:not([hidden]){min-height:30px;background:none;color:#0a84ff;font-size:13px;font-weight:500}
+    .cgRecord{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 0}
+    .cgRecord div{background:#1a1a1c;border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:3px}
+    .cgRecord span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8e8e93}
+    .cgRecord b{font-size:15px;font-weight:600;color:#f2f2f7;font-variant-numeric:tabular-nums}
+    .cgRecord i{font-style:normal;color:#8e8e93;font-weight:500}
+    .cgMore{display:block;width:100%;padding:9px;border:0;background:none;color:#0a84ff;font:500 13px/1 -apple-system,sans-serif;cursor:pointer}
     .cgQuick b{font-weight:600;color:#30d158;margin-left:2px}
     .cgQuick b:empty{display:none}
     .cgQuick button:disabled{opacity:.45;cursor:default}
@@ -132,7 +139,7 @@
         <button class="cgX" id="cgClose" type="button" aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button></div>
       <div id="cgSocialMount"></div>
       <div id="cgLobbyActions" class="cgQuick" aria-label="More ways to play">
-        <button id="cgGoLink" type="button">Share invite link</button>
+        <button id="cgGoLink" class="cgSmallLink" type="button">or share an invite link</button>
         <button id="cgGoWatch" type="button" hidden><b id="cgWatchCount"></b></button>
         <button id="cgGoChallenge" type="button" hidden>Challenge a player</button>
       </div>
@@ -150,6 +157,10 @@
           <button id="cgNotifyInvite" class="cgButton" type="button">Notify</button>
         </div>
         <button id="cgCancelInvite" class="cgLink cgCancelInvite" type="button">Cancel invite</button>
+      </div>
+      <div class="cgRecord" id="cgRecord" aria-label="Your record">
+        <div><span>vs Players</span><b id="cgRecOnline">–</b></div>
+        <div><span>vs Computer</span><b id="cgRecCpu">–</b></div>
       </div>
       <div id="cgMessage" role="status" aria-live="polite"></div>
       <div class="cgBlock" id="cgLiveBlock">
@@ -663,6 +674,7 @@
     games.replaceChildren();
     /* abandoned matches (closed by a newer invite) are not kept */
     const kept=(data||[]).filter(g=>g.end_reason!=='replaced');
+    renderRecord(player.id);
     if (!kept.length) { games.textContent='No matches yet.'; return; }
     const players=[...new Set(kept.flatMap(g=>[g.white_player_id,g.black_player_id]).filter(Boolean))];
     const {data:profiles}=await api.from('chess_profiles').select('id,display_name').in('id',players);
@@ -711,8 +723,29 @@
       row.addEventListener('click',open);
       row.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
       row.title=g.status==='finished'?'View this game':'Open this game';
+      if(games.children.length>=3&&!showAllGames)row.hidden=true;
       games.append(row);
     }
+    if(kept.length>3){
+      const more=document.createElement('button');more.type='button';more.className='cgMore';
+      more.textContent=showAllGames?'Show fewer':'Show all '+kept.length;
+      more.addEventListener('click',()=>{showAllGames=!showAllGames;void refresh();});
+      games.append(more);
+    }
+  }
+  let showAllGames=false;
+  const fmtRec=(w,l,d)=>w+'W <i>·</i> '+l+'L <i>·</i> '+d+'D';
+  async function renderRecord(pid){
+    const c=window.familyChessCpuRecord?.()||{w:0,l:0,d:0};
+    $('cgRecCpu').innerHTML=fmtRec(c.w,c.l,c.d);
+    const {data}=await api.from('chess_games').select('result,white_player_id,end_reason')
+      .eq('status','finished').or('white_player_id.eq.'+pid+',black_player_id.eq.'+pid).limit(1000);
+    let w=0,l=0,d=0;
+    for(const g of data||[]){
+      if(g.end_reason==='replaced'||!g.result)continue;
+      if(g.result==='1/2-1/2')d++;else if((g.result==='1-0')===(g.white_player_id===pid))w++;else l++;
+    }
+    $('cgRecOnline').innerHTML=fmtRec(w,l,d);
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
   let creating = false, openInviteId = null;
