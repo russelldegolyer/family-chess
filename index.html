@@ -1074,6 +1074,21 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
 .panel-head #btnSheetClose, .panel-head #btnChatClose { background: transparent; border: 0; }
 .panel-head .chat-tools + .chat-clear { margin-left: 4px; }
 @media (max-width: 420px) { body.compact .panel-head .chat-word { padding: 0 6px; } }
+/* settings: compact grouped list */
+.settings-card { gap: 10px; padding: 20px 16px 16px; }
+.settings-card h2 { font-size: 22px; }
+.set-list { display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; background: var(--fill-2); }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 7px 10px 7px 14px; }
+.set-row + .set-row { box-shadow: inset 0 0.5px 0 var(--line-2); }
+.set-label { flex: none; font: 500 15px/1.2 var(--body); color: var(--ink); white-space: nowrap; }
+.set-seg { display: flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--fill); min-width: 0; }
+.set-seg button { flex: 1 1 auto; min-width: 34px; height: 30px; padding: 0 9px; border: 0; border-radius: 7px; background: transparent; color: var(--ink); font: 500 13px/1 var(--body); white-space: nowrap; cursor: pointer; }
+.set-seg button[aria-checked="true"] { background: #636366; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); font-weight: 600; }
+.set-switch { position: relative; flex: none; width: 51px; height: 31px; border: 0; border-radius: 999px; background: var(--fill); cursor: pointer; transition: background 0.2s ease; }
+.set-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: transform 0.2s ease; }
+.set-switch[aria-checked="true"] { background: #30d158; }
+.set-switch[aria-checked="true"]::after { transform: translateX(20px); }
+@media (max-width: 370px) { .set-label { font-size: 14px; } .set-seg button { padding: 0 6px; font-size: 12px; } }
 </style>
 
 </head>
@@ -3409,8 +3424,11 @@ const Sound = {
   ctx: null,
   on: store.get('sg.sound', true) !== false,
   ensure() {
+    /* iPhone: let move sounds play like a game's audio rather than being silenced as page ambience */
+    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch { /* older Safari */ }
     if (!this.ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { this.ctx = new C(); } catch { return null; } }
-    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    /* Safari also leaves the context 'interrupted' after a call or after the app was in the background */
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
     return this.ctx;
   },
   /* Glass voices: a muted contact thud plus short inharmonic partials, like crystal set down on glass. */
@@ -3447,6 +3465,10 @@ const Sound = {
     }
   },
 };
+/* unlock audio on any tap or key anywhere (2D board, the side chooser, toolbar), not only the 3D canvas;
+   touchend/click count as a user gesture on iPhone where pointerdown sometimes does not */
+for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) document.addEventListener(ev, () => Sound.ensure(), { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Sound.ctx) Sound.ensure(); });
 function fxForMove(mv, landMs, remote) {
   if (!mv) return;
   setTimeout(() => {
@@ -5682,7 +5704,6 @@ function onComputerResult(data) {
 /* Computer move speed: the chosen interval runs from the start of the computer's turn, so time spent
    calculating counts toward it; a slow calculation is never padded further. Strength is unaffected. */
 const CPU_SPEED = { instant: 0, regular: 2500, slow: 4400, delayed: 10000 };
-const CPU_SPEED_LABEL = { instant: 'Instant', regular: 'Regular · 2.5 s', slow: 'Slow · 4.4 s', delayed: 'Delayed · 10 s' };
 const cpuSpeed = () => (CPU_SPEED[store.get('sg.cpuSpeed', 'regular')] !== undefined ? store.get('sg.cpuSpeed', 'regular') : 'regular');
 function setCpuSpeed(v) {
   if (CPU_SPEED[v] === undefined) return;
@@ -7114,57 +7135,44 @@ window.ChessClock?.setHandlers({
   select:()=>promptPawnTimeChoice('penalty')
 });
 
+/* Settings: one compact list, a control on each row, no explanations; fits on one phone screen */
 function openSettings() {
   closeMenu();
   const d = dialog('Settings', [], [['Done', 'gold', null]]);
   d.card.classList.add('settings-card');
-  const body = el('div', 'settings-body');
+  const body = el('div', 'set-list');
   d.card.insertBefore(body, d.card.lastChild);
-  const group = (title, items, cur, onPick, note) => {
-    const wrap = el('div', 'set-group');
-    const h = el('div', 'opt-label'); h.textContent = title; wrap.append(h);
-    const row = el('div', 'opt-group' + (items.length === 3 ? ' three' : items.length >= 4 ? ' four' : ''));
-    for (const [v, label] of items) { const o = el('button', 'opt'); o.type = 'button'; o.setAttribute('role', 'radio'); o.setAttribute('aria-checked', String(cur === v)); o.textContent = label; o.addEventListener('click', () => { onPick(v); render(); }); row.append(o); }
-    wrap.append(row);
-    if (note) { const n = el('p', 'set-note'); n.textContent = note; wrap.append(n); }
-    return wrap;
+  const row = (label, control) => { const r = el('div', 'set-row'); const l = el('span', 'set-label'); l.textContent = label; r.append(l, control); body.append(r); };
+  const seg = (items, cur, onPick, aria) => {
+    const g = el('div', 'set-seg'); g.setAttribute('role', 'radiogroup'); g.setAttribute('aria-label', aria);
+    for (const [v, label] of items) {
+      const o = el('button', ''); o.type = 'button'; o.setAttribute('role', 'radio'); o.setAttribute('aria-checked', String(cur === v)); o.textContent = label;
+      o.addEventListener('click', () => { onPick(v); render(); }); g.append(o);
+    }
+    return g;
+  };
+  const toggle = (on, onPick, aria) => {
+    const t = el('button', 'set-switch'); t.type = 'button'; t.setAttribute('role', 'switch'); t.setAttribute('aria-checked', String(!!on)); t.setAttribute('aria-label', aria);
+    t.addEventListener('click', () => { onPick(!on); render(); });
+    return t;
   };
   function render() {
     body.replaceChildren();
-    const s1 = el('div', 'set-sec'); const h1 = el('h3'); h1.textContent = 'Computer play'; s1.append(h1);
-    s1.append(group('Computer move speed', Object.keys(CPU_SPEED).map((k) => [k, CPU_SPEED_LABEL[k]]), cpuSpeed(), setCpuSpeed, 'How long the computer takes to answer, counted from the start of its turn. Its strength is the same at every speed.'));
-    const s2 = el('div', 'set-sec'); const h2 = el('h3'); h2.textContent = 'Board & gameplay'; s2.append(h2);
-    s2.append(group('Moving pieces', [['preview', 'Two taps (confirm)'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), moveMode === 'preview' ? 'Place a move, look at it, then confirm it.' : 'Moves go through as soon as you place them.'));
-    s2.append(group("Show opponent's last move", [[true, 'On'], [false, 'Off']], showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }));
-    const s0 = el('div', 'set-sec'); const h0 = el('h3'); h0.textContent = 'Starting a game'; s0.append(h0);
-    s0.append(group('Chess clock', [
-      ['off','No timer'],['10m','10 min each'],['12m','12 min each'],
-      ['15m','15 min each'],['move60','60 seconds per move']
-    ],window.ChessClock?.getPreference?.()||'off',(v)=>{
+    row('Chess clock', seg([['off', 'Off'], ['10m', '10'], ['12m', '12'], ['15m', '15'], ['move60', '60s']], window.ChessClock?.getPreference?.() || 'off', (v) => {
       window.ChessClock?.setPreference(v);
-      window.familyChessClockSavePromise =
-        Promise.resolve(window.familyChessSaveClockPreference?.(v));
-      window.familyChessClockSavePromise
-        .catch((e)=>toast('Clock preference could not sync: '+(e?.message||'Try again'),4200));
-    },'10/12/15 minutes: each player has that much total time. 60-second mode resets the active clock for each turn. Applies to your next new computer game or online invitation; existing games keep their clock.'));
-    s2.append(group('2D pieces', [['classic', 'Classic pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v })));
-    s2.append(group('Sound', [[true, 'On'], [false, 'Off']], Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) Sound.ensure(); }));
-    body.append(s0, s2, s1);
-    if (THEME === 'northern' || THEME === 'infernal') {
-      const s4 = el('div', 'set-sec'); const h4 = el('h3'); h4.textContent = 'Board effects'; s4.append(h4);
-      if (THEME === 'northern') s4.append(group('Aurora intensity', [['subtle', 'Subtle'], ['balanced', 'Balanced'], ['vivid', 'Vivid']], FX_PREF.aurora(), (v) => { store.set('sg.aurora', v); requestRender(); }));
-      if (THEME === 'infernal') s4.append(group('Environment animation', [['full', 'Full'], ['reduced', 'Reduced'], ['static', 'Still']], FX_PREF.fortress(), (v) => { store.set('sg.fortressFx', v); requestRender(); }));
-      body.append(s4);
-    }
+      window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(v));
+      window.familyChessClockSavePromise.catch((e) => toast('Clock preference could not sync: ' + (e?.message || 'Try again'), 4200));
+    }, 'Chess clock: off, 10, 12 or 15 minutes each, or 60 seconds per move'));
+    row('Computer speed', seg([['instant', 'Instant'], ['regular', '2.5s'], ['slow', '4.4s'], ['delayed', '10s']], cpuSpeed(), setCpuSpeed, 'Computer move speed'));
+    row('Moving pieces', seg([['preview', 'Two taps'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), 'Moving pieces'));
+    row('2D pieces', seg([['classic', 'Pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v }), '2D pieces'));
+    row('Show last move', toggle(showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }, "Show opponent's last move"));
+    row('Sound', toggle(Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) { Sound.ensure(); Sound.play('move'); } }, 'Sound'));
+    if (THEME === 'northern') row('Aurora', seg([['subtle', 'Subtle'], ['balanced', 'Medium'], ['vivid', 'Vivid']], FX_PREF.aurora(), (v) => { store.set('sg.aurora', v); requestRender(); }, 'Aurora intensity'));
+    if (THEME === 'infernal') row('Lava motion', seg([['full', 'Full'], ['reduced', 'Less'], ['static', 'Still']], FX_PREF.fortress(), (v) => { store.set('sg.fortressFx', v); requestRender(); }, 'Environment animation'));
   }
   render();
 }
-/* ---------------- challenges and rematches ---------------- */
-/* challenge/current: { id, kind: 'challenge'|'rematch', from, fromName, fromColor, board:{instanceId,themeId,ownerId},
-   to, toName, status:'open'|'declined'|'cancelled'|'started', at } */
-
-/* starts the game a challenge describes; both players' clients may call this, it is idempotent per challenge id */
-
 /* ------------------------------------------------------------------ boot */
 let needsRender = true;
 let firstFrame = true, warmFrames = 0;
@@ -7215,7 +7223,6 @@ async function boot() {
    let go past the threshold and it swings round to that side and the game starts. */
 const PG = { lean: null, on: false, az: Math.PI / 2, target: Math.PI / 2, polar: 0.98, dist: 0, swing: false, swingDur: 950, drag: null, glide: null };
 const PG_BASE = Math.PI / 2;
-const PG_LEVEL_NAME = { 1: 'Easy', 2: 'Casual', 3: 'Hard', 4: 'Expert · Gukesh style', 5: 'Expert · Magnus style' };
 function pregameReserve() {
   const H = window.innerHeight, top = $('pregame').querySelector('.pg-top').getBoundingClientRect().bottom;
   const card = $('pgBottom').getBoundingClientRect();
@@ -7226,7 +7233,7 @@ function pgSetLevel(v) {
   v = clamp(Math.round(Number(v)) || 2, 1, 5);
   cpu.level = v; store.set('sg.level', v);
   const r = $('pgLevel'); r.value = String(v); r.style.setProperty('--pg-fill', ((v - 1) / 4 * 100) + '%');
-  $('pgLevelName').textContent = `Level ${v} · ${PG_LEVEL_NAME[v]}`;
+  $('pgLevelName').textContent = `Level ${v}`;
   $('pgTicks').querySelectorAll('span').forEach((t, i) => t.classList.toggle('on', i + 1 === v));
 }
 function openPregame() {

@@ -28,13 +28,14 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Feature | Where | Notes |
 | --- | --- | --- |
 | Game state, moves, undo | `index.html` (`G`, `applyMove`, `playMove`, `undo`, `resetLocalGame`) | practice + online share one board |
-| Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu`; names in `PG_LEVEL_NAME` | 1 Easy, 2 Casual, 3 Hard, 4 Expert · Gukesh style, 5 Expert · Magnus style; engine branches on `level === 4/5` |
+| Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu` | UI shows numbers only; engine branches on `level === 4/5` for the two extreme styles |
 | 3D board/pieces/themes | `index.html` `THEMES`, `#masterSrc`, `applyTheme`, `fitCamera` | themes: unnamed (Default), matte, cats, royal, northern, infernal |
 | 2D board | `index.html` `draw2D`, `applyView`, `PREF2D` | |
 | Side chooser (start screen) | `index.html` `PG`, `openPregame`, `closePregame`, `pgStep`, `goHome`, `newGame` | swipe or tap White/Black + difficulty slider |
 | Piece colours | `index.html` `myColor`, `setMyColor`, `sideColors` (`BLACK_PIECES`), `openQuickColors`; sync in `chess-online.js` (`piece_color`) | one colour per account, paints White only |
 | Toolbar / chat header / ⋯ menu | `index.html` `.controls`, `.chat-tools`, `openMenu` | |
-| Settings dialog | `index.html` `openSettings` | clock, move mode, last-move, 2D pieces, sound, computer speed, board FX |
+| Settings dialog | `index.html` `openSettings` | one compact list: segmented controls + switches, no help text |
+| Sound | `index.html` `Sound` (Web Audio), `fxForMove` | unlocked by any tap/key (document listeners); `navigator.audioSession.type='playback'` on iPhone |
 | Game review | `index.html` `startReview`, `reviewStep`, `renderHistory`; `chess-review-analysis.js` | key-moments stepping |
 | Clocks, pause, pawn-for-time | `chess-clock.js`; server `chess-clock-action` + `database/chess-pawn-time-*.sql`, `chess-move60-*.sql` | |
 | Play online sheet, My matches, profile/name | `chess-online.js` (`show`, `refresh`, `refreshLive`, `startMatch`, `syncMatch`) | |
@@ -72,7 +73,6 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - The pre-Supabase in-page live layer (seats, shared doc, archive, Claude feedback) — removed 2026-11-10.
 
 ## Requirements vs implementation (discrepancies)
-- **Level labels:** the opening slider shows "Level N · name" (Easy, Casual, Hard, Expert · Gukesh style, Expert · Magnus style), as Russell confirmed on 2026-11-11.
 - **Visual identity:** requirement is black-and-red; current UI accent is iOS blue (#0a84ff) on buttons, slider, badges.
 - **Custom colours:** requirement lists custom board and piece colours; pieces now allow only the White colour (by decision D-07). 2D board styles (green/bw/wood/custom) and 3D themes remain.
 - **60 s per move:** requirement describes the pawn timeout rules generally; `move60` uses sudden-death loss on timeout (per `database/chess-move60-sudden-death-2026-11-09.sql`); pawn rules apply to 10/12/15-min modes.

@@ -7,7 +7,7 @@ Dates are when the decision was made or shipped (2026).
 | --- | --- | --- | --- | --- | --- |
 | D-01 | Host as a static site on Vercel, backend on the existing League Lab Supabase project, Chess data only in `chess_*` | Reuse one Supabase project; keep apps separate | Nov | all | Active |
 | D-02 | Online moves, clock actions and challenges go through Edge Functions / SECURITY DEFINER RPCs, never direct client writes | Server-authoritative play | Nov | online | Active |
-| D-03 | Five computer levels: 1 Easy, 2 Casual, 3 Hard, 4 Expert · Gukesh style (tactical/dynamic), 5 Expert · Magnus style (positional/adaptable); never the old 3-level system | Russell's request; names confirmed Nov 11 | Nov 9 / Nov 11 | computer | Active |
+| D-03 | Five computer levels, shown as numbers 1–5 only: 1 easy, 2 casual, 3 hard, 4 and 5 extreme (4 Gukesh-style tactical/dynamic, 5 Magnus-style positional/adaptable); never the old 3-level system | Russell's request, clarified Nov 11 | Nov 9 / Nov 11 | computer | Active |
 | D-04 | `move60` timeout is a sudden-death loss; pawn-for-time and pawn penalty apply to 10/12/15-min clocks | Recorded in move60 migration | Nov 9 | clocks | Active |
 | D-05 | Practice clock does not start until the first move of the game | Opening/thinking shouldn't cost time | Nov 10 | clocks | Active |
 | D-06 | Opening screen: side-on 3D board, swipe (or tap) to pick White/Black, difficulty slider 1–5; replaces auto-starting a computer game | Russell's request | Nov 10 | start, New | Active |
@@ -23,4 +23,5 @@ Dates are when the decision was made or shipped (2026).
 | D-15 | Game review steps only through key moments (mistakes, blunders, inaccuracies, strong replies) by default, with an "Every move" toggle | Skip pointless "best/reasonable" stops | Nov 10 | review | Active |
 | D-16 | Leaked-password protection stays off | Russell declined | Nov 10 | Supabase Auth | Active |
 | D-17 | iPhone-style UI (system font, frosted panels, flat toolbar) | Russell's request | Nov 5 | UI | Active |
+| D-19 | Settings is one compact list (clock, computer speed, moving pieces, 2D pieces, last move, sound, board FX) with no explanatory text, fitting one phone screen | Russell's request | Nov 11 | settings | Active |
 | D-18 | Computer colour retired: one colour per account, used for White pieces only (completes D-07) | Russell confirmed Nov 11 | Nov 11 | colours, profiles | Active |
