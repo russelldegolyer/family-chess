@@ -1049,33 +1049,43 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
 .pregame[hidden] { display: none; }
 .pregame.leaving { opacity: 0; pointer-events: none; }
 .pregame.dragging { cursor: grabbing; }
-.pg-top { padding: calc(env(safe-area-inset-top, 0px) + 74px) 24px 0; text-align: center; pointer-events: none; }
-.pg-eyebrow { font: 600 13px/1 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
-.pg-top h1 { margin: 10px 0 8px; font: 700 30px/1.1 var(--display); letter-spacing: -0.02em; color: var(--ink); }
-.pg-top p { margin: 0; font: 400 16px/1.35 var(--body); color: var(--ink-2); }
-.pg-sides { display: flex; justify-content: space-between; margin-top: auto; padding: 0 16px 12px; pointer-events: none; }
-.pg-side { pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--mat); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); color: var(--ink); font: 600 16px/1 var(--body); box-shadow: 0 6px 18px rgba(0,0,0,0.3); }
-.pg-side .orb { width: 16px; height: 16px; }
-.pg-side .pg-arrow { color: var(--ink-3); font-weight: 400; }
-#pgWhite .pg-arrow { animation: pgNudgeR 1.8s ease-in-out infinite; }
-#pgBlack .pg-arrow { animation: pgNudgeL 1.8s ease-in-out infinite; }
-@keyframes pgNudgeR { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
-@keyframes pgNudgeL { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
-.pg-bottom { margin: 0 16px calc(env(safe-area-inset-bottom, 0px) + 22px); padding: 16px 18px 14px; border-radius: 22px; background: var(--mat-thick); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: 0 12px 34px rgba(0,0,0,0.4); cursor: default; }
-.pg-diff-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; font: 400 13px/1 var(--body); text-transform: uppercase; color: var(--ink-3); }
-.pg-diff-head b { font: 600 17px/1 var(--body); text-transform: none; color: var(--ink); letter-spacing: -0.01em; }
-.pg-range { width: 100%; height: 30px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; touch-action: pan-x; }
+/* title: clear of the profile button, compact three-line stack */
+.pg-top { padding: calc(env(safe-area-inset-top, 0px) + 84px) 28px 0; text-align: center; pointer-events: none; }
+.pg-eyebrow { font: 600 12px/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.pg-top h1 { margin: 10px 0 6px; font: 700 32px/1.08 var(--display); letter-spacing: -0.025em; color: var(--ink); }
+.pg-top p { margin: 0 auto; max-width: 320px; font: 400 15px/1.4 var(--body); color: var(--ink-2); text-wrap: balance; }
+.auth-account-toggle:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+/* swipe hint under the board: two chevrons breathing outward */
+.pg-hint { position: absolute; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 14px; pointer-events: none; font: 600 12px/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); transition: opacity 0.3s ease; }
+.pregame.dragging .pg-hint, .pregame.touched .pg-hint { opacity: 0; }
+.pg-hint i { font-style: normal; font-size: 16px; letter-spacing: 0; }
+.pg-hint i:first-child { animation: pgNudgeL 1.8s ease-in-out infinite; }
+.pg-hint i:last-child { animation: pgNudgeR 1.8s ease-in-out infinite; }
+@keyframes pgNudgeR { 0%, 100% { transform: translateX(0); opacity: 0.6; } 50% { transform: translateX(5px); opacity: 1; } }
+@keyframes pgNudgeL { 0%, 100% { transform: translateX(0); opacity: 0.6; } 50% { transform: translateX(-5px); opacity: 1; } }
+/* one card: side choice on top, difficulty below */
+.pg-bottom { margin: auto 16px calc(env(safe-area-inset-bottom, 0px) + 16px); padding: 6px 6px 16px; border-radius: 26px; background: var(--mat-thick); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: 0 16px 40px rgba(0,0,0,0.45); cursor: default; }
+.pg-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pg-side { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; border: 0; border-radius: 20px; background: var(--fill-2); color: var(--ink); font: 600 17px/1 var(--body); letter-spacing: -0.01em; cursor: pointer; transition: background 0.15s ease, transform 0.12s ease; }
+.pg-side:active { transform: scale(0.97); background: var(--fill); }
+.pg-side .orb { width: 18px; height: 18px; flex: none; }
+.pg-side small { font: 500 12px/1 var(--body); color: var(--ink-3); }
+.pg-diff { padding: 18px 14px 0; }
+.pg-diff-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; font: 600 12px/1 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.pg-diff-head b { font: 600 17px/1 var(--body); letter-spacing: -0.01em; text-transform: none; color: var(--ink); }
+.pg-range { display: block; width: 100%; height: 32px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; touch-action: pan-x; }
 .pg-range::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--acc) var(--pg-fill, 25%), var(--fill) var(--pg-fill, 25%)); }
 .pg-range::-moz-range-track { height: 6px; border-radius: 3px; background: var(--fill); }
 .pg-range::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--acc); }
-.pg-range::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -11px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+.pg-range::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -11px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(0,0,0,0.1); }
 .pg-range::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
-.pg-ticks { display: flex; justify-content: space-between; padding: 6px 4px 0; font: 500 13px/1 var(--body); color: var(--ink-3); }
+.pg-ticks { display: flex; justify-content: space-between; padding: 4px 9px 0; font: 600 12px/1 var(--body); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.pg-ticks span { width: 10px; text-align: center; transition: color 0.15s ease; }
 .pg-ticks span.on { color: var(--ink); }
 body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregame #banner, body.pregame #chessClockHud, body.pregame #chatFab, body.pregame .brand, body.pregame #toast { opacity: 0 !important; pointer-events: none !important; }
 .bottom-bar, .plate, #status, #chatFab, #chessClockHud { transition: opacity 0.45s ease; }
-@media (min-width: 900px) { .pg-bottom { width: 420px; margin-left: auto; margin-right: auto; } .pg-sides { padding: 0 8vw; } }
-@media (prefers-reduced-motion: reduce) { .pg-side .pg-arrow { animation: none; } }
+@media (min-width: 900px) { .pg-bottom { width: 420px; margin-left: auto; margin-right: auto; } }
+@media (prefers-reduced-motion: reduce) { .pg-hint i { animation: none !important; } }
 /* touch screens keep :hover after a tap, which left the 2D button (and others) looking selected */
 @media (hover: none) {
   .ctl:hover:not(:disabled) { border-color: transparent; }
@@ -1108,11 +1118,17 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
 <p class="fatal" id="fatal" hidden></p>
 <div class="pregame" id="pregame" hidden>
   <div class="pg-top"><div class="pg-eyebrow">Play the computer</div><h1>Choose your side</h1><p>Swipe the board to turn your pieces toward you</p></div>
-  <div class="pg-sides"><button class="pg-side" id="pgWhite" type="button"><span class="orb white"></span>White<span class="pg-arrow">→</span></button><button class="pg-side" id="pgBlack" type="button"><span class="pg-arrow">←</span>Black<span class="orb"></span></button></div>
+  <div class="pg-hint" id="pgHint" aria-hidden="true"><i>‹</i>Swipe<i>›</i></div>
   <div class="pg-bottom" id="pgBottom">
-    <div class="pg-diff-head"><span>Difficulty</span><b id="pgLevelName">Level 2</b></div>
-    <input class="pg-range" id="pgLevel" type="range" min="1" max="5" step="1" value="2" aria-label="Computer difficulty, 1 to 5">
-    <div class="pg-ticks" id="pgTicks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+    <div class="pg-pick" role="group" aria-label="Choose your side">
+      <button class="pg-side" id="pgWhite" type="button"><span class="orb white"></span>White</button>
+      <button class="pg-side" id="pgBlack" type="button">Black<span class="orb"></span></button>
+    </div>
+    <div class="pg-diff">
+      <div class="pg-diff-head"><span>Difficulty</span><b id="pgLevelName">Level 2</b></div>
+      <input class="pg-range" id="pgLevel" type="range" min="1" max="5" step="1" value="2" aria-label="Computer difficulty, 1 to 5">
+      <div class="pg-ticks" id="pgTicks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+    </div>
   </div>
 </div>
 
@@ -7310,8 +7326,9 @@ const PG_BASE = Math.PI / 2;
 const PG_LEVEL_NAME = { 1: 'Easy', 2: 'Casual', 3: 'Average', 4: 'Hard', 5: 'Expert' };
 function pregameReserve() {
   const H = window.innerHeight, top = $('pregame').querySelector('.pg-top').getBoundingClientRect().bottom;
-  const sides = $('pregame').querySelector('.pg-sides').getBoundingClientRect();
-  return { top: Math.max(top + 4, 110), bottom: H - sides.top + 2 };
+  const card = $('pgBottom').getBoundingClientRect();
+  /* leave a strip above the card for the swipe hint */
+  return { top: Math.max(top + 10, 110), bottom: H - card.top + 40 };
 }
 function pgSetLevel(v) {
   v = clamp(Math.round(Number(v)) || 2, 1, 5);
@@ -7324,9 +7341,9 @@ function openPregame() {
   /* the chooser is a 3D moment: close the chat sheet and leave the flat board first */
   if (sheetOpen) setSheet(false);
   if (VIEW === '2d') applyView('3d', false);
-  PG.on = true; PG.swing = false; PG.az = PG_BASE; PG.polar = compact && window.innerWidth < window.innerHeight ? 0.98 : 0.9;
+  PG.on = true; PG.swing = false; PG.az = PG_BASE; PG.polar = compact && window.innerWidth < window.innerHeight ? 0.8 : 0.86; /* higher camera: the board fills the space and reads clearly side-on */
   document.body.classList.add('pregame');
-  const el = $('pregame'); el.classList.remove('leaving'); el.hidden = false;
+  const el = $('pregame'); el.classList.remove('leaving', 'touched'); el.hidden = false;
   pgSetLevel(cpu.level);
   controls.enabled = false;
   userCam = false;
@@ -7338,7 +7355,8 @@ function openPregame() {
 function pgMeasure() {
   let far = 0;
   for (const a of [0, PG_BASE]) { PG.az = a; fitCamera(false); far = Math.max(far, camera.position.length()); }
-  PG.dist = far * 1.04; /* a touch of room so corners stay clear mid-turn */ PG.az = PG.target; pgPlace();
+  PG.dist = far * 1.02; /* a touch of room so corners stay clear mid-turn */
+  const hint = $('pgHint'); if (hint) hint.style.top = Math.round($('pgBottom').getBoundingClientRect().top - 28) + 'px'; PG.az = PG.target; pgPlace();
 }
 function pgPlace() {
   const d = PG.dist, p = PG.polar, a = PG.az;
@@ -7394,7 +7412,8 @@ function dismissPregame() { if (PG.on) closePregame(null); }
   const el = $('pregame');
   const azFor = (dx) => clamp(PG_BASE - (dx / Math.max(320, window.innerWidth)) * Math.PI * 1.05, 0.02, Math.PI - 0.02);
   el.addEventListener('pointerdown', (e) => {
-    if (!PG.on || e.target.closest('.pg-bottom, .pg-side')) return;
+    if (!PG.on || e.target.closest('.pg-bottom')) return;
+    $('pregame').classList.add('touched');
     PG.drag = { id: e.pointerId, x: e.clientX - (PG_BASE - PG.target) / (Math.PI * 1.05) * Math.max(320, window.innerWidth), t: performance.now(), lx: e.clientX, lt: performance.now(), v: 0, va: 0, lx0: e.clientX };
     el.setPointerCapture(e.pointerId); el.classList.add('dragging');
   });
