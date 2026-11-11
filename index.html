@@ -4800,6 +4800,13 @@ function setOppColor(hex) {
 /* the colour shown for each logical side in the current game */
 function sideColors() {
   const mine = myColor(), opp = oppColor();
+  /* choosing a side: both armies in plain white and black until the board leans one way; the army turning
+     toward you takes your colour then, so it is already yours when the game starts */
+  if (PG.on) {
+    if (!PG.lean) return { w: '#ece7dc', b: '#26262a' };
+    const c = CPU_COLOR || opp;
+    return PG.lean === 'w' ? { w: mine, b: c } : { w: c, b: mine };
+  }
   if (G.mode === 'live') {
     const c = G.colors || {}, pick = (side, fb) => (G.seats[side] && G.seats[side] === me.id ? mine : chromaOk(c[G.seats[side]]) ? c[G.seats[side]] : fb);
     return { w: pick('w', COLOR_DEF.mine), b: pick('b', COLOR_DEF.opp) };
@@ -7351,7 +7358,7 @@ async function boot() {
 /* ------------------------------------------------------------------ opening: choose a side by swiping the board
    The board starts side-on (White on the left, Black on the right). Dragging turns it like a lazy Susan;
    let go past the threshold and it swings round to that side and the game starts. */
-const PG = { on: false, az: Math.PI / 2, target: Math.PI / 2, polar: 0.98, dist: 0, swing: false, swingDur: 950, drag: null, glide: null };
+const PG = { lean: null, on: false, az: Math.PI / 2, target: Math.PI / 2, polar: 0.98, dist: 0, swing: false, swingDur: 950, drag: null, glide: null };
 const PG_BASE = Math.PI / 2;
 const PG_LEVEL_NAME = { 1: 'Easy', 2: 'Casual', 3: 'Average', 4: 'Hard', 5: 'Expert' };
 function pregameReserve() {
@@ -7377,8 +7384,11 @@ function openPregame() {
   pgSetLevel(cpu.level);
   controls.enabled = false;
   userCam = false;
-  PG.target = PG.az;
+  if (camTween) { tweens.delete(camTween); camTween = null; }
+  PG.target = PG.az; PG.lean = null;
   pgMeasure();
+  pgLean(true);
+  if (!firstFrame) pregameGlide();
 }
 /* the board turns at one fixed distance (the farther of side-on and end-on), so it never breathes in and out as it
    rotates; the projection and centring are set once by fitCamera */
@@ -7394,6 +7404,14 @@ function pgPlace() {
   camera.lookAt(0, 0, 0); controls.target.set(0, 0, 0);
   requestRender();
 }
+/* which army you are turning toward you (White when the camera swings toward az 0, Black toward π) */
+function pgLean(force) {
+  /* follows where your finger is taking the board, not the intro glide */
+  const t = PG.drag ? PG.target : PG_BASE;
+  const lean = t < PG_BASE - 0.14 ? 'w' : t > PG_BASE + 0.14 ? 'b' : null;
+  if (lean === PG.lean && !force) return;
+  PG.lean = lean; applySideColors(true); if (VIEW === '2d') draw2D(true); requestRender();
+}
 /* called every animation frame: the board eases toward where your finger is, so uneven touch events
    (and 60 vs 120 Hz screens) still give one continuous motion */
 let pgLast = 0;
@@ -7404,6 +7422,7 @@ function pgStep(now) {
   if (Math.abs(diff) < 1e-4) { if (diff) { PG.az = PG.target; pgPlace(); } return false; }
   PG.az += diff * (1 - Math.exp(-dt * (PG.drag ? 26 : 9)));
   pgPlace();
+  pgLean();
   return true;
 }
 function pregameGlide() {
@@ -7414,6 +7433,7 @@ function pregameGlide() {
 }
 function closePregame(side) {
   if (!PG.on) return;
+  if (side) PG.lean = side;
   PG.on = false; PG.swing = true;
   controls.enabled = true;
   const el = $('pregame'); el.classList.add('leaving');
@@ -7459,7 +7479,9 @@ function dismissPregame() { if (PG.on) closePregame(null); }
     PG.drag = null; el.classList.remove('dragging');
     const dx = e.clientX - d.lx0;
     /* a decisive swipe (distance or flick speed) picks a side; a small nudge springs back */
-    const pick = dx > 56 || d.v > 0.45 ? 'w' : dx < -56 || d.v < -0.45 ? 'b' : null;
+    /* the side the board was turned to when you let go wins; a quick flick from near the middle also counts */
+    const at = PG.target < PG_BASE - 0.12 ? 'w' : PG.target > PG_BASE + 0.12 ? 'b' : null;
+    const pick = Math.abs(dx) > 48 ? at : Math.abs(d.v) > 0.45 ? (d.v > 0 ? 'w' : 'b') : null;
     if (pick && e.type !== 'pointercancel') {
       /* match the swing to the flick: angle left to travel / speed, with easeOut's 3x opening slope */
       const goal = pick === 'w' ? 0 : Math.PI, left = Math.abs(goal - PG.az), speed = Math.abs(d.va);
