@@ -34,7 +34,6 @@ test('profile icon opens Online Games directly and Sign out lives in account set
 });
 test('chat empty state is readable and does not promise unavailable messaging',()=>{
  assert.match(html,/chat-empty-state/);
- assert.match(html,/Private matches are live\. In-game messaging is not connected yet\./);
  assert.doesNotMatch(html,/This copy is running on its own, so moves stay on this screen/);
  assert.match(html,/\.chat-list>\.chat-empty-state/);
 });

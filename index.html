@@ -160,26 +160,6 @@ body.focus:not(.compact) .panel { display: none; }
 .chat-list { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; padding: 18px 18px 10px; scrollbar-width: thin; scrollbar-color: rgba(239, 222, 196, 0.18) transparent; }
 .chat-list[hidden] { display: none; }
 .note { margin: auto 0; padding: 0 12px; text-align: center; font: italic 400 17px/1.45 var(--body); color: var(--ink-3); text-wrap: balance; }
-.msg { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; column-gap: 12px; row-gap: 6px; }
-.msg.cont { margin-top: -6px; }
-.msg.black .msg-name { color: var(--gold); }
-.msg.white .msg-name { color: var(--silver); }
-.bubble { justify-self: start; max-width: 100%; background: var(--grey-bubble); color: var(--ink); overflow-wrap: anywhere; }
-.msg.black .bubble { border-color: var(--gold-line); background: var(--gold-bubble); }
-.msg.pending .bubble { opacity: 0.6; }
-.msg time { padding-bottom: 11px; white-space: nowrap; font: 400 13px/1 var(--body); font-variant-numeric: lining-nums tabular-nums; }
-/* Match chat layout is based on message ownership, never on piece colour.
-   The signed-in player's blue bubble stays right; everyone else stays left. */
-#chatList .msg.mine { grid-template-columns: minmax(0,1fr) auto; }
-#chatList .msg.mine .msg-name { grid-column:1 / -1; grid-row:1; text-align:right; justify-self:end; color:#73b5ff; }
-#chatList .msg.mine .bubble { grid-column:2; grid-row:2; justify-self:end;
-  background:#1685f7; border-color:#1685f7; color:#fff; max-width:min(78vw,540px); }
-#chatList .msg.mine time { grid-column:1; grid-row:2; justify-self:end; padding-bottom:9px; }
-#chatList .msg.mine.cont .bubble,
-#chatList .msg.mine.cont time { grid-row:1; }
-#chatList .msg.theirs .msg-name { text-align:left; justify-self:start; }
-#chatList .msg.theirs .bubble { grid-column:1; justify-self:start; background:var(--grey-bubble); color:var(--ink); }
-#chatList .msg.theirs time { grid-column:2; }
 
 .typing { min-height: 22px; padding: 0 18px 4px; font: italic 400 15px/22px var(--body); color: var(--ink-3); }
 .chat-form { display: flex; }
@@ -264,13 +244,7 @@ body.compact .review-move-scroll{max-height:18dvh}
 .mv.on { border-color: var(--gold); }
 .stepper { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 14px 0 6px; }
 .section-title { margin: 22px 0 10px; font: 500 12px/1 var(--body); letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-3); }
-.tally { margin: 0 0 12px; font: 500 19px/1.3 var(--display); color: var(--ink-2); }
 .games { display: flex; flex-direction: column; gap: 8px; }
-.game-row { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); color: var(--ink); text-align: left; cursor: pointer; }
-.game-row:hover { border-color: var(--line-2); }
-.game-row.on { border-color: var(--gold); }
-.game-row .t { font: 500 19px/1.15 var(--display); }
-.game-row .d { font: 400 14px/1.3 var(--body); color: var(--ink-3); }
 .muted { margin: 0; font: italic 400 16px/1.4 var(--body); color: var(--ink-3); }
 
 .menu { position: fixed; z-index: 4; width: 236px; display: flex; flex-direction: column; }
@@ -290,27 +264,12 @@ body.compact .review-move-scroll{max-height:18dvh}
 .eyebrow { font: 500 12px/1.2 var(--body); letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-3); }
 .field { width: 100%; height: 48px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, 0.28); color: var(--ink); font: 400 19px var(--body); text-align: center; }
 .field:focus { outline: none; border-color: var(--gold); }
-.seats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.seat { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 12px 16px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.03); color: var(--ink); cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
-.seat:hover:not(:disabled) { border-color: var(--gold); background: rgba(214, 166, 94, 0.08); }
-.seat.white:hover:not(:disabled) { border-color: var(--silver); background: rgba(207, 211, 217, 0.07); }
-.seat .orb { width: 34px; height: 34px; }
-.seat b { font: 600 23px/1 var(--display); }
-.seat span:last-child { font: 400 15px/1.2 var(--body); color: var(--ink-3); }
-.seat:disabled { opacity: 0.45; }
-.err { color: var(--warn) !important; font-size: 16px !important; }
 .promo-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .promo { width: 76px; height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; color: var(--gold-hi); cursor: pointer; }
 .promo.white { color: var(--silver); }
 .promo:hover { border-color: var(--gold); }
 .promo .g { font-size: 40px; line-height: 1; font-family: "Segoe UI Symbol", "Apple Symbols", "Noto Sans Symbols 2", "DejaVu Sans", serif; }
 .promo span:last-child { font: 400 14px/1 var(--body); color: var(--ink-3); }
-.feedback { display: flex; flex-direction: column; gap: 12px; }
-.feedback:empty { display: none; }
-.fb { padding-top: 12px; border-top: 1px solid var(--line); text-align: left; }
-.fb h4 { margin: 0 0 4px; font: 600 19px/1.2 var(--display); color: var(--gold); }
-.fb.white h4 { color: var(--silver); }
-.fb p { font-size: 17px; }
 .end-actions { display: flex; flex-wrap: wrap; justify-content: center; }
 .card.setup { gap: 14px; text-align: left; }
 .card.setup h2 { text-align: center; font-size: 34px; }
@@ -443,8 +402,6 @@ body.compact.landscape .toast, body.compact.landscape .confirm { left: auto; rig
 
 /* Boards menu, board chip, challenges */
 .overlay.top { z-index: 6; }
-.chal-banner { top: auto; bottom: calc(var(--gb) + 128px); z-index: 2; }
-body.compact .chal-banner { bottom: calc(var(--gb) + 118px); }
 #btnCollection { position: relative; }
 .board-chip { display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 5px 14px 5px 5px; border-radius: 12px; border: 1px solid var(--line); background: rgba(13, 10, 8, 0.58); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--ink); cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s; }
 .board-chip:hover { border-color: var(--line-2); background: rgba(30, 24, 18, 0.7); }
@@ -509,12 +466,7 @@ body.compact #plateBottom { display: none !important; }
 .tile .new { position: absolute; top: 8px; left: 8px; padding: 2px 6px; border-radius: 6px; background: var(--gold); color: #24170a; font: 600 11px/1.3 var(--body); letter-spacing: 0.1em; }
 .tile .eq { position: absolute; top: 8px; right: 8px; padding: 2px 7px; border-radius: 6px; background: rgba(0, 0, 0, 0.6); color: var(--gold-hi); font: 500 11px/1.3 var(--body); letter-spacing: 0.08em; }
 .card.detail { width: min(560px, 100%); gap: 10px; }
-.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
-.pick { display: flex; flex-direction: column; gap: 4px; padding: 4px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.03); color: var(--ink-2); cursor: pointer; font: 500 14px/1.2 var(--body); text-align: left; }
-.pick img { width: 100%; border-radius: 7px; }
-.pick.on { border-color: var(--gold); color: var(--gold-hi); background: rgba(214, 166, 94, 0.1); }
 .opt-group.three { grid-template-columns: 1fr 1fr 1fr; }
-.card.chal { width: min(560px, 100%); }
 @keyframes revealIn { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes legend { from { letter-spacing: 0.3em; opacity: 0; } to { letter-spacing: 0.01em; opacity: 1; } }
 
@@ -668,10 +620,6 @@ body.compact .bottom-bar .ctl, body.compact .bottom-bar .icon-btn.round { border
 body.compact .panel { border-radius: 22px 22px 0 0; background: var(--mat-thick); box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4); }
 .panel-head { padding: 10px 12px; border-bottom: 0.5px solid var(--line-2); }
 .chat-title { font: 600 17px/1.2 var(--display); letter-spacing: -0.02em; text-transform: none; }
-.msg-name { grid-column: 1 / -1; font: 400 12px/1.1 var(--body); color: var(--ink-3); padding-left: 12px; }
-.bubble { padding: 8px 13px; border: 0; border-radius: 19px; font: 400 17px/1.3 var(--body); }
-.msg.black .bubble { color: #fff; }
-.msg time { font-family: var(--body); font-size: 11px; color: var(--ink-3); }
 .chip { border: 0; border-radius: 999px; padding: 8px 13px; background: var(--fill-2); color: var(--ink); font: 500 15px/1 var(--body); }
 .chip[aria-pressed="true"] { color: #fff; background: var(--acc); }
 
@@ -683,13 +631,7 @@ body.compact .panel { border-radius: 22px 22px 0 0; background: var(--mat-thick)
 
 /* toasts, banners, lists */
 .toast { border: 0; border-radius: 999px; padding: 11px 18px; background: var(--mat-thick); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); color: var(--ink); font: 500 15px/1.3 var(--body); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
-.banner, .confirm, .chal-banner { border: 0; border-radius: 18px; background: var(--mat-thick); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); font-family: var(--body); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
-.game-row, .seat { border: 0; background: var(--fill-2); }
-.game-row .t, .seat b { font: 600 17px/1.2 var(--display); letter-spacing: -0.02em; }
-.game-row .d, .seat span:last-child { font: 400 14px/1.3 var(--body); }
-.seat:hover:not(:disabled), .seat.white:hover:not(:disabled) { background: var(--fill); }
-.fb h4 { font-family: var(--display); letter-spacing: -0.01em; text-transform: none; }
-.fb p, .san, .moves, .mv { font-family: var(--body); }
+.banner, .confirm{ border: 0; border-radius: 18px; background: var(--mat-thick); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); font-family: var(--body); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); } .san, .moves, .mv { font-family: var(--body); }
 .mv.on { background: var(--acc); color: #fff; }
 .promo { border: 0; background: var(--fill-2); }
 .section-title, .hist h3 { font-family: var(--display); letter-spacing: -0.02em; text-transform: none; }
@@ -723,7 +665,6 @@ body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); 
 .panel.reviewing .hist{overscroll-behavior:contain}
 .panel.reviewing .review-move-scroll{margin-bottom:8px}
 .panel.reviewing .panel-head .chat-title{font-weight:700}
-.panel.reviewing .panel-head .chat-view,
 .panel.reviewing .panel-head .chat-new,
 .panel.reviewing .panel-head .chat-clear,
 .panel.reviewing .panel-head .chat-resign{display:none!important}
@@ -1148,17 +1089,12 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
 
 
   <div class="toast" id="toast" role="status"></div>
-  <div class="chal-banner banner" id="chalBanner" role="status" hidden></div>
 
   <div class="overlay collection" id="collection" hidden>
     <div class="col-shell" role="dialog" aria-modal="true" aria-labelledby="colTitle">
       <div class="col-top"><h2 id="colTitle">Your boards</h2><button class="icon-btn" id="colClose" type="button" aria-label="Close boards"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
       <div class="col-body" id="colBody"></div>
     </div>
-  </div>
-
-  <div class="overlay" id="challengeSheet" hidden>
-    <div class="card setup chal" role="dialog" aria-modal="true" id="chalBody"></div>
   </div>
 
   <aside class="panel" id="panel" aria-label="Chat and game history">
@@ -1201,22 +1137,6 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
 
   <button class="fab" id="chatFab" type="button" aria-label="Open chat" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v10H9.5L4 20v-14.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><span class="badge" id="unread" hidden></span></button>
   <button class="exit-focus" id="exitFocus" type="button" hidden>Show chat<span class="badge" id="unreadFocus" hidden></span></button>
-
-  <div class="overlay" id="seatDialog" hidden>
-    <div class="card" role="dialog" aria-modal="true" aria-labelledby="seatTitle">
-      <div class="eyebrow" id="seatEyebrow">Default · Your colours</div>
-      <h2 id="seatTitle">Take your seat</h2>
-      <p id="seatNote">White moves first. Your seat stays yours, so you come back to the same side.</p>
-      <label class="sr" for="seatName">Your name</label>
-      <input class="field" id="seatName" maxlength="20" placeholder="Your name">
-      <div class="seats">
-        <button class="seat white" id="seatW" type="button"><span class="orb white"></span><b>White</b><span id="seatWNote">Moves first</span></button>
-        <button class="seat black" id="seatB" type="button"><span class="orb"></span><b>Black</b><span id="seatBNote">Moves second</span></button>
-      </div>
-      <p class="err" id="seatErr" hidden></p>
-      <button class="btn quiet" id="seatWatch" type="button">Just watch</button>
-    </div>
-  </div>
 
   <div class="overlay" id="promoDialog" hidden>
     <div class="card" role="dialog" aria-modal="true" aria-labelledby="promoTitle">
@@ -1262,7 +1182,6 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
       <div class="eyebrow" id="endEyebrow"></div>
       <h2 id="endTitle"></h2>
       <p id="endLine"></p>
-      <div class="feedback" id="endFeedback"></div>
       <div class="end-actions" id="endActions"></div>
     </div>
   </div>
@@ -2068,7 +1987,7 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 const rid = (n = 10) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('');
-const safeSeg = (s) => String(s).replace(/[^A-Za-z0-9_\-.~:@+]/g, '-').slice(0, 120);
+
 const cleanName = (s) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 20);
 function mulberry(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
@@ -2087,19 +2006,13 @@ let toastTimer = 0;
 const haptic = (p) => { if (REDUCED || !Sound.on) return; try { navigator.vibrate && navigator.vibrate(p); } catch { /* unsupported */ } };
 function toast(msg, ms = 2800) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms); }
 function announce(msg) { $('announcer').textContent = msg; }
-function fmtTime(ms) {
-  const d = new Date(ms), now = new Date();
-  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  return d.toDateString() === now.toDateString() ? t : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${t}`;
-}
-function fmtDate(ms) { return ms ? new Date(ms).toLocaleDateString([], { month: 'short', day: 'numeric', year: new Date(ms).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }) : ''; }
 
 /* ------------------------------------------------------------------ chess */
 const FILES = 'abcdefgh';
 const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 const PIECE = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
 const SIDE = { w: 'White', b: 'Black' };
-const sideName = (side) => (side === 'w' ? 'white' : 'black');
+
 const other = (s) => (s === 'w' ? 'b' : 'w');
 const UCI = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
 
@@ -3393,7 +3306,7 @@ function updateTrayLabels(pos) {
 /* ------------------------------------------------------------------ state */
 const LOCAL_PID = (() => { let v = store.get('sg.pid', null); if (!v) { v = 'p_' + rid(16); store.set('sg.pid', v); } return v; })();
 const me = { id: null, name: '', canWrite: null };
-const CAP = { db: null, user: null, room: null, sample: null };
+
 const G = {
   onlineProvider: null, onlineBusy: false,
   mode: 'connecting', localReason: '', gid: null, n: 1, moves: [], pos: positionFrom([]),
@@ -3405,7 +3318,7 @@ const LEVEL_NAME = { 1: '1', 2: '2', 3: '3', 4: '4', 5: '5' };
 const cpu = { human: 'w', level: clamp(Number(store.get('sg.level', 2)) || 2, 1, 5) };
 let thinking = null;
 let lockUntil = 0;
-let liveDoc = null;
+
 let mySeat = null;
 let viewSide = 'w';
 let localView = store.get('sg.orient', 'w') === 'b' ? 'b' : 'w';
@@ -3419,12 +3332,9 @@ let focusMode = false;
 let compact = false;
 let historyOpen = false;
 let sheetOpen = false;
-let PROFILES = {};
-let PEERS = [];
-let chatDocs = [];
-let archive = [];
+
 let unread = 0;
-let seatDismissed = false;
+
 let endDismissed = null;
 let titleFlag = false;
 let hoverPiece = null;
@@ -3460,22 +3370,14 @@ function legalFrom(sq) {
   if (legalCache.key !== key) legalCache = { key, list: G.pos.chess.moves({ square: sq, verbose: true }) };
   return legalCache.list;
 }
-function profileFirst(uid) { const p = uid && PROFILES[uid]; return p && p.name ? p.name.trim().split(/\s+/)[0] : ''; }
+
 function seatName(side) {
   if (G.mode === 'local') return SIDE[side];
   if (G.mode === 'cpu') return side === cpu.human ? cleanName(store.get('sg.name', '')) || 'You' : 'Computer';
   const uid = G.seats[side];
-  return G.names[side] || (uid && G.people[uid]) || profileFirst(uid) || (uid ? SIDE[side] : 'Open seat');
+  return G.names[side] || (uid ? SIDE[side] : 'Open seat');
 }
-function personName(uid) {
-  if (G.mode === 'live' && uid && uid === G.seats.w) return seatName('w');
-  if (G.mode === 'live' && uid && uid === G.seats.b) return seatName('b');
-  const d = liveDoc || {}, ls = d.seats || {}, ln = d.names || {}, lp = d.people || {};
-  if (uid && uid === ls.w && ln.w) return cleanName(ln.w);
-  if (uid && uid === ls.b && ln.b) return cleanName(ln.b);
-  return (uid && (G.people[uid] || cleanName(lp[uid]))) || profileFirst(uid) || (uid === me.id ? 'You' : 'Guest');
-}
-function isOnline(uid) { return PEERS.some((p) => !p.isMe && p.kind === 'viewer' && (p.by === uid || (p.presence && p.presence.uid === uid))); }
+
 function material(pos, side) { const v = (list) => list.reduce((s, t) => s + VALUE[t], 0); return v(pos.captured[other(side)]) - v(pos.captured[side]); }
 
 /* ------------------------------------------------------------------ sound */
@@ -3615,7 +3517,7 @@ function fillPlate(node, side) {
   if(G.mode==='cpu'&&side!==cpu.human)extra.push(LEVEL_NAME[cpu.level]);
   const adv=material(pos,side);
   if(adv>0)extra.push('+'+adv+' material');
-  if(G.status==='active'&&G.drawOffer===side)extra.push('Draw offered');
+
   node.title=extra.length?extra.join(' · '):seatName(side)+' · '+SIDE[side];
   /* on phones the pieces this side has taken show as a row of small icons in its plate */
   const cap = node.querySelector('.pcap');
@@ -3629,8 +3531,7 @@ function fillPlate(node, side) {
     }
     cap.hidden = !taken.length;
   }
-  const uid = G.seats[side];
-  node.querySelector('.live-dot').hidden = !(G.mode === 'live' && uid && uid !== me.id && isOnline(uid));
+  node.querySelector('.live-dot').hidden = true;
 }
 function statusText() {
   if (review || G.mode === 'connecting') return ['', false];
@@ -3672,20 +3573,10 @@ function updateBanner() {
     msg = `${review.title} · ${review.ply ? moveLabel(review.ply, sans[review.ply - 1]) : 'starting position'}` +
       (review.alternative ? ' · recommended alternative' : '');
     acts.append(iconBtn('prev', 'Previous move', () => reviewStep(-1)), iconBtn('next', 'Next move', () => reviewStep(1)), button(G.status === 'over' ? 'Exit review' : 'Back to game', 'gold small', endReview));
-  } else if (G.mode === 'live' && G.status === 'active' && mySeat && G.drawOffer && G.drawOffer !== mySeat) {
-    msg = `${seatName(G.drawOffer)} offers a draw.`;
-    acts.append(button('Decline', 'quiet small', () => answerDraw(false)), button('Accept draw', 'gold small', () => answerDraw(true)));
   } else if (G.onlineProvider==='supabase' && !mySeat && bothSeated()) {
     msg=`Spectating ${seatName('w')} vs ${seatName('b')} · read-only`;
   } else if (G.mode === 'live' && mySeat && !bothSeated() && G.status !== 'over') {
     msg = `Waiting for someone to take the ${SIDE[other(mySeat)].toLowerCase()} seat.`;
-  } else if (G.mode === 'live' && !mySeat && me.canWrite === false) {
-    msg = 'You can watch here. To play, the owner shares this page with you as an Editor.';
-  } else if (G.mode === 'live' && !mySeat && bothSeated()) {
-    const others = watcherIds().filter((u) => u !== me.id).map(watcherName);
-    msg = `Watching ${seatName('w')} and ${seatName('b')}${others.length ? ` · also watching: ${others.join(', ')}` : ''}.`;
-  } else if (G.mode === 'live' && mySeat && bothSeated() && G.status === 'active' && watcherIds().length) {
-    msg = `Watching: ${watcherIds().map(watcherName).join(', ')}`;
   } else if (G.mode === 'local' && G.status === 'active' && G.moves.length === 0) {
     msg = 'Two players on one screen. White moves first.';
   } else if (G.mode === 'cpu' && G.status === 'active' && G.moves.length <= 1 && cpuIntro) {
@@ -4664,7 +4555,6 @@ function applyTheme(t) {
 function updateBrand() {
   const [a, b] = VIEW === '2d' ? ['Classic', '2D'] : THEMES[THEME].brand;
   $('brand').innerHTML = `${a}<span>·</span>${b}`;
-  $('seatEyebrow').innerHTML = `${a} · ${b}`;
 }
 /* a tap on the empty space around the flat board (not a drag, not a pinch) closes it back to 3D */
 { let down = null;
@@ -5735,13 +5625,9 @@ function playMove(uci, opts = {}) {
   }
   const r = applyMove(uci, opts);
   if (!r) { toast("That move isn't legal here."); syncBoard(G.pos, { quick: true }); updateMarkers(); return; }
-  const { end, now } = r;
+  const { end } = r;
+
   updateAll();
-  if (G.mode === 'live') {
-    const patch = { moves: G.moves.slice(), turnAt: now, drawOffer: null };
-    if (end) Object.assign(patch, { status: 'over', result: end.result, reason: end.reason, endedAt: now });
-    gameWrite((ref) => ref.update(patch)).then(() => (end ? archiveGame() : null)).catch(() => { toast("That move didn't save. Check your connection, then try again."); resyncGame(); });
-  }
   if (end) setTimeout(showEndCard, REDUCED ? 0 : 900);
   else if (G.mode === 'cpu') requestComputer();
 }
@@ -5858,10 +5744,7 @@ function undo() {
   syncBoard(G.pos, { animate: true, quick: true });
   updateAll();
   announce('Move taken back.');
-  if (G.mode === 'live') {
-    gameWrite((ref) => ref.update({ moves: G.moves.slice(), status: G.status, result: G.result, reason: G.reason, drawOffer: null, turnAt: G.turnAt, endedAt: null, feedback: null }))
-      .catch(() => { toast("Couldn't take that back. Try again."); resyncGame(); });
-  }
+
   if (G.status === 'over') maybeShowEndCard();
 }
 
@@ -6305,21 +6188,7 @@ function renderHistory() {
   if (G.mode === 'live' && !review) {
     const t = el('div', 'section-title'); t.textContent = 'Past games';
     frag.append(t);
-    if (!archive.length) { const p = el('p', 'muted'); p.textContent = 'Finished games collect here, with every move kept.'; frag.append(p); }
-    else {
-      const tally = el('p', 'tally'); tally.textContent = tallyLine(); frag.append(tally);
-      const list = el('div', 'games');
-      for (const g of archive) {
-        const b = el('button', 'game-row' + (review && review.gid === g.gid ? ' on' : ''));
-        b.type = 'button';
-        const t1 = el('span', 't'); t1.textContent = `Game ${g.n || '?'} · ${archiveResult(g)}`;
-        const t2 = el('span', 'd'); t2.textContent = `${fmtDate(g.endedAt)} · ${g.reason || 'finished'} · ${Math.ceil((g.moves || []).length / 2)} moves`;
-        b.append(t1, t2);
-        b.addEventListener('click', () => startReview({ moves: (g.moves || []).filter((m) => UCI.test(m)), ply: (g.moves || []).length, title: `Game ${g.n || '?'}`, subtitle: `${archiveResult(g)} · ${fmtDate(g.endedAt)}`, live: false, gid: g.gid }));
-        list.append(b);
-      }
-      frag.append(list);
-    }
+    const p = el('p', 'muted'); p.textContent = 'Finished games collect here, with every move kept.'; frag.append(p);
   }
   view.replaceChildren(frag);
   view.scrollTop = oldViewScroll;
@@ -6336,21 +6205,7 @@ function renderHistory() {
     }
   }
 }
-function archiveName(g, side) { const uid = g.seats && g.seats[side]; return (g.names && g.names[side]) || (uid && G.people[uid]) || profileFirst(uid) || SIDE[side]; }
-function archiveResult(g) { if (g.result === '1-0') return `${archiveName(g, 'w')} won`; if (g.result === '0-1') return `${archiveName(g, 'b')} won`; return 'Draw'; }
-function tallyLine() {
-  const wins = new Map(); let draws = 0;
-  for (const g of archive) {
-    const ws = g.result === '1-0' ? 'w' : g.result === '0-1' ? 'b' : null;
-    if (!ws) { draws++; continue; }
-    const name = archiveName(g, ws);
-    wins.set(name, (wins.get(name) || 0) + 1);
-  }
-  for (const s of ['w', 'b']) if (G.seats[s] && !wins.has(seatName(s))) wins.set(seatName(s), 0);
-  const parts = [...wins.entries()].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n} ${c}`);
-  if (draws) parts.push(`${draws} ${draws === 1 ? 'draw' : 'draws'}`);
-  return parts.join(' · ');
-}
+
 function openHistory(on = !historyOpen) {
   historyOpen = on;
   $('btnHistory').setAttribute('aria-pressed', String(on));
@@ -6371,22 +6226,6 @@ function openHistory(on = !historyOpen) {
 }
 
 /* ------------------------------------------------------------------ panel: chat */
-let myBucket = null;
-let chatChain = Promise.resolve();
-let localEcho = [];
-const seenMsg = new Set();
-let chatPrimed = false;
-function allMessages() {
-  const seen = new Set(), all = [];
-  for (const d of chatDocs) for (const m of (Array.isArray(d.msgs) ? d.msgs : [])) {
-    if (!m || typeof m.id !== 'string' || typeof m.t !== 'string' || seen.has(m.id)) continue;
-    seen.add(m.id); all.push({ id: m.id, t: m.t.slice(0, 400), at: Number(m.at) || 0, by: d.by });
-  }
-  localEcho = localEcho.filter((m) => !seen.has(m.id));
-  for (const m of localEcho) all.push({ ...m, pending: true });
-  all.sort((a, b) => a.at - b.at);
-  return all.slice(-200);
-}
 function renderChat(forceBottom = false) {
   const list = $('chatList');
   if (G.onlineProvider === 'supabase') {
@@ -6402,87 +6241,18 @@ function renderChat(forceBottom = false) {
     }, forceBottom);
     return;
   }
-  if (!CAP.db) {
-    const n=el('div','note chat-empty-state');
+  const n=el('div','note chat-empty-state');
     const heading=el('strong','chat-empty-title'),detail=el('p','chat-empty-description');
-    heading.textContent=G.mode==='connecting'?'Connecting to chess…':G.onlineProvider==='supabase'?'Messages':'Practice game';
-    detail.textContent=G.mode==='connecting'?'Setting up your chess board.':
-      G.onlineProvider==='supabase'?'Private matches are live. In-game messaging is not connected yet.':
-      'Play against the computer or open Online games to invite someone to a private match.';
-    n.append(heading,detail);list.replaceChildren(n);return;
-  }
-  const msgs = allMessages();
-  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 90;
-  const frag = document.createDocumentFragment();
-  if (!msgs.length) { const n = el('p', 'note'); n.textContent = mySeat && bothSeated() ? `No messages yet. Say hi to ${seatName(other(mySeat))}.` : 'No messages yet.'; frag.append(n); }
-  let prev = null;
-  for (const m of msgs) {
-    const ls = (liveDoc && liveDoc.seats) || {};
-    const side = m.by === ls.w ? 'white' : m.by === ls.b ? 'black' : 'guest';
-    const cont = prev && prev.by === m.by && m.at - prev.at < 180000;
-    const row = el('div', `msg ${side}${cont ? ' cont' : ''}${m.pending ? ' pending' : ''}`);
-    if (!cont) { const n = el('div', 'msg-name'); n.textContent = personName(m.by); row.append(n); }
-    const b = el('div', 'bubble'); b.textContent = m.t;
-    const t = el('time'); t.dateTime = new Date(m.at || Date.now()).toISOString(); t.textContent = fmtTime(m.at || Date.now());
-    row.append(b, t); frag.append(row); prev = m;
-  }
-  list.replaceChildren(frag);
-  if (forceBottom || nearBottom) list.scrollTop = list.scrollHeight;
+  heading.textContent=G.mode==='connecting'?'Connecting to chess…':'Practice game';
+  detail.textContent=G.mode==='connecting'?'Setting up your chess board.':
+    'Play against the computer or open Online games to invite someone to a private match.';
+  n.append(heading,detail);list.replaceChildren(n);
 }
 function chatVisible() { if (historyOpen || document.hidden) return false; return compact ? sheetOpen : !focusMode; }
 function markChatRead() { if (chatVisible()) { unread = 0; updateUnread(); } }
 function updateUnread() { for (const id of ['unread', 'unreadFocus']) { const b = $(id); b.hidden = !unread; b.textContent = unread > 9 ? '9+' : String(unread); } }
-function countUnread() {
-  let added = 0;
-  for (const m of allMessages()) { if (seenMsg.has(m.id)) continue; seenMsg.add(m.id); if (chatPrimed && m.by !== me.id) added++; }
-  chatPrimed = true;
-  if (!added) return;
-  if (!chatVisible()) { unread += added; updateUnread(); Sound.play('chime'); }
-  if (document.hidden) { document.title = '● New message · Chess'; titleFlag = true; }
-}
 function sendChat(raw) {
-  if (G.onlineProvider === 'supabase') {
-    void window.familyChessChat?.send(raw);
-    return;
-  }
-  const text = raw.replace(/\s+/g, ' ').trim().slice(0, 400);
-  if (!text || !CAP.db || !me.id) return;
-  const msg = { id: rid(10), t: text, at: Date.now() };
-  localEcho.push({ ...msg, by: me.id });
-  seenMsg.add(msg.id);
-  renderChat(true);
-  chatChain = chatChain.then(async () => {
-    const now = Date.now();
-    if (!myBucket || myBucket.msgs.length >= 80) {
-      const id = `${safeSeg(me.id)}~${now.toString(36)}`;
-      await CAP.db.doc('chat/' + id).set({ by: me.id, started: now, updatedAt: now, msgs: [msg] });
-      myBucket = { id, msgs: [msg] };
-    } else {
-      const msgs = [...myBucket.msgs.filter((m) => m.id !== msg.id), msg];
-      await CAP.db.doc('chat/' + myBucket.id).update({ msgs, updatedAt: now });
-      myBucket = { id: myBucket.id, msgs };
-    }
-  }).catch(() => {
-    localEcho = localEcho.filter((m) => m.id !== msg.id);
-    renderChat();
-    toast("Your message didn't send. Check your connection, then try again.");
-    if (!$('chatInput').value) $('chatInput').value = text;
-  });
-  setTyping(false);
-}
-let typingState = false, typingTimer = 0;
-function setTyping(on) {
-  if (!CAP.room) return;
-  clearTimeout(typingTimer);
-  if (on) typingTimer = setTimeout(() => setTyping(false), 5000);
-  if (on === typingState) return;
-  typingState = on;
-  CAP.room.presence({ uid: me.id, name: myName(), typing: on }).catch(() => {});
-}
-function renderTyping() {
-  const ids = [...new Set(PEERS.filter((p) => !p.isMe && p.presence && p.presence.typing).map((p) => p.by || p.presence.uid).filter(Boolean))];
-  const names = ids.map(personName);
-  $('typing').textContent = names.length ? `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} typing…` : '';
+  if (G.onlineProvider === 'supabase') void window.familyChessChat?.send(raw);
 }
 function updateChatEnabled() {
   if (G.onlineProvider === 'supabase') {
@@ -6502,219 +6272,15 @@ function updateChatEnabled() {
       ok ? 'Type a message…' : 'Connecting chat…';
     return;
   }
-  const ok = !!CAP.db && !!me.id && me.canWrite !== false;
-  $('chatInput').disabled = !ok; $('chatSend').disabled = !ok;
-  $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : !CAP.db ? 'Messaging is not connected yet' : ok ? 'Type a message…' : 'Chat is read-only for you here';
+  $('chatInput').disabled = $('chatSend').disabled = true;
+  $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : 'Messaging is not connected yet';
 }
 
-/* ------------------------------------------------------------------ live sync */
-function freshGame(seats, names, n, people, colors = G.colors) {
-  const now = Date.now();
-  return {
-    colors: { ...(colors || {}) },
-    gid: 'g' + now.toString(36) + rid(4), n, seats: { w: seats.w || null, b: seats.b || null }, names: { w: names.w || '', b: names.b || '' }, people: people || {},
-    moves: [], status: seats.w && seats.b ? 'active' : 'waiting', result: null, reason: null, drawOffer: null, turnAt: now, startedAt: now, endedAt: null, feedback: null,
-  };
-}
-let gameChain = Promise.resolve();
-function gameWrite(fn) {
-  const run = gameChain.then(() => fn(CAP.db.doc('game/current')));
-  gameChain = run.catch(() => {});
-  return run;
-}
-async function resyncGame() { try { const s = await CAP.db.doc('game/current').get(); onGame(s.exists ? s.data() : null, true); } catch { /* offline */ } }
-function archivePayload() {
-  return { gid: G.gid, n: G.n, seats: { ...G.seats }, names: { ...G.names }, moves: G.moves.slice(), result: G.result, reason: G.reason, startedAt: G.startedAt, endedAt: G.endedAt || Date.now(), feedback: G.feedback || null };
-}
-function archiveGame() {
-  if (G.mode !== 'live' || !G.gid || G.status !== 'over') return Promise.resolve();
-  return CAP.db.doc('archive/' + safeSeg(G.gid)).set(archivePayload()).catch(() => {});
-}
-let gameFirst = true;
-function onGame(d, forced = false) {
-  liveDoc = d;
-  if (G.mode !== 'live') { queueProfiles(); renderChat(); return; }
-  const prevGid = G.gid, prevMoves = G.moves, prevStatus = G.status, prevOffer = G.drawOffer;
-  if (!d || typeof d.gid !== 'string') {
-    Object.assign(G, { gid: null, n: 1, moves: [], seats: { w: null, b: null }, names: { w: '', b: '' }, people: {}, status: 'waiting', result: null, reason: null, drawOffer: null, turnAt: Date.now(), startedAt: null, endedAt: null, feedback: null });
-  } else {
-    const people = {};
-    if (d.people && typeof d.people === 'object') for (const [k, v] of Object.entries(d.people).slice(0, 24)) people[k] = cleanName(v);
-    Object.assign(G, {
-      gid: d.gid, n: Number(d.n) || 1,
-      moves: Array.isArray(d.moves) ? d.moves.filter((m) => typeof m === 'string' && UCI.test(m)) : [],
-      seats: { w: (d.seats && d.seats.w) || null, b: (d.seats && d.seats.b) || null },
-      names: { w: cleanName(d.names && d.names.w), b: cleanName(d.names && d.names.b) }, people,
-      status: ['waiting', 'active', 'over'].includes(d.status) ? d.status : 'waiting',
-      result: d.result || null, reason: d.reason || null,
-      drawOffer: d.drawOffer === 'w' || d.drawOffer === 'b' ? d.drawOffer : null,
-      turnAt: Number(d.turnAt) || Date.now(), startedAt: d.startedAt || null, endedAt: d.endedAt || null,
-      feedback: d.feedback && typeof d.feedback === 'object' ? d.feedback : null,
-      board: d.board && typeof d.board === 'object' && typeof d.board.themeId === 'string' ? d.board : null,
-      chooser: typeof d.chooser === 'string' ? d.chooser : null,
-      colors: d.colors && typeof d.colors === 'object' ? Object.fromEntries(Object.entries(d.colors).filter(([, v]) => chromaOk(v)).slice(0, 24)) : {},
-    });
-  }
-  const seatBefore = mySeat;
-  if (PROG.ready) presentTheme();
-  mySeat = G.seats.w === me.id ? 'w' : G.seats.b === me.id ? 'b' : null;
-  const sameGame = prevGid === G.gid;
-  const same = sameGame && G.moves.length === prevMoves.length && G.moves.every((m, i) => m === prevMoves[i]);
-  const ext = sameGame && G.moves.length === prevMoves.length + 1 && prevMoves.every((m, i) => m === G.moves[i]);
-  if (!same || gameFirst || forced) { G.pos = positionFrom(G.moves); G.version++; }
-  if (mySeat !== seatBefore) flipped = false;
-  const want = wantedSide();
-  const sideChanged = want !== viewSide;
-  viewSide = want;
-  if (sideChanged) requestRender();
-  if (!sameGame && review) { stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop(); review = null; }
-  if (!gameFirst && sameGame) {
-    if (prevStatus === 'active' && G.status === 'over' && !ext) Sound.play('end');
-    if (G.drawOffer && G.drawOffer !== prevOffer && G.drawOffer !== mySeat) Sound.play('chime');
-  }
-  if (gameFirst) {
-    gameFirst = false;
-    fitCamera(false);
-    syncBoard(G.pos, { intro: true });
-  } else if (!same || forced || sideChanged) {
-    if (pending) pending = null;
-    if (!review) clearSelection();
-    if (review && review.live) review.moves = G.moves.slice();
-    if (sideChanged) { syncBoard(displayPos(), { animate: false }); userCam = false; fitCamera(true); }
-    else if (!review) {
-      if (ext) { const land = syncBoard(G.pos, { animate: true, hint: G.pos.last }); fxForMove(G.pos.last, land, !!G.pos.last && G.pos.last.color !== mySeat); }
-      else syncBoard(G.pos, { animate: true, quick: true });
-    }
-  }
-  if (seatBefore !== mySeat && mySeat) seatDismissed = false;
-  /* opening the app drops you straight into a game against the computer, unless you're seated in a live game
-     that's under way */
-  if (!autoCpuDone) { autoCpuDone = true; if (!(mySeat && G.status === 'active' && G.moves.length)) { autoStartCpu(); return; } }
-  updateAll();
-  maybeShowSeatDialog();
-  maybeShowEndCard();
-  renderChat();
-  queueProfiles();
-}
-function onDbError(e, resubscribe) {
-  if (e && e.code === 'unavailable' && resubscribe) setTimeout(resubscribe, 3000);
-}
-function subscribeGame() {
-  CAP.db.doc('game/current').onSnapshot((snap) => onGame(snap.exists ? snap.data() : null), (e) => onDbError(e, subscribeGame));
-}
-function subscribeChat() {
-  CAP.db.collection('chat').orderBy('updatedAt', 'desc').limit(10).onSnapshot((qs) => {
-    chatDocs = qs.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
-    const mine = chatDocs.filter((d) => d.by === me.id && Array.isArray(d.msgs)).sort((a, b) => (b.started || 0) - (a.started || 0))[0];
-    if (mine && (!myBucket || mine.id !== myBucket.id || mine.msgs.length >= myBucket.msgs.length)) myBucket = { id: mine.id, msgs: mine.msgs.slice() };
-    renderChat();
-    countUnread();
-    queueProfiles();
-  }, (e) => onDbError(e, subscribeChat));
-}
-function subscribeArchive() {
-  CAP.db.collection('archive').orderBy('endedAt', 'desc').limit(40).onSnapshot((qs) => {
-    archive = qs.docs.map((d) => d.data()).filter((g) => g && Array.isArray(g.moves));
-    renderHistory();
-  }, (e) => onDbError(e, subscribeArchive));
-}
-function setupRoom() {
-  const room = CAP.room;
-  if (!room) return;
-  room.onPeers((ch) => { PEERS = ch.peers; updatePlates(); updateBanner(); renderTyping(); queueProfiles(); }, () => {});
-  room.presence({ uid: me.id, name: myName(), typing: false }).catch(() => {});
-}
-let profTimer = 0;
-function queueProfiles() {
-  clearTimeout(profTimer);
-  profTimer = setTimeout(async () => {
-    if (!CAP.user) return;
-    const ids = new Set([G.seats.w, G.seats.b]);
-    for (const d of chatDocs) ids.add(d.by);
-    for (const p of PEERS) ids.add(p.by);
-    for (const g of archive) { ids.add(g.seats && g.seats.w); ids.add(g.seats && g.seats.b); }
-    const list = [...ids].filter((x) => typeof x === 'string' && x.startsWith('u_'));
-    if (!list.length) return;
-    try { PROFILES = await CAP.user.profiles(list); } catch { return; }
-    updatePlates(); renderChat(); renderTyping(); renderHistory();
-  }, 80);
-}
-
-/* seats */
-function maybeShowSeatDialog() {
-  const dlg = $('seatDialog');
-  const canSit = G.mode === 'live' && !mySeat && !!me.id && me.canWrite !== false && !seatDismissed;
-  const open = !G.seats.w || !G.seats.b;
-  if (!canSit) { dlg.hidden = true; return; }
-  const prefill = cleanName(store.get('sg.name', '')) || cleanName((me.name || '').split(/\s+/)[0]);
-  if (!$('seatName').value && prefill) $('seatName').value = prefill;
-  /* seats belong to accounts, so nobody needs to "reclaim" one; when both are taken you watch */
-  $('seatTitle').textContent = open ? 'Take your seat' : 'Watch this game';
-  $('seatNote').textContent = open
-    ? 'White moves first. Your seat stays yours, so you come back to the same side.'
-    : `${seatName('w')} and ${seatName('b')} are playing. Add your name so they can see who's watching — you can play the next game.`;
-  for (const side of ['w', 'b']) {
-    const btn = $(side === 'w' ? 'seatW' : 'seatB');
-    const note = $(side === 'w' ? 'seatWNote' : 'seatBNote');
-    const taken = !!G.seats[side];
-    btn.disabled = taken; btn.dataset.reclaim = '';
-    btn.hidden = !open;
-    note.textContent = taken ? `${seatName(side)} is here` : side === 'w' ? 'Moves first' : 'Moves second';
-  }
-  $('seatName').hidden = false;
-  $('seatWatch').textContent = open ? 'Just watch' : 'Watch';
-  dlg.hidden = false;
-}
-async function takeSeat(side) {
-  const reclaim = $(side === 'w' ? 'seatW' : 'seatB').dataset.reclaim === '1';
-  const name = cleanName($('seatName').value) || cleanName((me.name || '').split(/\s+/)[0]);
-  if (!reclaim && !name) { showSeatErr('Add your name first, so the board can show it.'); $('seatName').focus(); return; }
-  if (name) store.set('sg.name', name);
-  $('seatErr').hidden = true;
-  $('seatW').disabled = $('seatB').disabled = true;
-  try {
-    const ref = CAP.db.doc('game/current');
-    try { await ref.acquire({ holder: safeSeg(me.id), ttlMs: 5000 }); } catch { /* lease is a courtesy */ }
-    const snap = await ref.get();
-    const d = snap.exists ? snap.data() : null;
-    if (!d || typeof d.gid !== 'string') {
-      const seats = { w: null, b: null }, names = { w: '', b: '' };
-      seats[side] = me.id; names[side] = name;
-      await gameWrite((r) => r.set(freshGame(seats, names, 1, { [me.id]: name }, { [me.id]: myColor() })));
-    } else {
-      const seats = { w: (d.seats && d.seats.w) || null, b: (d.seats && d.seats.b) || null };
-      const names = { w: (d.names && d.names.w) || '', b: (d.names && d.names.b) || '' };
-      if (!reclaim && seats[side] && seats[side] !== me.id) { showSeatErr('Someone just took that seat.'); return; }
-      const o = other(side);
-      if (seats[o] === me.id) { seats[o] = null; names[o] = ''; }
-      seats[side] = me.id;
-      if (!reclaim) names[side] = name;
-      const patch = { seats, names, people: { [me.id]: reclaim ? names[side] : name }, colors: { ...(d.colors || {}), [me.id]: myColor() } };
-      const both = !!(seats.w && seats.b);
-      if (d.status !== 'over') { patch.status = both ? 'active' : 'waiting'; if (both && !(Array.isArray(d.moves) && d.moves.length)) patch.turnAt = Date.now(); }
-      await gameWrite((r) => r.update(patch));
-    }
-    $('seatDialog').hidden = true;
-  } catch (e) {
-    showSeatErr(e && e.code === 'invalid_argument' ? 'This page is view-only for you. The owner can share it with you as an Editor.' : "Couldn't save your seat. Check your connection and try again.");
-  } finally {
-    maybeShowSeatDialog();
-  }
-}
-function showSeatErr(msg) { const e = $('seatErr'); e.textContent = msg; e.hidden = false; }
-$('seatW').addEventListener('click', () => takeSeat('w'));
-$('seatB').addEventListener('click', () => takeSeat('b'));
-$('seatWatch').addEventListener('click', () => { const n = cleanName($('seatName').value); if (n) saveMyName(n); seatDismissed = true; $('seatDialog').hidden = true; });
-/* your name, for everyone: saved to your player record, shown to the room and on this game */
+/* your name: saved to your player record */
 async function saveMyName(name) {
   name = cleanName(name); if (!name) return;
   store.set('sg.name', name);
   if (PROG.ready) savePlayer((p) => { p.name = name; }).catch(() => {});
-  if (CAP.room) CAP.room.presence({ uid: me.id, name, typing: false }).catch(() => {});
-  if (G.mode === 'live' && CAP.db && me.id) {
-    G.people = { ...G.people, [me.id]: name };
-    gameWrite((r) => r.update({ people: { [me.id]: name } })).catch(() => {});
-  }
   updatePlates(); updateBanner();
 }
 function myName() { return cleanName(store.get('sg.name', '')) || (PROG.P && PROG.P.name) || cleanName((me.name || '').split(/\s+/)[0]) || ''; }
@@ -6726,53 +6292,16 @@ function openNameDialog() {
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); row.querySelector('button').click(); } });
   d.card.insertBefore(row, d.card.lastChild); d.card.insertBefore(inp, row); inp.focus();
 }
-/* everyone in the room who isn't sitting at the board */
-function watcherIds() {
-  const seated = new Set([G.seats.w, G.seats.b]), out = [];
-  for (const p of PEERS) { if (p.kind && p.kind !== 'viewer') continue; const u = (p.presence && p.presence.uid) || p.by; if (u && !seated.has(u) && !out.includes(u)) out.push(u); }
-  if (G.mode === 'live' && !mySeat && me.id && !out.includes(me.id)) out.push(me.id);
-  return out;
-}
-function watcherName(u) {
-  if (u === me.id) return myName() || 'You';
-  const pr = PEERS.find((p) => ((p.presence && p.presence.uid) || p.by) === u);
-  return cleanName(pr && pr.presence && pr.presence.name) || personName(u);
-}
-/* people you could challenge: everyone known to this game or in the room, except you */
-function challengeablePeople() {
-  const ids = new Set([...Object.keys(G.people || {}), G.seats.w, G.seats.b, ...PEERS.map((p) => (p.presence && p.presence.uid) || p.by)]);
-  return [...ids].filter((u) => typeof u === 'string' && u && u !== myId()).map((u) => [u, watcherName(u)]).filter(([, n]) => n && n !== 'Guest');
-}
-$('seatName').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const free = !G.seats.w ? 'w' : !G.seats.b ? 'b' : null; if (free) takeSeat(free); } });
-async function leaveSeat() {
-  if (!mySeat) return;
-  const s = mySeat;
-  const patch = { seats: { [s]: null }, names: { [s]: '' } };
-  if (G.status !== 'over') patch.status = 'waiting';
-  seatDismissed = false;
-  try { await gameWrite((r) => r.update(patch)); } catch { toast("Couldn't leave the seat. Try again."); }
-}
 
-/* draws, resignation, rematch */
-const canOfferDraw = () => G.onlineProvider !== 'supabase' && G.mode === 'live' && !!mySeat && bothSeated() && G.status === 'active' && G.drawOffer !== mySeat && G.moves.length >= 2;
-function offerDraw() {
-  if (!canOfferDraw()) return;
-  G.drawOffer = mySeat; updatePlates(); updateBanner();
-  gameWrite((r) => r.update({ drawOffer: mySeat })).then(() => toast('Draw offered.')).catch(() => { toast("Couldn't send the offer. Try again."); resyncGame(); });
-}
+/* resignation, rematch */
 function finishGame(patch) {
   cancelComputer();
   if(G.mode==='cpu'||G.mode==='local')window.ChessClock?.stopLocal();
   Object.assign(G, { status: patch.status, result: patch.result, reason: patch.reason, drawOffer: null, endedAt: patch.endedAt });
   G.version++;
   updateAll();
-  if (G.mode === 'live') gameWrite((r) => r.update(patch)).then(archiveGame).catch(() => { toast("Couldn't save that. Try again."); resyncGame(); });
   Sound.play('end');
   showEndCard();
-}
-function answerDraw(accept) {
-  if (!accept) { G.drawOffer = null; updateBanner(); updatePlates(); gameWrite((r) => r.update({ drawOffer: null })).catch(() => {}); return; }
-  finishGame({ status: 'over', result: '1/2-1/2', reason: 'agreement', drawOffer: null, endedAt: Date.now() });
 }
 function resign() {
   if (G.onlineProvider === 'supabase') {
@@ -6828,7 +6357,6 @@ function resetLocalGame(mode, n) {
   flipped = false;
   const want = wantedSide();
   if (want !== viewSide) { viewSide = want; requestRender(); }
-  hide($('seatDialog'));
   presentTheme();
   syncBoard(G.pos, { animate: true, quick: true });
   userCam = false;
@@ -6847,36 +6375,13 @@ function startComputerGame(side, level) {
   if (cpuIntro) toast(cpuIntro, 4200);
   if (cpu.human === 'b') setTimeout(requestComputer, REDUCED ? 0 : 340);
 }
-function enterLive() {
-  cancelComputer();
-  window.ChessClock?.reset();
-  stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop();
-  review = null;
-  G.mode = 'live'; G.gid = null; G.moves = []; G.clockActions=[]; G.version++; gameFirst = false;
-  onGame(liveDoc, true);
-  presentTheme();
-  renderChat();
-}
-async function startTwoPlayer() {
-  if (!CAP.db) { resetLocalGame('local', (G.mode === 'local' ? G.n : 0) + 1); return; }
-  if (G.mode !== 'live') { enterLive(); return; }
-  if (!mySeat) { toast('Take a seat first to start a new game.'); return; }
-  await archiveGame();
-  try { await gameWrite((r) => r.set(freshGame({ ...G.seats }, { ...G.names }, (G.n || 1) + 1, G.people))); }
-  catch { toast("Couldn't start a new game. Try again."); }
-}
-async function rematch(swap) {
+function startTwoPlayer() { resetLocalGame('local', (G.mode === 'local' ? G.n : 0) + 1); }
+function rematch(swap) {
   hide($('endCard'));
   endDismissed = null;
   if (review) { stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop(); review = null; }
   if (G.mode === 'cpu') { startComputerGame(swap ? other(cpu.human) : cpu.human, cpu.level); return; }
-  if (G.mode === 'local') { if (swap) { localView = other(localView); store.set('sg.orient', localView); } resetLocalGame('local', G.n + 1); return; }
-  if (!mySeat) return;
-  await archiveGame();
-  const seats = swap ? { w: G.seats.b, b: G.seats.w } : { ...G.seats };
-  const names = swap ? { w: G.names.b, b: G.names.w } : { ...G.names };
-  try { await gameWrite((r) => r.set(freshGame(seats, names, (G.n || 1) + 1, G.people))); }
-  catch { toast("Couldn't start a new game. Try again."); }
+  if (G.mode === 'local') { if (swap) { localView = other(localView); store.set('sg.orient', localView); } resetLocalGame('local', G.n + 1); }
 }
 
 /* setup sheet: choices are staged and only applied by Start New Game */
@@ -6922,7 +6427,6 @@ $('setupStart').addEventListener('click', () => {
   hide($('setupDialog'));
   store.set('sg.side', staged.side);
   if (staged.mode === 'cpu') startComputerGame(staged.side, staged.level);
-  else if (CAP.db && me.id) openChallengeSheet('challenge');
   else startTwoPlayer();
 });
 $('setupCancel').addEventListener('click', closeSetup);
@@ -6938,7 +6442,6 @@ $('btnSettings').addEventListener('click', () => openQuickColors());
 $('colClose').addEventListener('click', closeCollection);
 /* a tap on empty space (not a board, not a heading) closes the board picker */
 $('collection').addEventListener('click', (e) => { if (!e.target.closest('.tile, .col-top h2, .pick-sec, button')) closeCollection(); });
-$('challengeSheet').addEventListener('pointerdown', (e) => { if (e.target === $('challengeSheet')) hide($('challengeSheet')); });
 $('btnView2d').addEventListener('click', () => {
   applyView(VIEW === '2d' ? '3d' : '2d');
 });
@@ -6960,11 +6463,6 @@ function describeResult() {
 }
 const endKey = () => (G.gid || G.mode) + ':' + G.version;
 function showEndCard() { endDismissed = null; maybeShowEndCard(); }
-function progressLine() {
-  if (!PROG.ready || !PROG.P || G.status !== 'over') return '';
-  const parts = [];
-  return parts.filter(Boolean).join(' ');
-}
 function maybeShowEndCard() {
   if (G.status === 'over') processFinishedGame();
   const card = $('endCard');
@@ -6975,108 +6473,15 @@ function maybeShowEndCard() {
   $('endTitle').textContent = title;
   $('endLine').textContent = line;
   $('endLine').hidden = !line;
-  renderFeedback();
   const acts = $('endActions');
   acts.replaceChildren();
-  const prog = progressLine();
-  if (prog) { $('endLine').hidden = false; $('endLine').textContent = [line, prog].filter(Boolean).join(' '); }
-  if (G.mode === 'live' && mySeat && CAP.db) {
-    const winColor = G.result === '1-0' ? 'w' : G.result === '0-1' ? 'b' : null;
-    const chooser = winColor ? G.seats[winColor] : G.chooser || G.seats.w;
-    if (chooser === myId()) acts.append(button('Choose the next game', 'gold', () => { endDismissed = endKey(); card.hidden = true; openChallengeSheet('rematch'); }));
-    else { const w = el('p', 'muted'); w.textContent = `${personLabel(chooser)} chooses the next board and colour.`; acts.append(w); }
-  } else if (G.mode !== 'live') acts.append(button('Play Again', 'gold', () => rematch(false)), button('Swap colors', '', () => rematch(true)));
+  if (G.mode !== 'live') acts.append(button('Play Again', 'gold', () => rematch(false)), button('Swap colors', '', () => rematch(true)));
   acts.append(button('New game', '', () => { endDismissed = endKey(); card.hidden = true; openSetup(); }));
   acts.append(button('▶ Game review', 'gold', () => { endDismissed = endKey(); beginGameReview(); }));
   acts.append(button('Close', 'quiet', () => { endDismissed = endKey(); card.hidden = true; }));
   card.hidden = false;
 }
-let fbBusy = false, fbNote = '';
-const FB_ERR = {
-  not_granted: 'Claude feedback is turned off for this page.',
-  sampling_disabled: "Claude feedback isn't available on this account.",
-  rate_limited: 'Claude is busy right now. Try again in a minute.',
-  invalid_json: "Claude's answer came back garbled. Try again.",
-  session_expired: 'Sign in to Claude again, then try again.',
-  refused: "Claude couldn't review this game.",
-};
-function renderFeedback() {
-  const box = $('endFeedback');
-  box.replaceChildren();
-  const fb = G.feedback;
-  if (fb && (fb.white || fb.black || fb.gold || fb.silver)) {
-    for (const side of ['w', 'b']) {
-      if (G.mode === 'cpu' && side !== cpu.human) continue;
-      const item = fb[sideName(side)];
-      if (!item || !item.text) continue;
-      const wrap = el('div', 'fb' + (side === 'w' ? ' white' : ''));
-      const h = el('h4'); h.textContent = `${seatName(side)} · ${item.kind === 'tip' ? 'A tip' : 'Best move'}${item.move ? ' · ' + item.move : ''}`;
-      const p = el('p'); p.textContent = item.text;
-      wrap.append(h, p); box.append(wrap);
-    }
-    return;
-  }
-  if (!CAP.sample || G.moves.length < 6 || (G.mode === 'live' && !mySeat)) return;
-  const b = button(fbBusy ? 'Reading the game…' : "Get Claude's take", '', requestFeedback);
-  b.disabled = fbBusy;
-  box.append(b);
-  if (fbNote) { const p = el('p'); p.textContent = fbNote; box.append(p); }
-}
-function feedbackPrompt() {
-  const sans = sanList(G.moves);
-  let pgn = '';
-  sans.forEach((s, i) => { if (i % 2 === 0) pgn += `${i / 2 + 1}. `; pgn += s + ' '; });
-  if (G.mode === 'cpu') {
-    const k = sideName(cpu.human), mv = cpu.human === 'w' ? '14. Nd5' : '14... Qb6';
-    return [
-      `Give friendly end-of-game feedback to a player who just played a casual chess game against a computer opponent (${LEVEL_NAME[cpu.level]}). They like long, patient, positional games.`,
-      `The player had ${SIDE[cpu.human]}${cpu.human === 'w' ? ' (moved first)' : ''}. The computer had ${SIDE[other(cpu.human)]}.`,
-      `Result: ${G.result} by ${G.reason}.`,
-      `Moves: ${pgn.trim()}`,
-      `Give the player exactly one item: either one niche, specific tip tied to a concrete moment in this game, or a compliment on their single best move. Only talk about the player's own moves (the ${SIDE[cpu.human]} moves). Name the move with its number, like "${mv}". Use only moves that appear above. Keep it under 45 words, plain and warm.`,
-      `Reply with only JSON in this shape: {"${k}":{"kind":"tip","move":"${mv}","text":"..."}}`,
-    ].join('\n');
-  }
-  return [
-    'Give friendly end-of-game feedback on a casual chess game between two siblings who like long, patient games.',
-    `White (moves first): ${seatName('w')}. Black: ${seatName('b')}.`,
-    `Result: ${G.result} by ${G.reason}.`,
-    `Moves: ${pgn.trim()}`,
-    'For each player, give exactly one item: either one niche, specific tip tied to a concrete moment in this game, or a compliment on their single best move. Name the move with its number, like "14. Nd5" or "14... Qb6". Use only moves that appear above. Keep each under 45 words, plain and warm.',
-    'Reply with only JSON in this shape: {"white":{"kind":"tip","move":"14. Nd5","text":"..."},"black":{"kind":"compliment","move":"20... Rxe3","text":"..."}}',
-  ].join('\n');
-}
-function normalizeFeedback(out) {
-  const one = (x) => {
-    if (!x || typeof x !== 'object') return null;
-    const text = String(x.text || '').trim().slice(0, 420);
-    return text ? { kind: x.kind === 'tip' ? 'tip' : 'compliment', move: String(x.move || '').trim().slice(0, 18), text } : null;
-  };
-  const fb = { white: one(out && (out.white || out.silver)), black: one(out && (out.black || out.gold)) };
-  return fb.white || fb.black ? fb : null;
-}
-async function requestFeedback() {
-  if (!CAP.sample || fbBusy) return;
-  const gid = G.gid, key = G.key;
-  fbBusy = true; fbNote = ''; renderFeedback();
-  try {
-    const out = await CAP.sample.json(feedbackPrompt(), { modelTier: 'default' });
-    const fb = normalizeFeedback(out);
-    if (!fb) throw { code: 'invalid_json' };
-    if (G.mode === 'live' && gid && G.gid === gid) {
-      G.feedback = fb;
-      gameWrite((r) => r.update({ feedback: fb })).catch(() => {});
-      CAP.db.doc('archive/' + safeSeg(gid)).update({ feedback: fb }).catch(() => {});
-    } else if (G.mode !== 'live' && G.key === key) G.feedback = fb;
-  } catch (e) {
-    const code = e && e.code;
-    if (code === 'not_granted' || code === 'sampling_disabled' || code === 'not_declared') CAP.sample = null;
-    fbNote = FB_ERR[code] || "Couldn't reach Claude. Try again in a moment.";
-  } finally {
-    fbBusy = false;
-    if (!$('endCard').hidden) renderFeedback();
-  }
-}
+
 
 /* ------------------------------------------------------------------ menu, modes, panel */
 function closeMenu() { const m = $('menu'); if (!m.hidden) { m.hidden = true; $('btnMenu').setAttribute('aria-expanded', 'false'); } }
@@ -7098,7 +6503,7 @@ function openMenu() {
     const paused=window.ChessClock?.snapshot?.().clockState==='paused';
     add(paused?'▶ Resume game':'⏸ Pause game',()=>{closeMenu();void toggleChessPause();});
   }
-  if (playing && canOfferDraw()) add('Offer a draw', () => { closeMenu(); offerDraw(); });
+
   if (playing) add('Resign…', () => {
     m.replaceChildren();
     const p = el('p'); p.textContent = 'Resign this game?';
@@ -7115,8 +6520,7 @@ function openMenu() {
   if (G.status === 'over' && G.moves.length) add('Game review ▶', () => { closeMenu(); beginGameReview(); });
   add('Move history', () => { closeMenu(); if (focusMode) setFocus(false); if (compact) setSheet(true); openHistory(); });
   add('Flip board', () => { closeMenu(); flipBoard(); });
-  if (G.onlineProvider !== 'supabase' && G.mode === 'live' && mySeat && (G.moves.length === 0 || G.status === 'over')) add('Leave my seat', () => { closeMenu(); leaveSeat(); });
-  if (G.mode === 'live' && !mySeat && (!G.seats.w || !G.seats.b)) add('Take a seat…', () => { closeMenu(); seatDismissed = false; maybeShowSeatDialog(); });
+
   if (G.mode === 'live') add('Change my name…', openNameDialog);
   placeMenu();
   m.hidden = false;
@@ -7164,11 +6568,7 @@ $('btnChatClear').addEventListener('click', () => {
       }]]);
     return;
   }
-  if (!CAP.db) { toast('Open an online match to clear chat.'); return; }
-  dialog('Clear the chat?', ['This removes every message for everyone in this room. It can\'t be undone.'], [['Keep it', 'quiet', null], ['Clear chat', 'gold', async () => {
-    try { await Promise.all(chatDocs.map((d) => CAP.db.doc('chat/' + d.id).delete())); myBucket = null; chatDocs = []; renderChat(); toast('Chat cleared.'); }
-    catch { toast("Couldn't clear the chat. Only messages you can edit were removed."); }
-  }]]);
+  toast('Open an online match to clear chat.');
 });
 /* tap a name plate to change that side's colour */
 /* the colour wheel on the bottom bar: your pieces, and the other side when it's on this device */
@@ -7331,8 +6731,7 @@ $('chatInput').addEventListener('blur',()=>{
 });
 window.visualViewport?.addEventListener('resize',scheduleChatKeyboard);
 window.visualViewport?.addEventListener('scroll',scheduleChatKeyboard);
-$('chatInput').addEventListener('input', () => setTyping($('chatInput').value.trim().length > 0));
-$('chatInput').addEventListener('blur', () => setTyping(false));
+
 $('chatList').addEventListener('scroll', () => { const l = $('chatList'); if (l.scrollHeight - l.scrollTop - l.clientHeight < 40) markChatRead(); });
 document.addEventListener('keydown', (e) => {
   Sound.ensure();
@@ -7414,7 +6813,8 @@ const LocalStore = (() => {
   });
   return { doc, collection };
 })();
-const S = () => CAP.db || LocalStore;
+const S = () => LocalStore;
+
 const myId = () => me.id || LOCAL_PID;
 
 /* ---------------- state ---------------- */
@@ -7476,19 +6876,14 @@ async function initProgress() {
     onProgressChanged();
     for (const id of gone) S().doc('boards/' + id).delete().catch(() => {});
   }, () => {});
-  S().doc('challenge/current').onSnapshot((s) => {
-    const prev = PROG.challenge; PROG.challenge = s.exists ? s.data() : null; renderChallenge();
-    /* a challenge you sent was just accepted: join the online game, even from a game against the computer */
-    const c = PROG.challenge;
-    if (c && prev && prev.id === c.id && prev.status === 'open' && c.status === 'started' && c.from === myId() && G.mode !== 'live') { enterLive(); toast('Challenge accepted. Your game is on.', 2600); }
-  }, () => {});
+
   PROG.ready = true;
   onProgressChanged();
 }
 function onProgressChanged() {
   if (!PROG.ready || !PROG.P) return;
   presentTheme();
-  updateRewardsBadge();
+  updateBoardChip();
   if (!$('collection').hidden) renderCollection();
 }
 
@@ -7678,12 +7073,6 @@ function updateBoardChip() {
   if (BOARD[id]) { img.src = boardArt(id, 120, 76); $('chipName').textContent = BOARD[id].name; }
   $('chipRec').textContent = inst && (inst.wins || inst.losses || inst.draws) ? `${inst.wins || 0}W · ${inst.losses || 0}L · ${inst.draws || 0}D` : 'No games yet';
 }
-function updateRewardsBadge() {
-  updateBoardChip();
-  const b = $('rewardsBadge'); if (!b || !PROG.P) return;
-  b.hidden = !Object.keys(PROG.P.newMarks || {}).length;
-  b.textContent = '•';
-}
 
 /* ---------------- Settings (opened from the ⋯ menu): starting a game, gameplay, computer play, board effects ---------------- */
 const FX_PREF = { aurora: () => store.get('sg.aurora', 'balanced'), fortress: () => store.get('sg.fortressFx', 'full') };
@@ -7848,103 +7237,8 @@ function openSettings() {
 /* ---------------- challenges and rematches ---------------- */
 /* challenge/current: { id, kind: 'challenge'|'rematch', from, fromName, fromColor, board:{instanceId,themeId,ownerId},
    to, toName, status:'open'|'declined'|'cancelled'|'started', at } */
-const chal = { draft: null };
-const chalRef = () => S().doc('challenge/current');
-function otherSeatUid() { if (!mySeat) return null; return G.seats[other(mySeat)] || null; }
-function personLabel(uid) { return (G.people && G.people[uid]) || profileFirst(uid) || (uid === myId() ? 'You' : 'Your opponent'); }
-function openChallengeSheet(kind = 'challenge', ctx = {}) {
-  if (!CAP.db) { toast('Online challenges will be available in the multiplayer update.'); return; }
-  closeMenu(); hide($('setupDialog')); hide($('endCard'));
-  chal.draft = { kind, boardId: equippedInstance().instanceId, color: 'w', to: ctx.to || (kind === 'rematch' ? otherSeatUid() : null) };
-  renderChallengeSheet();
-  show($('challengeSheet'));
-}
-function renderChallengeSheet() {
-  const d = chal.draft, body = $('chalBody');
-  body.replaceChildren();
-  const h = el('h2'); h.textContent = d.kind === 'rematch' ? 'You choose the next game' : 'Challenge a friend';
-  const p = el('p'); p.textContent = d.kind === 'rematch' ? 'You won, so you pick the board and your colour. Your opponent accepts or declines.' : 'Pick one of your boards. As challenger you play White and move first.';
-  body.append(h, p);
-  if (d.kind === 'challenge') {
-    const people = challengeablePeople();
-    if (people.length) {
-      const wl0 = el('div', 'opt-label'); wl0.textContent = 'Who'; body.append(wl0);
-      const row0 = el('div', 'opt-group');
-      for (const [v, label] of [[null, 'Anyone here'], ...people]) { const o = el('button', 'opt'); o.type = 'button'; o.setAttribute('role', 'radio'); o.setAttribute('aria-checked', String(d.to === v)); o.textContent = label; o.addEventListener('click', () => { d.to = v; renderChallengeSheet(); }); row0.append(o); }
-      body.append(row0);
-    }
-  }
-  const lab = el('div', 'opt-label'); lab.textContent = 'Board'; body.append(lab);
-  const grid = el('div', 'pick-grid');
-  for (const b of myBoards().sort((x, y) => BOARD[x.themeId].sortOrder - BOARD[y.themeId].sortOrder)) {
-    if (!BOARD[b.themeId]) continue;
-    const t = el('button', 'pick' + (d.boardId === b.instanceId ? ' on' : '')); t.type = 'button';
-    const im = el('img'); im.alt = ''; im.src = boardArt(b.themeId, 200, 124);
-    const n = el('span'); n.textContent = BOARD[b.themeId].name;
-    t.append(im, n); t.addEventListener('click', () => { d.boardId = b.instanceId; renderChallengeSheet(); });
-    grid.append(t);
-  }
-  body.append(grid);
-  if (d.kind === 'rematch') {
-    const cl = el('div', 'opt-label'); cl.textContent = 'Your colour'; body.append(cl);
-    const row = el('div', 'opt-group');
-    for (const [v, label] of [['w', 'White — move first'], ['b', 'Black — move second']]) { const o = el('button', 'opt'); o.type = 'button'; o.setAttribute('role', 'radio'); o.setAttribute('aria-checked', String(d.color === v)); o.textContent = label; o.addEventListener('click', () => { d.color = v; renderChallengeSheet(); }); row.append(o); }
-    body.append(row);
-  }
-  const acts = el('div', 'end-actions');
-  const send = button(d.kind === 'rematch' ? 'Propose next game' : 'Send challenge', 'gold', sendChallenge);
-  send.disabled = !d.boardId;
-  acts.append(send, button('Cancel', 'quiet', () => hide($('challengeSheet'))));
-  body.append(acts);
-}
-async function sendChallenge() {
-  const d = chal.draft, inst = instanceOf(d.boardId);
-  if (!inst) return;
-  const c = { id: 'c' + Date.now().toString(36) + rid(4), kind: d.kind, from: myId(), fromName: PROG.P.name || cleanName(me.name) || 'Player', fromColor: d.kind === 'rematch' ? d.color : 'w', board: { instanceId: inst.instanceId, themeId: inst.themeId, ownerId: inst.ownerId }, to: d.to || null, toName: d.to ? watcherName(d.to) : '', status: 'open', at: Date.now() };
-  await chalRef().set(c).catch(() => toast("Couldn't send that. Try again."));
-  hide($('challengeSheet'));
-  toast(d.kind === 'rematch' ? 'Sent. Waiting for your opponent to accept.' : 'Challenge sent.');
-}
-function renderChallenge() {
-  const c = PROG.challenge, box = $('chalBanner');
-  box.replaceChildren(); box.hidden = true;
-  if (!c || !PROG.ready || c.status !== 'open') return;
-  const mine = c.from === myId();
-  const boardName = BOARD[c.board.themeId] ? BOARD[c.board.themeId].name : 'a board';
-  const youColor = c.fromColor === 'w' ? 'Black' : 'White';
-  const msg = el('span');
-  if (mine) { msg.textContent = `Waiting for ${c.to ? (c.toName || personLabel(c.to)) : 'someone'} to reply: ${boardName}.`; box.append(msg, button('Cancel', 'quiet small', cancelChallenge));
-  } else if (c.to && c.to !== myId()) {
-    /* a challenge between two other people: everyone else just sees it */
-    msg.textContent = `${c.fromName} challenged ${c.toName || personLabel(c.to)} on ${boardName}.`;
-    box.append(msg);
-  } else {
-    const target = c.kind === 'rematch' ? `${c.fromName} picked ${boardName} and plays ${c.fromColor === 'w' ? 'White' : 'Black'}. You play ${youColor}.` : `${c.fromName} challenges you on ${boardName}. You play ${youColor}.`;
-    msg.textContent = target;
-    box.append(msg, button('Accept', 'gold small', () => acceptChallenge(c)), button('Decline', 'quiet small', declineChallenge));
-  }
-  box.hidden = false;
-}
-async function cancelChallenge() { await chalRef().update({ status: 'cancelled' }).catch(() => {}); }
-async function declineChallenge() { await chalRef().update({ status: 'declined', declinedBy: myId() }).catch(() => {}); toast('Declined.'); }
-async function acceptChallenge(c) { await startFromChallenge(c); }
+
 /* starts the game a challenge describes; both players' clients may call this, it is idempotent per challenge id */
-async function startFromChallenge(c) {
-  const fresh = await chalRef().get().catch(() => null);
-  const cur = fresh && fresh.exists ? fresh.data() : null;
-  if (!cur || cur.id !== c.id || cur.status !== 'open') return;
-  const opp = c.from === myId() ? otherSeatUid() : myId();
-  if (!opp) { toast('Your opponent needs to accept first.'); return; }
-  const seats = c.fromColor === 'w' ? { w: c.from, b: opp } : { w: opp, b: c.from };
-  const nameOf = (u) => (u === myId() ? PROG.P.name || cleanName(me.name) : u === c.from ? c.fromName : personLabel(u));
-  const names = { w: nameOf(seats.w), b: nameOf(seats.b) };
-  await chalRef().update({ status: 'started', startedBy: myId() }).catch(() => {});
-  if (G.mode !== 'live') enterLive();
-  await archiveGame().catch(() => {});
-  const g = freshGame(seats, names, (G.n || 1) + 1, G.people);
-  Object.assign(g, { board: c.board, chooser: c.from });
-  await gameWrite((r) => r.set(g)).catch(() => toast("Couldn't start the game. Try again."));
-}
 
 /* ------------------------------------------------------------------ boot */
 let needsRender = true;
@@ -7964,8 +7258,8 @@ function frame(now) {
     if (firstFrame && piecesReady) { firstFrame = false; $('loading').classList.add('gone'); }
   }
 }
-let autoCpuDone = false;
-function autoStartCpu() { autoCpuDone = true; const sd = store.get('sg.side', 'w'); startComputerGame(['w', 'b', 'r'].includes(sd) ? sd : 'w', cpu.level); }
+function autoStartCpu() { const sd
+ = store.get('sg.side', 'w'); startComputerGame(['w', 'b', 'r'].includes(sd) ? sd : 'w', cpu.level); }
 function goLocal(reason) {
   Object.assign(G, { mode: 'local', localReason: reason, gid: null, status: 'active', moves: [], pos: positionFrom([]), turnAt: Date.now(), n: 1, seats: { w: 'local', b: 'local' }, names: { w: '', b: '' } });
   G.version++;
@@ -7988,28 +7282,7 @@ async function boot() {
   requestRender();
   updatePlates();
   renderChat();
-  const c = window.claude;
-  if (!c || typeof c.use !== 'function') { goLocal('Practice against the computer, or use Online games to invite someone to play online.'); initProgress(); autoStartCpu(); return; }
-  let caps = [null, null, null, null];
-  try { caps = await Promise.all(['db', 'user', 'room', 'sample'].map((n) => Promise.resolve(c.use(n)).catch(() => null))); } catch { /* fall back below */ }
-  [CAP.db, CAP.user, CAP.room, CAP.sample] = caps;
-  if (CAP.user) {
-    try { const v = await CAP.user.me(); me.id = v.id || null; me.name = v.name || ''; } catch { /* no identity */ }
-    try { me.canWrite = await CAP.user.can('data.write'); } catch { me.canWrite = null; }
-  }
-  if (!CAP.db) { goLocal('Online online games will be available after the multiplayer upgrade. You can practice against the computer now.'); initProgress(); autoStartCpu(); return; }
-  if (!me.id) me.id = LOCAL_PID;
-  G.mode = 'live';
-  initProgress();
-  subscribeGame();
-  subscribeChat();
-  subscribeArchive();
-  setupRoom();
-  renderChat();
-  updateAll();
-  setTimeout(() => { if (gameFirst) onGame(null); }, 9000);
-  /* if the live game is slow to arrive, don't keep you waiting: start the computer game anyway */
-  setTimeout(() => { if (!autoCpuDone && G.mode === 'live' && !mySeat) autoStartCpu(); }, 5000);
+  goLocal('Practice against the computer, or use Online games to invite someone to play online.'); initProgress(); autoStartCpu();
 }
 
 /* Supabase match bridge: reuse the original 3D/2D board and chess.js engine. */
@@ -8089,7 +7362,6 @@ window.familyChessNative = {
       }
       draw2D(true);
     }
-    hide($('seatDialog'));
     updateAll();
     if(game.clock_state==='penalty' && mySeat &&
        mySeat!==game.clock_penalty_side){

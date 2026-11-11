@@ -260,7 +260,6 @@
     else launch.focus();
   }
   window.familyChessOpenLobby = show;
-  const panel=()=>root.querySelector('.cgPanel');
   function toSection(id) {
     show();
     requestAnimationFrame(()=>{

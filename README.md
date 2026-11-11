@@ -7,7 +7,7 @@
 **Supabase project reference:** **xozummfupjmsmxooawdx**  
 **Documentation verified against the repository and live Supabase project:** November 10, 2026
 
-> This is the CURRENT setup guide. The older README-SETUP.md describes an early Phase 1 and is retained only as historical documentation. Chess now has multiplayer-related infrastructure, chat, challenges, server-validated moves, clocks, and push notifications.
+> This is the CURRENT setup guide. Chess now has multiplayer-related infrastructure, chat, challenges, server-validated moves, clocks, and push notifications.
 
 ## 1. Project overview
 
@@ -110,14 +110,13 @@ Other Chess database RPCs are referenced from the frontend and SQL, including fu
 | chess-clock.js | Local and online clock HUD and timing behaviors |
 | chess-review-analysis.js | Post-game/move review features |
 | chess-sw.js | Push service worker; opens game invitation when clicked |
-| manifest.webmanifest, manifest-svg-v4.webmanifest | Installable web app manifests |
+| manifest-svg-v4.webmanifest | Installable web app manifest |
 | icon-*, favicon*, apple-touch-icon* | Branding and PWA icons |
 | database/*.sql | Chess-specific SQL change scripts and policy/function updates |
 | supabase/functions/*/index.ts | Source for the three Chess Supabase Edge Functions |
 | tests/*.test.mjs | Node.js automated regression tests |
 | .github/workflows/chess-verify.yml | GitHub Actions verification |
 | vercel.json | Static Vercel routing/header configuration |
-| README-SETUP.md | Historical early-stage deployment notes |
 | README.md | This current guide |
 
 There is no Node dependency installation or frontend build required for this static site. The Supabase JavaScript client is loaded from a pinned external CDN in index.html, so browser connectivity to that CDN is needed.

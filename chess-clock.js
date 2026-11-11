@@ -228,7 +228,6 @@
     state[mover]=remaining(mover,now);
     if(state[mover]<=0) {tick();return;}
     if(state.mode==='move60') {
-      const bonusKey=nextTurn==='w'?'bonusW':'bonusB';
       state[nextTurn]=60000;
     }
     state.turn=nextTurn;

@@ -35,7 +35,7 @@
  const $=id=>document.getElementById(id);
  let user=null,presence=null,challengeChannel=null,poll=null,ticker=null;
  let profiles=[],activeGames=[],challenges=[],onlineIds=new Set(),openAlertId=null;
- let initializedFor=null,openedGameIds=new Set(),initialVisit=true,requesting=false,loading=false;
+ let openedGameIds=new Set(),requesting=false,loading=false;
  const validUid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(v);
  const nameFor=id=>profiles.find(p=>p.id===id)?.display_name||'Family player';
  const message=(msg)=>{$('cgChallengeStatus').textContent=msg;};
@@ -198,8 +198,6 @@
       message('Challenge accepted by '+nameFor(accepted.target_id)+'. Game started.');}
     catch(e){message('Challenge accepted, but board could not open: '+e.message);}
    }
-   // The existing spectator lobby handles first-visit Watch Live prompts.
-   if(offerLobby)initialVisit=false;
   }catch(e){message('Lobby unavailable: '+(e.message||'Try refreshing.'));}
   finally{loading=false;}
  }
@@ -233,7 +231,7 @@
   if(presence){void api.removeChannel(presence);presence=null;}
   if(challengeChannel){void api.removeChannel(challengeChannel);challengeChannel=null;}
   clearInterval(poll);clearInterval(ticker);
-  initializedFor=user.id;initialVisit=true;openedGameIds=new Set();
+  openedGameIds=new Set();
   startPresence();
   challengeChannel=api.channel('chess-challenge-events-'+user.id)
     .on('postgres_changes',{event:'*',schema:'public',table:'chess_challenges',filter:'target_id=eq.'+user.id},
