@@ -98,3 +98,42 @@ body.compact .bottom-bar .controls #btnNew .ctl-word, body.compact .bottom-bar .
   body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause,
   body.compact .bottom-bar .mine .icon-btn.round { width: 31px !important; min-width: 31px !important; }
 }
+
+/* ---- panel v2: one clean card under the board ---- */
+.tr-panel { gap: 10px; padding-top: 14px; background: linear-gradient(180deg, rgba(24,24,27,.97), rgba(12,12,14,.98)); border-top: 1px solid rgba(255,255,255,.07); border-radius: 22px 22px 0 0; }
+.tr-panel::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 56px; height: 2px; border-radius: 2px; background: var(--tr-red); opacity: .85; }
+.tr-head2 { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tr-turn { flex: none; width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.18); }
+.tr-turn.w { background: #f2f2f7; } .tr-turn.b { background: #111; box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
+.tr-h-title { flex: 1; min-width: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; line-height: 1.25; }
+.tr-h-tags { display: flex; gap: 6px; flex: none; }
+.tr-tag { padding: 4px 9px; border-radius: 999px; background: #2a2a2e; color: #d1d1d6; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tr-tag.hot { background: rgba(229,48,42,.18); color: #ff8a83; }
+.tr-panel .tr-say { position: relative; padding-left: 24px; font-size: 14.5px; line-height: 1.4; color: #c7c7cc; min-height: 1.4em; }
+.tr-panel .tr-say:empty { display: none; }
+.tr-panel .tr-say.good, .tr-panel .tr-say.bad, .tr-panel .tr-say.warn { padding: 8px 10px 8px 34px; border-radius: 12px; }
+.tr-panel .tr-say.good { background: rgba(48,209,88,.12); color: #7ee99a; }
+.tr-panel .tr-say.bad { background: rgba(229,48,42,.14); color: #ff8a83; }
+.tr-panel .tr-say.warn { background: rgba(255,214,10,.11); color: #ffe066; }
+.tr-panel .tr-say.good::before, .tr-panel .tr-say.bad::before, .tr-panel .tr-say.warn::before { position: absolute; left: 11px; top: 8px; font-weight: 800; }
+.tr-panel .tr-say.good::before { content: '✓'; } .tr-panel .tr-say.bad::before { content: '✕'; } .tr-panel .tr-say.warn::before { content: '!'; left: 14px; }
+.tr-panel .tr-say:not(.good):not(.bad):not(.warn) { padding-left: 24px; }
+.tr-panel .tr-say:not(.good):not(.bad):not(.warn)::before { content: ''; position: absolute; left: 6px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: #5a5a60; }
+.tr-actions { display: flex; gap: 8px; }
+.tr-actions .tr-btn { flex: 1 1 0; min-width: 0; min-height: 48px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 4px; border-radius: 14px; font-size: 12.5px; font-weight: 600; background: #232327; color: #e5e5ea; }
+.tr-actions .tr-btn .tr-ico { width: 18px; height: 18px; }
+.tr-actions .tr-btn.primary { background: var(--tr-red); color: #fff; flex-direction: row; gap: 7px; font-size: 15px; flex-grow: 1.6; }
+.tr-actions .tr-btn.hint { background: rgba(229,48,42,.16); color: #ff8a83; position: relative; }
+.tr-actions .tr-btn.hint.used { opacity: .55; }
+.tr-btn-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tr-pips { display: flex; gap: 3px; position: absolute; top: 7px; right: 9px; }
+.tr-pips i { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,138,131,.35); }
+.tr-pips i.on { background: #ff8a83; }
+.tr-panel .tr-result { font-size: 19px; }
+.tr-view { min-width: 40px; }
+.tr-right { gap: 6px; }
+
+/* hint: the piece to move hovers on the 2D board */
+#board2d .p2.tr-lift > * { animation: trBob .75s ease-in-out infinite alternate; transform-box: fill-box; filter: drop-shadow(0 .08px .06px rgba(229,48,42,.9)); }
+@keyframes trBob { from { transform: translateY(0); } to { transform: translateY(-14%); } }
+@media (prefers-reduced-motion: reduce) { #board2d .p2.tr-lift > * { animation: none; transform: translateY(-10%); } }

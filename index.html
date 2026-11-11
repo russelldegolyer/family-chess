@@ -21,8 +21,8 @@
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
 <script defer src="./chess-social.js?v=12"></script>
-<link rel="stylesheet" href="./chess-training.css?v=2">
-<script defer src="./chess-training.js?v=2"></script>
+<link rel="stylesheet" href="./chess-training.css?v=3">
+<script defer src="./chess-training.js?v=3"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -7198,7 +7198,7 @@ async function applyPawnTimeAction(kind,square){
    Training (chess-training.js) borrows the real board: same 3D/2D view, theme and colours. Entering saves the
    game in progress (practice clock paused, online match detached) and leaving restores it exactly. */
 const TRAIN = { side: 'w', opponent: 'Trainer', busy: false, marks: {}, saved: null, onMove: null,
-  after(uci, r) { updateMarkers(); const f = TRAIN.onMove; if (f) setTimeout(() => f(uci, { end: r.end, fen: G.pos.chess.fen() }), REDUCED ? 0 : Math.max(120, r.land || 0)); } };
+  after(uci, r) { trainLift(null); updateMarkers(); const f = TRAIN.onMove; if (f) setTimeout(() => f(uci, { end: r.end, fen: G.pos.chess.fen() }), REDUCED ? 0 : Math.max(120, r.land || 0)); } };
 function trainEnter() {
   if (G.mode === 'train') return true;
   cancelComputer(); if (pending) cancelPreview(false); clearSelection(); endPawnPick?.();
@@ -7209,18 +7209,20 @@ function trainEnter() {
   const online = G.onlineProvider === 'supabase' && G.gid ? { gid: G.gid, mode: window.familyChessCurrentMatchMode?.() || 'play' } : null;
   if (online) window.familyChessOnlineStop?.();
   const pregame = PG.on; if (pregame) closePregame();
-  TRAIN.saved = { G: { ...G }, cpu: { ...cpu }, mySeat, viewSide, flipped, pausedClock, online, startFen: START_FEN, pregame };
+  TRAIN.saved = { G: { ...G }, cpu: { ...cpu }, mySeat, viewSide, flipped, pausedClock, online, startFen: START_FEN, pregame, view: VIEW };
+  const tv = store.get('chess.trainView', '2d'); if (tv !== VIEW) applyView(tv, false);
   if (online) { G.onlineProvider = null; window.ChessClock?.reset?.(); }
   document.body.classList.add('training');
   return true;
 }
 function trainSetup({ fen, side, opponent = 'Trainer' }) {
   if (!TRAIN.saved) trainEnter();
-  START_FEN = fen; TRAIN.side = side; TRAIN.opponent = opponent; TRAIN.busy = false; TRAIN.marks = {};
+  START_FEN = fen; TRAIN.side = side; TRAIN.opponent = opponent; TRAIN.busy = false; TRAIN.marks = {}; trainLift(null);
   hide($('endCard'));
   Object.assign(G, { mode: 'train', gid: null, key: 't' + Date.now().toString(36), moves: [], pos: positionFrom([]), status: 'active', result: null, reason: null, drawOffer: null, turnAt: Date.now(), clockActions: [] });
   G.version++; mySeat = null;
   if (viewSide !== side) { viewSide = side; requestRender(); }
+  if (VIEW === '2d') draw2D();
   syncBoard(G.pos, { animate: true, quick: true }); fitCamera(true); updateAll();
 }
 function trainPlay(uci, { quick = false } = {}) {
@@ -7235,13 +7237,27 @@ function trainTakeBack(n = 1) {
   Object.assign(G, { status: 'active', result: null, reason: null }); G.version++;
   syncBoard(G.pos, { animate: true, quick: true }); updateAll();
 }
+/* hint: the piece to move hovers (3D lift + highlight; 2D bob) */
+let trainLifted = null;
+function trainLift(sq) {
+  if (trainLifted && trainLifted !== sq) {
+    const old = meshes.find((m) => m.sq === trainLifted && !m.dying); if (old && old.sq !== selected) liftPiece(old, false);
+    for (const it of b2.items || []) it.el.classList.remove('tr-lift');
+  }
+  trainLifted = sq;
+  if (!sq) return;
+  const p = meshes.find((m) => m.sq === sq && !m.dying); if (p) liftPiece(p, true);
+  const it = (b2.items || []).find((i) => i.sq === sq); if (it) it.el.classList.add('tr-lift');
+}
 function trainExit() {
   const sv = TRAIN.saved; if (!sv) return;
-  TRAIN.saved = null; TRAIN.onMove = null; TRAIN.marks = {}; START_FEN = sv.startFen || null;
+  TRAIN.saved = null; TRAIN.onMove = null; TRAIN.marks = {}; trainLift(null); START_FEN = sv.startFen || null;
+  if (sv.view && sv.view !== VIEW) applyView(sv.view, false);
   document.body.classList.remove('training');
   Object.assign(G, sv.G); Object.assign(cpu, sv.cpu); mySeat = sv.mySeat; flipped = sv.flipped;
   G.version++;
   if (viewSide !== sv.viewSide) { viewSide = sv.viewSide; requestRender(); }
+  if (VIEW === '2d') draw2D();
   syncBoard(G.pos, { animate: true, quick: true }); fitCamera(true); updateAll();
   if (sv.pausedClock && window.ChessClock?.snapshot?.().clockState === 'paused') { window.ChessClock.pauseLocal(); updateAll(); }
   if (sv.pregame) openPregame();
@@ -7254,7 +7270,8 @@ window.familyChessBoard = Object.freeze({
   fen: () => G.pos.chess.fen(), turn: () => G.pos.chess.turn(), moves: () => G.moves.slice(),
   chess: () => new Chess(G.pos.chess.fen()), active: () => G.mode === 'train',
   onMove(fn) { TRAIN.onMove = fn; }, userMove(uci) { if (G.mode === 'train' && canAct()) playMove(uci); }, busy(v) { TRAIN.busy = !!v; },
-  mark(m) { TRAIN.marks = m || {}; updateMarkers(); },
+  mark(m) { TRAIN.marks = m || {}; trainLift(TRAIN.marks.lift || null); updateMarkers(); },
+  view: () => VIEW, setView(v) { if (v !== VIEW) { applyView(v, false); if (G.mode === 'train') { if (VIEW === '2d') draw2D(); syncBoard(G.pos, { animate: false }); updateMarkers(); trainLift(TRAIN.marks.lift || null); } } },
   Chess, engineSource: () => $('engineSrc').textContent, toast: (m, t) => toast(m, t),
   playerName: () => cleanName(store.get('sg.name', '')) || 'You',
 });

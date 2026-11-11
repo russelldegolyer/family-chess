@@ -8,7 +8,18 @@
   const B = () => window.familyChessBoard;
   const api = () => window.chessSupabase || null;
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-  const btn = (label, cls, fn) => { const b = el('button', (/\btr-(x|back|card|item|link|chip)\b/.test(cls || '') ? '' : 'tr-btn ') + (cls || ''), label); b.type = 'button'; b.addEventListener('click', fn); return b; };
+  const ICON = {
+    hint: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z"/>',
+    eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/>',
+    skip: '<path d="M5 6l7 6-7 6zM13 6l7 6-7 6z"/>', retry: '<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/>',
+    next: '<path d="M5 12h13M13 6l6 6-6 6"/>', flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>', play: '<path d="M7 5l12 7-12 7z"/>',
+  };
+  const svgIcon = (k) => '<svg class="tr-ico" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICON[k] + '</svg>';
+  const btn = (label, cls, fn, icon) => {
+    const b = el('button', (/\btr-(x|back|card|item|link|chip)\b/.test(cls || '') ? '' : 'tr-btn ') + (cls || ''));
+    if (icon && ICON[icon]) b.innerHTML = svgIcon(icon);
+    b.append(el('span', 'tr-btn-label', label)); b.type = 'button'; b.addEventListener('click', fn); return b;
+  };
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const FILES = 'abcdefgh';
@@ -176,7 +187,11 @@
     back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training</span>';
     back.setAttribute('aria-label', 'Back to Training');
     const t = el('div', 'tr-title', title);
-    const r = el('div', 'tr-right'); if (right) r.append(right);
+    const r = el('div', 'tr-right');
+    const v = el('button', 'tr-chip tr-view', B().view() === '2d' ? '3D' : '2D'); v.type = 'button';
+    v.setAttribute('aria-label', 'Switch to ' + v.textContent + ' board');
+    v.addEventListener('click', () => { const nv = B().view() === '2d' ? '3d' : '2d'; B().setView(nv); try { localStorage.setItem('chess.trainView', JSON.stringify(nv)); } catch { } v.textContent = nv === '2d' ? '3D' : '2D'; v.setAttribute('aria-label', 'Switch to ' + v.textContent + ' board'); });
+    r.append(v); if (right) r.append(right);
     top.append(back, t, r); top.hidden = false;
   }
   const say = (node, text, tone) => { node.textContent = text; node.className = 'tr-say' + (tone ? ' ' + tone : ''); };
@@ -185,6 +200,7 @@
     if (!B()) return;
     root.hidden = false; document.body.classList.add('training-open');
     $btn()?.classList.add('active');
+    B().enter();
     void loadProfile().then(() => { if (screen === 'hub') renderHub(); });
     openHub();
   }
@@ -193,7 +209,7 @@
     hub.hidden = true; top.hidden = true; panel.hidden = true; root.hidden = true;
     document.body.classList.remove('training-open');
     $btn()?.classList.remove('active');
-    if (B()?.active()) B().exit();
+    B()?.exit();
   }
   const $btn = () => document.getElementById('btnTrain');
 
@@ -339,20 +355,23 @@
     B().play(p.moves[0]); /* the opponent's last move, then the player's turn */
     await sleep(350); if (my !== session) return;
     B().busy(false);
-    say(PZ.msgNode, (side === 'w' ? 'White' : 'Black') + ' to move. Find the best move.');
+    say(PZ.msgNode, 'Find the best move.');
     B().onMove((uci) => void onPuzzleMove(uci, my));
   }
   function renderPuzzlePanel(level) {
     panel.replaceChildren();
-    const meta = el('div', 'tr-meta');
-    meta.append(el('span', 'tr-pill', level + ' · ' + PZ.p.rating), el('span', 'tr-pill', 'Streak ' + P.puzzle.streak));
-    if (PZ.p.src === 'dev') meta.append(el('span', 'tr-pill dim', 'Dev set'));
-    const msg = el('div', 'tr-say', '…'); PZ.msgNode = msg;
-    const row = el('div', 'tr-row');
-    PZ.hintBtn = btn('Hint', '', () => hint()); PZ.hintBtn.setAttribute('aria-label', 'Hint (level 1 of 3)');
-    row.append(PZ.hintBtn, btn('Solution', 'quiet', () => void showSolution()), btn('Skip', 'quiet', () => void startPuzzle()));
+    const head = el('div', 'tr-head2');
+    head.append(el('span', 'tr-turn ' + PZ.side), el('b', 'tr-h-title', (PZ.side === 'w' ? 'White' : 'Black') + ' to move'));
+    const tags = el('span', 'tr-h-tags'); tags.append(el('span', 'tr-tag', level + ' ' + PZ.p.rating));
+    if (P.puzzle.streak) tags.append(el('span', 'tr-tag hot', '🔥 ' + P.puzzle.streak));
+    head.append(tags);
+    const msg = el('div', 'tr-say', 'Find the best move.'); PZ.msgNode = msg;
+    const row = el('div', 'tr-actions');
+    PZ.hintBtn = btn('Hint', 'hint', () => hint(), 'hint'); PZ.hintBtn.setAttribute('aria-label', 'Hint (level 1 of 3)');
+    const pips = el('span', 'tr-pips'); for (let k = 0; k < 3; k++) pips.append(el('i')); PZ.hintBtn.append(pips);
+    row.append(PZ.hintBtn, btn('Solution', 'quiet', () => void showSolution(), 'eye'), btn('Skip', 'quiet', () => void startPuzzle(), 'skip'));
     PZ.rowNode = row;
-    panel.append(meta, msg, row);
+    panel.append(head, msg, row);
   }
   function themesList(t) { return t.split(' ').filter((x) => IDEA[x]); }
   function hint() {
@@ -360,9 +379,10 @@
     const want = PZ.p.moves[PZ.i]; if (!want) return;
     PZ.hints = Math.min(3, PZ.hints + 1); P.puzzle.hints++; save();
     if (PZ.hints === 1) { const th = themesList(PZ.p.themes); say(PZ.msgNode, 'Idea: ' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]] || 'Look for checks, captures and threats.')); }
-    else if (PZ.hints === 2) { B().mark({ sel: want.slice(0, 2) }); say(PZ.msgNode, 'Use the highlighted piece.'); }
-    else { B().mark({ arrows: [[want.slice(0, 2), want.slice(2, 4)]] }); say(PZ.msgNode, 'Play the arrow move.'); }
-    PZ.hintBtn.textContent = PZ.hints >= 3 ? 'Hint 3/3' : 'Hint ' + (PZ.hints + 1) + '/3';
+    else if (PZ.hints === 2) { B().mark({ sel: want.slice(0, 2), lift: want.slice(0, 2) }); say(PZ.msgNode, 'Move the raised piece.'); }
+    else { B().mark({ arrows: [[want.slice(0, 2), want.slice(2, 4)]], lift: want.slice(0, 2) }); say(PZ.msgNode, 'Play the arrow move.'); }
+    PZ.hintBtn.querySelectorAll('.tr-pips i').forEach((p, k) => p.classList.toggle('on', k < PZ.hints));
+    if (PZ.hints >= 3) PZ.hintBtn.classList.add('used');
   }
   async function onPuzzleMove(uci, my) {
     if (!PZ || PZ.done || my !== session) return;
@@ -422,7 +442,7 @@
     const meta = el('div', 'tr-meta');
     meta.append(el('span', 'tr-pill', 'Puzzle ' + PZ.p.rating), el('span', 'tr-pill', rated ? (delta >= 0 ? '+' : '') + delta + ' → ' + Math.round(P.puzzle.rating) : 'Unrated'), el('span', 'tr-pill', 'Streak ' + P.puzzle.streak));
     const ex = el('div', 'tr-say', th.length ? th.slice(0, 2).map((x) => NAME[x] || x).join(' · ') + ' — ' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]]) : '');
-    const row = el('div', 'tr-row'); row.append(btn('Next puzzle', 'primary', () => void startPuzzle()), btn('Retry', 'quiet', () => void startPuzzle(true)));
+    const row = el('div', 'tr-actions'); row.append(btn('Next puzzle', 'primary', () => void startPuzzle(), 'next'), btn('Retry', 'quiet', () => void startPuzzle(true), 'retry'));
     panel.append(head, meta, ex, row); puzzleTop();
   }
   function fail() {
@@ -430,7 +450,7 @@
     const { delta, rated } = first ? record(false) : { delta: 0, rated: false };
     say(PZ.msgNode, first && rated ? 'Not the move. ' + delta + ' rating. Try again or see the solution.' : 'Not the move. Try again.', 'bad');
     puzzleTop();
-    if (!PZ.rowNode.querySelector('.retry')) { const r = btn('Retry from start', 'quiet retry', () => void startPuzzle(true)); PZ.rowNode.prepend(r); }
+    if (!PZ.rowNode.querySelector('.retry')) { const r = btn('Retry', 'quiet retry', () => void startPuzzle(true), 'retry'); PZ.rowNode.prepend(r); }
   }
   async function showSolution() {
     if (!PZ || PZ.done) return;
@@ -446,7 +466,7 @@
     panel.replaceChildren();
     const th = themesList(PZ.p.themes);
     panel.append(el('div', 'tr-result bad', 'Puzzle failed'), el('div', 'tr-say', th.length ? (NAME[th[0]] || th[0]) + ' — ' + IDEA[th[0]] : ''));
-    const row = el('div', 'tr-row'); row.append(btn('Next puzzle', 'primary', () => void startPuzzle()), btn('Retry', 'quiet', () => void startPuzzle(true))); panel.append(row);
+    const row = el('div', 'tr-actions'); row.append(btn('Next puzzle', 'primary', () => void startPuzzle(), 'next'), btn('Retry', 'quiet', () => void startPuzzle(true), 'retry')); panel.append(row);
     puzzleTop();
   }
 
@@ -617,10 +637,11 @@
     const s = el('span', 'tr-chip dim', (LS.stage + 1) + '/5 ' + STAGES[LS.stage]);
     setTop(LS.l.title, s);
   }
-  function lessonPanel(text, buttons = []) {
+  function lessonPanel(title, buttons = [], sub = '') {
     panel.hidden = false; panel.replaceChildren();
-    const msg = el('div', 'tr-say', text); const row = el('div', 'tr-row'); buttons.forEach((b) => row.append(b));
-    panel.append(msg, row); return msg;
+    const head = el('div', 'tr-head2'); head.append(el('span', 'tr-turn w'), el('b', 'tr-h-title', title));
+    const msg = el('div', 'tr-say', sub); const row = el('div', 'tr-actions'); buttons.forEach((b) => row.append(b));
+    panel.append(head, msg, row); return msg;
   }
   function nextStage() {
     const st = P.lessons[LS.l.id] || (P.lessons[LS.l.id] = {});
@@ -633,7 +654,7 @@
       const f = l.demo.fen || (l.guided[0] && l.guided[0].fen);
       B().setup({ fen: f, side: 'w', opponent: 'Defender' }); B().busy(true);
       tintBox();
-      lessonPanel(l.intro.join('\n\n'), [btn('Show me', 'primary', nextStage), btn('Skip to mastery', 'quiet', () => { LS.stage = 3; nextStage(); })]);
+      lessonPanel('The idea', [btn('Show me', 'primary', nextStage, 'play'), btn('Skip ahead', 'quiet', () => { LS.stage = 3; nextStage(); }, 'skip')], l.intro.join('\n\n'));
       return;
     }
     if (LS.stage === 1) return void runDemo(my);
@@ -654,7 +675,7 @@
   async function runDemo(my) {
     const d = LS.l.demo;
     B().setup({ fen: d.fen, side: 'w', opponent: 'Defender' }); B().busy(true);
-    const msg = lessonPanel(d.say || '', [btn('Next stage', 'primary', nextStage), btn('Replay', 'quiet', () => runStage())]);
+    const msg = lessonPanel('Watch', [btn('Your turn', 'primary', nextStage, 'next'), btn('Replay', 'quiet', () => runStage(), 'retry')], d.say || '');
     await sleep(700); if (my !== session) return;
     if (d.steps) {
       for (const s of d.steps) {
@@ -696,10 +717,10 @@
     }
     tintBox();
     let need = g.count || 1;
-    const msg = lessonPanel(g.task, [btn('Hint', '', async () => {
+    const msg = lessonPanel(g.task, [btn('Hint', 'hint', async () => {
       const u = g.type === 'mate1' ? uciOf(mateMoves(B().chess())[0]) : await suggest(B().fen(), 'teacher');
-      if (u) B().mark({ tint: box(B().fen(), 'b').squares, arrows: [[u.slice(0, 2), u.slice(2, 4)]] });
-    }), btn('Skip', 'quiet', done)]);
+      if (u) B().mark({ tint: box(B().fen(), 'b').squares, arrows: [[u.slice(0, 2), u.slice(2, 4)]], lift: u.slice(0, 2) });
+    }, 'hint'), btn('Skip', 'quiet', done, 'skip')]);
     B().onMove(async (uci) => {
       if (my !== session) return;
       B().busy(true);
@@ -734,14 +755,14 @@
     const stats = { moves: 0, mistakes: [], missed: 0, stalemates: 0, hints: 0, inefficient: 0, log: [] };
     let msg; let done = false;
     const buttons = [];
-    if (mode !== 'challenge') buttons.push(btn('Hint', '', async () => {
+    if (mode !== 'challenge') buttons.push(btn('Hint', 'hint', async () => {
       if (done || B().turn() !== side) return;
       stats.hints++; const u = await suggest(B().fen(), kind === 'teacher' ? 'teacher' : 'engine');
-      if (u && my === session) { B().mark({ tint: goal === 'hold' ? [] : box(B().fen(), other(side)).squares, arrows: [[u.slice(0, 2), u.slice(2, 4)]] }); say(msg, 'Suggested: ' + sanOf(B().fen(), u)); }
-    }));
-    buttons.push(btn('Restart', 'quiet', () => void playEnding({ fen, goal, kind, task, limit, mode, side, onDone })));
-    buttons.push(btn('Give up', 'quiet', () => finish(false, 'You stopped this attempt.')));
-    msg = lessonPanel(task + (mode === 'challenge' ? ' No hints — review afterwards.' : ''), buttons);
+      if (u && my === session) { B().mark({ tint: goal === 'hold' ? [] : box(B().fen(), other(side)).squares, arrows: [[u.slice(0, 2), u.slice(2, 4)]], lift: u.slice(0, 2) }); say(msg, 'Try ' + sanOf(B().fen(), u) + ' — the raised piece.'); }
+    }, 'hint'));
+    buttons.push(btn('Restart', 'quiet', () => void playEnding({ fen, goal, kind, task, limit, mode, side, onDone }), 'retry'));
+    buttons.push(btn('Give up', 'quiet', () => finish(false, 'You stopped this attempt.'), 'flag'));
+    msg = lessonPanel(task, buttons, mode === 'challenge' ? 'No hints — full review afterwards.' : 'Your move.');
     const guided = mode === 'guided';
     const showBox = () => { if (mode !== 'challenge' && goal !== 'hold' && goal !== 'promote') B().mark({ tint: box(B().fen(), other(side)).squares }); else B().mark({}); };
     const finish = (win, why) => {
@@ -845,7 +866,7 @@
         res.stats.log.forEach((m, i) => { const tag = { mate: 'mate', good: '✓', ok: '·', inefficient: 'slow', lost: '✗ lost win', stalemate: '✗ stalemate', draw: '✗ draw' }[m.kind] || m.kind; rev.append(el('span', 'tr-rev ' + m.kind, (i + 1) + '. ' + m.uci + ' ' + tag)); });
         panel.append(rev);
       }
-      const row = el('div', 'tr-row'); row.append(btn('New position', 'primary', () => startChallenge(ch)), btn('All challenges', 'quiet', openChallenges)); panel.append(row);
+      const row = el('div', 'tr-actions'); row.append(btn('New position', 'primary', () => startChallenge(ch), 'next'), btn('All challenges', 'quiet', openChallenges)); panel.append(row);
     } });
   }
 
