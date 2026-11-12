@@ -21,10 +21,10 @@
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
 <script defer src="./chess-social.js?v=12"></script>
-<link rel="stylesheet" href="./chess-training.css?v=10">
+<link rel="stylesheet" href="./chess-training.css?v=11">
 <link rel="stylesheet" href="./chess-stats.css?v=1">
 <script defer src="./chess-stats.js?v=1"></script>
-<script defer src="./chess-training.js?v=11"></script>
+<script defer src="./chess-training.js?v=12"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -336,6 +336,11 @@ body:not(.compact) .plate-top { left: var(--gl); right: auto; margin: 0; }
 body.compact #btnResign span { display: none; }
 .chat-clear { margin-left: auto; }
 /* Red X is a deliberate, confirmed game resignation, not a close-chat control. */
+#btnSave[hidden], #btnChatSave[hidden] { display: none !important; }
+#btnSave, #btnChatSave { color: #9fd3ff; }
+body.compact .bottom-bar .controls #btnSave { width: 31px !important; min-width: 31px !important; padding: 0 !important; }
+.panel-head #btnChatSave { width: 30px; min-width: 30px; height: 32px; }
+.panel-head #btnChatSave svg { width: 16px; height: 16px; }
 #btnChatResign[hidden]{display:none!important}
 #btnChatResign{
   flex:none;display:grid;place-items:center;
@@ -1146,6 +1151,8 @@ body.compact:not(.landscape) .bottom-bar { justify-content: space-evenly !import
 body.compact:not(.landscape) .bottom-bar .controls, body.compact:not(.landscape) .bottom-bar .mine { display: contents !important; }
 body.compact:not(.landscape) .bottom-bar .controls > * { order: 1; }
 body.compact:not(.landscape) .bottom-bar .mine > * { order: 2; }
+@media (max-width: 385px) { body.compact:not(.landscape) .bottom-bar .controls #btnSave, body.compact:not(.landscape) .bottom-bar .controls #btnResign, body.compact:not(.landscape) .bottom-bar .controls #btnPause, body.compact:not(.landscape) .bottom-bar .controls .ctl.icon-only { width: 27px !important; min-width: 27px !important; } body.compact:not(.landscape) .bottom-bar .controls .ctl:has(.ctl-word) { padding-left: 3px !important; padding-right: 3px !important; } }
+@media (max-width: 400px) { body.compact .panel-head .chat-tools .chat-tool:not(.chat-word), body.compact .panel-head #btnChatResign, body.compact .panel-head #btnChatPause, body.compact .panel-head #btnChatSave { width: 27px !important; min-width: 27px !important; padding: 0 !important; } body.compact .panel-head .chat-tools .chat-tool.chat-word { padding: 0 5px !important; font-size: 14.5px !important; } body.compact .panel-head .chat-tools { gap: 0 !important; } body.compact .panel-head .chat-title { font-size: 16px !important; } }
 </style>
 
 </head>
@@ -1196,6 +1203,7 @@ body.compact:not(.landscape) .bottom-bar .mine > * { order: 2; }
       <button class="ctl" id="btnNew" type="button" aria-label="New game"><span class="ctl-word">New</span></button>
       <button class="ctl" id="btnUndo" type="button" aria-label="Undo" aria-keyshortcuts="Control+Z Meta+Z" disabled><span class="ctl-word">Undo</span></button>
       <button class="ctl" id="btnResign" type="button" aria-label="Resign" title="Resign" hidden><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Resign</span></button>
+      <button class="ctl save-btn" id="btnSave" type="button" aria-label="Save game" title="Save game" hidden><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></button>
       <button class="ctl game-pause" id="btnPause" type="button" aria-label="Pause game" title="Pause game" hidden><svg class="pause-symbol" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><g class="pause-bars"><rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/></g><path class="resume-triangle" d="M8 5.1a1 1 0 0 1 1.55-.85l10 6.9a1.05 1.05 0 0 1 0 1.7l-10 6.9A1 1 0 0 1 8 18.9Z" fill="currentColor"/></svg><span class="pause-label">Pause</span></button>
       <button class="ctl icon-only" id="btnView" type="button" aria-label="Reset camera" title="Reset camera"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
@@ -1239,6 +1247,7 @@ body.compact:not(.landscape) .bottom-bar .mine > * { order: 2; }
             stroke-width="2.7" stroke-linecap="round"/>
         </svg>
       </button>
+      <button class="chat-tool chat-save" id="btnChatSave" type="button" aria-label="Save game" title="Save game" hidden><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></button>
       <button class="chat-tool chat-pause game-pause" id="btnChatPause" type="button" aria-label="Pause game" title="Pause game" hidden><svg class="pause-symbol" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><g class="pause-bars"><rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/></g><path class="resume-triangle" d="M8 5.1a1 1 0 0 1 1.55-.85l10 6.9a1.05 1.05 0 0 1 0 1.7l-10 6.9A1 1 0 0 1 8 18.9Z" fill="currentColor"/></svg><span class="pause-label">Pause</span></button>
       <button class="chat-tool" id="btnChatCam" type="button" aria-label="Reset view" title="Reset view"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button class="chat-tool" id="btnChatMore" type="button" aria-label="Settings" title="Settings"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg></button>
@@ -5168,6 +5177,42 @@ function newGame() {
     [online ? 'You can come back to it from Play online.' : 'This game will end and you’ll go back to the start screen.'],
     [['Keep playing', 'quiet', null], [online ? 'Leave match' : 'New game', 'gold', goHome]]);
 }
+
+/* ------------------------------------------------------------------ saved games
+   Save keeps a snapshot of the moves on this device (practice data never goes to Supabase).
+   A saved computer game resumes against the computer at the same level and side; anything
+   else resumes as a two-player game on this screen. Listed under Training → Saved games. */
+const SAVED_KEY = 'sg.saved';
+const savedList = () => { const v = store.get(SAVED_KEY, []); return Array.isArray(v) ? v : []; };
+function saveCurrentGame() {
+  if (G.status !== 'active' || !G.moves.length || G.mode === 'train') return;
+  const online = G.onlineProvider === 'supabase';
+  const opp = G.mode === 'cpu' ? 'Computer' : online ? (cleanName(G.names?.[other(mySeat || 'w')] || '') || 'Family match') : 'Two players';
+  const entry = { id: 's' + Date.now().toString(36) + rid(3), at: Date.now(), mode: G.mode === 'cpu' ? 'cpu' : 'local', online,
+    level: cpu.level, human: G.mode === 'cpu' ? cpu.human : (mySeat || localView), opp, moves: G.moves.slice(), fen: G.pos.chess.fen() };
+  const list = savedList().filter((g) => !(g.moves.join() === entry.moves.join() && g.mode === entry.mode));
+  list.unshift(entry); store.set(SAVED_KEY, list.slice(0, 40));
+  toast('Game saved. Find it in Challenges → Saved games.', 3200);
+}
+function loadSavedGame(id) {
+  const g = savedList().find((x) => x.id === id); if (!g) return false;
+  if (PG.on) closePregame(null);
+  endPracticeGame();
+  if (g.mode === 'cpu') { cpu.level = g.level || cpu.level; cpu.human = g.human === 'b' ? 'b' : 'w'; }
+  else { localView = g.human === 'b' ? 'b' : 'w'; }
+  resetLocalGame(g.mode, 1);
+  G.moves = g.moves.slice(); G.pos = positionFrom(G.moves); G.version++;
+  const end = endInfo(G.pos.chess, G.pos.last);
+  if (end) Object.assign(G, { status: 'over', result: end.result, reason: end.reason });
+  syncBoard(G.pos, { animate: false }); updateAll();
+  toast('Saved game loaded. ' + SIDE[G.pos.chess.turn()] + ' to move.', 2600);
+  if (G.mode === 'cpu' && G.status === 'active' && G.pos.chess.turn() !== cpu.human) setTimeout(requestComputer, 500);
+  return true;
+}
+function deleteSavedGame(id) { store.set(SAVED_KEY, savedList().filter((g) => g.id !== id)); }
+window.familyChessSaved = Object.freeze({ list: savedList, load: loadSavedGame, remove: deleteSavedGame });
+$('btnSave').addEventListener('click', saveCurrentGame);
+$('btnChatSave').addEventListener('click', saveCurrentGame);
 $('btnNew').addEventListener('click', newGame);
 $('btnChatNew').addEventListener('click', newGame);
 $('btnChatUndo').addEventListener('click', undo);
@@ -5365,6 +5410,8 @@ function updateResignBtn() {
     (G.mode === 'local' || G.mode === 'cpu' || (mySeat && bothSeated()));
   $('btnResign').hidden = !playing;
   $('btnChatResign').hidden = !playing;
+  const canSave = G.status === 'active' && G.moves.length > 0 && G.mode !== 'train';
+  $('btnSave').hidden = !canSave; $('btnChatSave').hidden = !canSave;
 }
 $('exitFocus').addEventListener('click', () => setFocus(false));
 function setSheet(open) {

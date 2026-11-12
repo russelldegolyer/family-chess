@@ -271,3 +271,19 @@ body.training-open .bottom-bar, body.training-open #chatFab, body.training-open 
 .tr-lg.arrow i::after { content: ""; position: absolute; right: -5px; top: -4px; border: 6px solid transparent; border-left: 7px solid #ff9f0a; border-right: 0; }
 .tr-lg.lift i { background: rgba(255,214,10,.4); box-shadow: inset 0 0 0 2px #ffd60a; }
 body.training.view-2d #stage { opacity: 0 !important; }
+/* saved games */
+.tr-saved { display: flex; flex-direction: column; border-radius: 18px; background: #151517; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); overflow: hidden; }
+.tr-saved-row { position: relative; display: flex; align-items: center; }
+.tr-saved-row + .tr-saved-row::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: 1px; background: rgba(255,255,255,.07); }
+.tr-saved-go { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 10px 6px 10px 16px; border: 0; background: none; color: var(--tr-fg); font: inherit; text-align: left; cursor: pointer; }
+.tr-saved-go:active { background: rgba(255,255,255,.05); }
+.tr-saved-go .tr-card-text b { font-size: 16px; font-weight: 600; }
+.tr-saved-go .tr-card-text span { font-size: 12.5px; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-saved-side { flex: none; width: 32px; height: 32px; border-radius: 50%; }
+.tr-saved-side.w { background: radial-gradient(circle at 35% 30%, #fff, #c9c9ce); }
+.tr-saved-side.b { background: radial-gradient(circle at 35% 30%, #555, #0b0b0c); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.25); }
+.tr-saved-del { flex: none; height: 34px; min-width: 34px; margin-right: 12px; padding: 0 8px; border: 0; border-radius: 10px; display: grid; place-items: center; background: rgba(120,120,128,.16); color: #a1a1a6; font: 600 13px/1 inherit; cursor: pointer; }
+.tr-saved-del.arm { background: #ff3b30; color: #fff; }
+.tr-saved-empty { padding: 28px 22px; border-radius: 18px; background: #151517; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); text-align: center; }
+.tr-saved-empty b { display: block; font-size: 17px; margin-bottom: 6px; }
+.tr-saved-empty p { margin: 0; color: #a1a1a6; font-size: 14px; line-height: 1.45; }

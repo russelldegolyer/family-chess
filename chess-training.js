@@ -297,6 +297,8 @@
     card('Unlimited Puzzles', 'Tactics by rating, with hints', '♞', pz.solved ? pz.solved + ' solved' : '', () => openPuzzles());
     card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
     card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
+    const nSaved = window.familyChessSaved?.list().length || 0;
+    card('Saved games', 'Pick up a game where you left it', '★', nSaved ? String(nSaved) : '', () => openSaved());
     hub.append(head, hero, mini, el('div', 'tr-section', 'Practice'), cards);
     const info = el('div', 'tr-cards tr-about-row');
     const ab = btn('', 'tr-card', () => openAbout());
@@ -304,6 +306,35 @@
     info.append(ab); hub.append(info);
     const back = btn('Back to the game', 'tr-link', close); hub.append(back);
   }
+  function openSaved() {
+    hub.replaceChildren();
+    const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
+    back.innerHTML = '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Training';
+    head.append(back, el('h2', '', 'Saved games'));
+    hub.append(head);
+    const S = window.familyChessSaved, list = S ? S.list() : [];
+    if (!list.length) {
+      const e = el('div', 'tr-saved-empty');
+      e.append(el('b', '', 'No saved games yet'), el('p', '', 'During a game, tap the bookmark button next to resign. The game is saved here so you can finish it later.'));
+      hub.append(e); return;
+    }
+    const box = el('div', 'tr-saved');
+    for (const g of list) {
+      const row = el('div', 'tr-saved-row');
+      const go = btn('', 'tr-saved-go', () => { close(); setTimeout(() => S.load(g.id), 60); });
+      const ply = g.moves.length, turn = (g.fen || '').split(' ')[1] === 'b' ? 'Black' : 'White';
+      const who = g.mode === 'cpu' ? 'vs Computer · Level ' + g.level : g.online ? 'vs ' + g.opp : 'Two players';
+      const d = new Date(g.at), when = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      const side = el('span', 'tr-saved-side ' + (g.human === 'b' ? 'b' : 'w'));
+      const txt = el('span', 'tr-card-text'); txt.append(el('b', '', who), el('span', '', 'Move ' + (Math.floor(ply / 2) + 1) + ' · ' + turn + ' to move · ' + when));
+      go.append(side, txt, el('span', 'tr-chev', '›'));
+      const del = btn('', 'tr-saved-del', () => { if (del.classList.contains('arm')) { S.remove(g.id); openSaved(); } else { del.classList.add('arm'); del.textContent = 'Delete'; setTimeout(() => { if (del.isConnected) { del.classList.remove('arm'); del.innerHTML = TRASH; } }, 2500); } });
+      del.innerHTML = TRASH; del.setAttribute('aria-label', 'Delete saved game');
+      row.append(go, del); box.append(row);
+    }
+    hub.append(box, el('p', 'tr-about-foot', 'Saved on this device. Computer games resume at the same level and side.'));
+  }
+  const TRASH = '<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function openAbout() {
     hub.replaceChildren();
     const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
