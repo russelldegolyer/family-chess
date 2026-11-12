@@ -1175,6 +1175,7 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
       </button>
       <button class="chat-tool chat-pause game-pause" id="btnChatPause" type="button" aria-label="Pause game" title="Pause game" hidden><svg class="pause-symbol" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><g class="pause-bars"><rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/></g><path class="resume-triangle" d="M8 5.1a1 1 0 0 1 1.55-.85l10 6.9a1.05 1.05 0 0 1 0 1.7l-10 6.9A1 1 0 0 1 8 18.9Z" fill="currentColor"/></svg><span class="pause-label">Pause</span></button>
       <button class="chat-tool" id="btnChatCam" type="button" aria-label="Reset view" title="Reset view"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="chat-tool" id="btnChatMore" type="button" aria-label="Settings" title="Settings"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg></button>
       </span>
       <button class="chat-tool chat-clear" id="btnChatClear" type="button" aria-label="Clear chat" title="Clear chat"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
       <button class="icon-btn chat-close" id="btnChatClose" type="button" aria-label="Close chat" title="Close chat"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
@@ -5096,6 +5097,7 @@ $('btnChatCam').addEventListener('click', resetView);
 $('btnPause').addEventListener('click',()=>void toggleChessPause());
 $('btnChatPause').addEventListener('click',()=>void toggleChessPause());
 $('btnUndo').addEventListener('click', undo);
+$('btnChatMore').addEventListener('click', () => openSettings());
 $('btnView').addEventListener('click', resetView);
 $('btnCollection').addEventListener('click', () => openCollection(null, VIEW === '2d'));
 $('btnSettings').addEventListener('click', () => openQuickColors());
