@@ -373,3 +373,17 @@ body.training.view-2d #stage { opacity: 0 !important; }
   .tr-sg-page .tr-sg-foot { margin-top: 8px; }
   .tr-sg-page .tr-sg-keep { padding: 7px 12px; }
 }
+/* saved list polish */
+.tr-saved .tr-saved-go { gap: 13px; min-height: 76px; padding: 11px 14px 11px 12px; }
+.tr-saved .tr-saved-thumb { width: 54px; height: 54px; border-radius: 10px; }
+.tr-saved-row + .tr-saved-row::before { left: 79px; }
+.tr-saved .tr-card-text { gap: 4px; }
+.tr-saved .tr-card-text > b { display: flex; align-items: center; gap: 7px; font-size: 16.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-saved-tag { flex: none; padding: 3px 7px; border-radius: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.tr-saved-tag.online { background: rgba(10,132,255,.18); color: #64b5ff; }
+.tr-saved-tag.computer { background: rgba(229,48,42,.16); color: #ff8a83; }
+.tr-saved-tag.local { background: rgba(48,209,88,.15); color: #5fe08a; }
+.tr-saved-meta { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #a1a1a6; }
+.tr-saved-meta .tr-saved-when { font-size: 12px; color: #6e6e73; }
+.tr-saved-go .tr-card-text span.tr-saved-meta { white-space: normal; }
+.tr-sheet .tr-about-foot { white-space: nowrap; font-size: 12.5px; }

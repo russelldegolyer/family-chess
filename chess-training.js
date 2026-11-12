@@ -373,12 +373,14 @@
       const go = btn('', 'tr-saved-go', () => openSavedGame(g));
       const txt = el('span', 'tr-card-text');
       const title = el('b', '', savedTitle(g)); if (g.keep) title.append(el('em', 'tr-keep-star', '★'));
-      txt.append(title, el('span', '', 'Move ' + (Math.floor(g.moves.length / 2) + 1) + ' · ' + sideName(turnOf(g)) + ' to move · ' + whenOf(g)));
+      const meta = el('span', 'tr-saved-meta'); meta.append(el('span', '', 'Move ' + (Math.floor(g.moves.length / 2) + 1) + ' · ' + sideName(turnOf(g)) + ' to move'), el('span', 'tr-saved-when', whenOf(g)));
+      txt.append(title, meta);
+
       const thumb = el('span', 'tr-saved-thumb'); thumb.innerHTML = miniBoard(g);
       go.append(thumb, txt, el('span', 'tr-chev', '›'));
       row.append(go); box.append(row);
     }
-    hub.append(box, el('p', 'tr-about-foot', 'A saved game disappears once it’s picked up, unless you turn on Keep.'));
+    hub.append(box, el('p', 'tr-about-foot', 'Picked-up games disappear unless kept ★'));
   }
   function openSavedGame(g) {
     session++; hub.classList.remove('tr-sg-page'); hub.replaceChildren(); hub.append(subHead(savedTitle(g), () => openSaved(), 'Saved games'));
