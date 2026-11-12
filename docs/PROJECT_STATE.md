@@ -82,7 +82,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - **Timeout rule:** opponent removes a pawn, timed-out side gets 3:00 (`180000`) — matches. Below 30 s, sacrifice a pawn for +1:30 — matches.
 
 ## Known Issues
-- Pending migration `database/chess-training-clock-presence-2026-11-11.sql` (NOT applied): online clock changes, Last online heartbeat, puzzle DB and training sync need it; until then puzzles use the dev subset and progress stays on the device.
+- `chess_puzzles` is empty until `tools/import-lichess-puzzles.py` is run; puzzles use the bundled dev subset meanwhile.
 - Endgame truth: built-in exact tables for K+Q/K+R/K+P vs K (offline); Lichess tablebase API for other ≤7-piece endings when reachable; otherwise the engine (two bishops, bishop+knight, multi-pawn).
 - Supabase advisor: leaked-password protection is off (Russell chose to leave it); League Lab functions flagged as executable by signed-in users (not Chess's to change).
 - Opening-screen swipe smoothness only checked in a slow headless browser; confirm on phone.

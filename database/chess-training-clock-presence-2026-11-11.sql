@@ -1,6 +1,5 @@
 -- Chess: live clock changes, Last online, and Training persistence.
--- PREPARED ONLY (2026-11-11). Not applied. Review, then apply as one migration before deploying the
--- matching front end. Touches public.chess_* objects only (shared project with League Lab).
+-- Applied 2026-11-11 as migration chess_training_clock_presence_2026_11_11. Touches public.chess_* objects only (shared project with League Lab).
 
 ---------------------------------------------------------------------------------------------------
 -- 1. Change the time control of an active online game (either player). Row-locked, server time.
@@ -92,6 +91,7 @@ returns setof public.chess_puzzles language sql stable security invoker set sear
     order by p.rnd desc limit 1)
   limit 1;
 $$;
+revoke all on function public.chess_next_puzzle(integer,integer,text,text[]) from public,anon;
 grant execute on function public.chess_next_puzzle(integer,integer,text,text[]) to authenticated;
 
 ---------------------------------------------------------------------------------------------------
