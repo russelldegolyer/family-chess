@@ -31,11 +31,22 @@ Deno.serve(async req=>{
   if(userError||!user)return respond(401,{error:"Invalid login session"});
   const body=await req.json().catch(()=>({}));
   const isTest=body?.action==="self_test";
+  const isFriend=body?.action==="friend_request";
   const challengeId=body?.challenge_id;
-  if(!isTest&&!uuid(challengeId))return respond(400,{error:"Invalid challenge ID"});
+  if(isFriend&&!uuid(body?.target_id))return respond(400,{error:"Invalid player"});
+  if(!isTest&&!isFriend&&!uuid(challengeId))return respond(400,{error:"Invalid challenge ID"});
   const admin=createClient(url,service,{auth:{persistSession:false}});
   let c:any;
-  if(isTest){
+  if(isFriend){
+   // One push per pending request the caller sent (push_sent_at claims it).
+   const a=user.id<body.target_id?user.id:body.target_id,b=user.id<body.target_id?body.target_id:user.id;
+   const {data:fr}=await admin.from("chess_friendships").update({push_sent_at:new Date().toISOString()})
+    .eq("user_a",a).eq("user_b",b).eq("requested_by",user.id).eq("status","pending").is("push_sent_at",null)
+    .select("id").maybeSingle();
+   if(!fr)return respond(200,{configured:true,sent:0,already_sent:true});
+   c={id:fr.id,challenger_id:user.id,target_id:body.target_id,status:"pending",kind:"friend",
+      expires_at:new Date(Date.now()+86400000).toISOString(),push_sent_at:null};
+  } else if(isTest){
    c={id:null,challenger_id:user.id,target_id:user.id,status:"pending",kind:"play",
       expires_at:new Date(Date.now()+60000).toISOString(),push_sent_at:null};
   } else {
@@ -67,7 +78,7 @@ Deno.serve(async req=>{
   if(subsError)return respond(500,{error:"Push subscriptions unavailable"});
   if(!subs?.length)return respond(200,{configured:true,sent:0});
   // An atomic update prevents repeated push spam if the client retries the request.
-  if(!isTest){
+  if(!isTest&&!isFriend){
    const {data:claimed,error:claimError}=await admin.from("chess_challenges")
     .update({push_sent_at:new Date().toISOString()}).eq("id",c.id)
     .is("push_sent_at",null).eq("status","pending")
@@ -78,17 +89,17 @@ Deno.serve(async req=>{
   const {data:sender}=await admin.from("chess_profiles")
    .select("display_name").eq("id",user.id).maybeSingle();
   const name=String(sender?.display_name||"A family member").slice(0,40);
-  const saved=c.kind==="saved";
+  const saved=c.kind==="saved",friend=c.kind==="friend";
   webpush.setVapidDetails("mailto:no-reply@auth.allseasonpestllc.com",publicKey,privateKey);
   const message=JSON.stringify({
-   title:isTest?"Chess test":saved?"Pick up your saved game":"Chess challenge",
-   body:isTest?"Push notifications are working on this device.":saved
+   title:isTest?"Chess test":friend?"Friend request":saved?"Pick up your saved game":"Chess challenge",
+   body:isTest?"Push notifications are working on this device.":friend?name+" wants to be friends on Chess. Open Play online to accept.":saved
     ?name+" wants to continue your saved game. Accept within 10 minutes."
     :name+" challenged you. Accept within 60 seconds.",
-   url:isTest?"/":"/?challenge="+c.id,
-   tag:isTest?"chess-push-self-test":"chess-challenge-"+c.id
+   url:isTest||friend?"/":"/?challenge="+c.id,
+   tag:isTest?"chess-push-self-test":friend?"chess-friend-"+c.id:"chess-challenge-"+c.id
   });
-  const ttl=Math.max(1,Math.min(saved?600:60,Math.ceil((Date.parse(c.expires_at)-Date.now())/1000)));
+  const ttl=friend?86400:Math.max(1,Math.min(saved?600:60,Math.ceil((Date.parse(c.expires_at)-Date.now())/1000)));
   let sent=0,failed=0;
   const failureCodes: string[]=[];
   await Promise.all(subs.map(async sub=>{
@@ -111,7 +122,8 @@ Deno.serve(async req=>{
   }));
   // If the provider rejected every delivery, do not permanently consume
   // the one notification attempt. This allows a retry within the window.
-  if(!isTest&&sent===0&&failed>0){
+  if(isFriend&&sent===0&&failed>0)await admin.from("chess_friendships").update({push_sent_at:null}).eq("id",c.id);
+  if(!isTest&&!isFriend&&sent===0&&failed>0){
    await admin.from("chess_challenges").update({push_sent_at:null})
      .eq("id",c.id).eq("status","pending");
   }

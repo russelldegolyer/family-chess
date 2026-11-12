@@ -166,7 +166,9 @@
   const code=$('cgAddCode').value.replace(/[^a-z0-9]/gi,'').toUpperCase();
   if(code.length!==6){message('Friend codes are 6 letters and numbers, like ABC-123.');return;}
   $('cgAddCode').value='';
-  void friendAct('chess_friend_request',{p_code:code},(r)=>r==='accepted'?'You’re now friends.':r==='already'?'You’re already friends.':r==='pending'?'Request already sent. Waiting for them to accept.':'Friend request sent.');
+  void friendAct('chess_friend_request',{p_code:code},(r)=>{const st=r?.status||r;
+   if(st==='sent'&&r?.target)void Promise.resolve(api.functions.invoke('chess-notify-challenge',{body:{action:'friend_request',target_id:r.target}})).catch(()=>{});
+   return st==='accepted'?'You’re now friends.':st==='already'?'You’re already friends.':st==='pending'?'Request already sent. Waiting for them to accept.':'Friend request sent. They’ll get a notification.';});
  });
  $('cgMyCode').addEventListener('click',()=>{if(!myCode)return;const t=myCode.slice(0,3)+'-'+myCode.slice(3);
   Promise.resolve(navigator.clipboard?.writeText(t)).then(()=>message('Friend code '+t+' copied. Send it to someone you want to play.')).catch(()=>message('Your friend code is '+t+'.'));});

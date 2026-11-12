@@ -9,3 +9,8 @@
 -- * chess_send_challenge and chess_send_invite_to_player raise 'You can only invite friends' for non-friends;
 --   chess-saved-game Edge Function v4 refuses non-friends. Invite links still let anyone with the link join.
 -- Full statements: see migration chess_friends in the Supabase migration history.
+-- Follow-up migration chess_friends_join_and_notify (same day):
+-- * chess_friendships.push_sent_at (one friend-request push per request).
+-- * chess_befriend(a,b) (definer-only); chess_join_game now befriends the joiner and the inviter (invite links).
+-- * chess_friend_request returns jsonb {status: sent|accepted|pending|already, target}.
+-- * chess-notify-challenge v7: action 'friend_request' pushes "<name> wants to be friends".

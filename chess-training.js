@@ -520,7 +520,17 @@
     const note = el('p', 'tr-sg-note'); const say = (t, bad) => { note.textContent = t; note.classList.toggle('bad', !!bad); };
     // Primary: pick it straight back up the way it was being played.
     const actions = el('div', 'tr-sg-actions');
-    if (g.source === 'online' && g.opponent_id) actions.append(btn('Invite ' + oppName(g), 'tr-sg-primary', () => void sendSaved(g, g.opponent_id, g.owner_side, oppName(g), say)));
+    const inviteBtn = btn('Invite ' + oppName(g), 'tr-sg-primary', () => void sendSaved(g, g.opponent_id, g.owner_side, oppName(g), say));
+    if (g.source === 'online' && g.opponent_id) {
+      actions.append(inviteBtn);
+      // Only friends can be invited: swap to the computer if this opponent isn't a friend any more.
+      void Promise.resolve(api()?.rpc('chess_are_friends', { p_a: uid, p_b: g.opponent_id })).then((r) => {
+        if (r && r.data === false && inviteBtn.isConnected) {
+          inviteBtn.replaceWith(btn('Play vs computer', 'tr-sg-primary', () => resumeHere(g, 'cpu', 2, g.owner_side)));
+          say('Add ' + oppName(g) + ' as a friend to invite them (Play online → Friend’s code).');
+        }
+      }).catch(() => {});
+    }
     else if (g.source === 'computer') actions.append(btn('Continue', 'tr-sg-primary', () => resumeHere(g, 'cpu', g.level || 2, g.owner_side)));
     else if (g.source === 'custom') actions.append(btn('Play vs computer', 'tr-sg-primary', () => resumeHere(g, 'cpu', 2, g.owner_side)));
     else actions.append(btn('Continue on this screen', 'tr-sg-primary', () => resumeHere(g, 'local', 2, g.owner_side)));
