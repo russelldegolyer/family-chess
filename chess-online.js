@@ -685,7 +685,7 @@
       const badge=document.createElement('span');badge.className='cgBadge '+cls;badge.textContent=mark;
       badge.setAttribute('aria-label',outcome);
       const text=document.createElement('span');text.className='cgGameText';
-      const title=document.createElement('b');title.textContent='vs '+opp;
+      const title=document.createElement('b');title.textContent=oppId?'vs '+opp:'Open invite';
       const sub=document.createElement('span');
       sub.textContent=[mine==='w'?'White':'Black',outcome,when(g.updated_at||g.created_at)].filter(Boolean).join(' · ');
       text.append(title,sub);row.append(badge,text);

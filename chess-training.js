@@ -454,7 +454,7 @@
         const tx = el('span', 'tr-card-text'); tx.append(el('b', '', savedTitle(g)), el('span', 'tr-saved-meta', whenOf(g)));
         go.append(th, tx); row.append(go); list.append(row);
       }
-      card.append(list, btn('Cancel', 'primary', close)); ov.append(card); root.append(ov);
+      card.append(list, btn('Cancel', 'tr-ed-alt', close)); ov.append(card); root.append(ov);
     }
     async function doSaveEdit() {
       const err = checkFen(board, turn); if (err) { say(err, true); return; }

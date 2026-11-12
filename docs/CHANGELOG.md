@@ -33,6 +33,8 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Games with pawn-for-time changes can now be saved.
 - "Picking up where you left off" shows in a compact form while chat is open.
 - Saved games limit is 30 per player.
+- My matches shows "Open invite" instead of a cut-off "vs No opponent yet"; Load-saved sheet has a quiet Cancel.
+- Automatic tests for saving, clocks, sending, Create game and early resign.
 
 **Removed**
 - "Setting the board" loading text.
