@@ -90,11 +90,6 @@
     .cgCancelInvite{align-self:center;color:#ff6961;font-size:15px}
     .cgGameCopy.cgGameCancel{color:#ff6961}
     .cgQuick button.cgSmallLink:not([hidden]){min-height:30px;background:none;color:#0a84ff;font-size:13px;font-weight:500}
-    .cgRecord{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 0}
-    .cgRecord div{background:#1a1a1c;border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:3px}
-    .cgRecord span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8e8e93}
-    .cgRecord b{font-size:15px;font-weight:600;color:#f2f2f7;font-variant-numeric:tabular-nums}
-    .cgRecord i{font-style:normal;color:#8e8e93;font-weight:500}
     .cgMore{display:block;width:100%;padding:9px;border:0;background:none;color:#0a84ff;font:500 13px/1 -apple-system,sans-serif;cursor:pointer}
     .cgQuick b{font-weight:600;color:#30d158;margin-left:2px}
     .cgQuick b:empty{display:none}
@@ -159,8 +154,8 @@
         <button id="cgCancelInvite" class="cgLink cgCancelInvite" type="button">Cancel invite</button>
       </div>
       <div class="cgRecord" id="cgRecord" aria-label="Your record">
-        <div><span>vs Players</span><b id="cgRecOnline">–</b></div>
-        <div><span>vs Computer</span><b id="cgRecCpu">–</b></div>
+        <button class="cgRecCard" id="cgRecOnlineCard" type="button" aria-label="Stats vs players"><span class="cgRecHead"><span>vs Players</span><em>›</em></span><span id="cgRecOnline"></span></button>
+        <button class="cgRecCard" id="cgRecCpuCard" type="button" aria-label="Stats vs the computer"><span class="cgRecHead"><span>vs Computer</span><em>›</em></span><span id="cgRecCpu"></span></button>
       </div>
       <div id="cgMessage" role="status" aria-live="polite"></div>
       <div class="cgBlock" id="cgLiveBlock">
@@ -742,7 +737,11 @@
     }
   }
   let showAllGames=false;
-  const fmtRec=(w,l,d)=>w+'W <i>·</i> '+l+'L <i>·</i> '+d+'D';
+  /* win rate, W-L-D and a coloured bar; tap for the full stats */
+  const fmtRec=(w,l,d)=>{const n=w+l+d,f=(v,c)=>'<i class="'+c+'" style="flex-grow:'+(n?v:(c==='d'?1:0))+'"></i>';
+    return '<span class="cgRecMain"><b>'+(n?Math.round(w/n*100)+'%':'–')+'</b><small>'+(n?'won':'no games')+'</small></span>'+
+      '<span class="cgRecWdl"><i class="w">'+w+'W</i> · <i class="l">'+l+'L</i> · <i class="d">'+d+'D</i></span>'+
+      '<span class="st-wdl">'+f(w,'w')+f(d,'d')+f(l,'l')+'</span>';};
   async function renderRecord(pid){
     const c=window.familyChessCpuRecord?.()||{w:0,l:0,d:0};
     $('cgRecCpu').innerHTML=fmtRec(c.w,c.l,c.d);
@@ -756,6 +755,8 @@
     $('cgRecOnline').innerHTML=fmtRec(w,l,d);
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
+  $('cgRecOnlineCard').addEventListener('click',()=>{if(player)void window.familyChessStats?.openPlayers(api,player.id);});
+  $('cgRecCpuCard').addEventListener('click',()=>{window.familyChessStats?.openComputer(0);});
   let creating = false, openInviteId = null;
   /* take back an invitation nobody has joined: the server deletes the waiting game and its pending challenge */
   async function cancelInvite(id){

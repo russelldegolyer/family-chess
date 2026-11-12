@@ -16,12 +16,14 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=6"></script>
-<script defer src="./chess-online.js?v=14"></script>
+<script defer src="./chess-online.js?v=15"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
 <script defer src="./chess-social.js?v=12"></script>
 <link rel="stylesheet" href="./chess-training.css?v=5">
+<link rel="stylesheet" href="./chess-stats.css?v=1">
+<script defer src="./chess-stats.js?v=1"></script>
 <script defer src="./chess-training.js?v=6"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -5135,8 +5137,18 @@ function recordCpuResult() {
   if (G.result === '1/2-1/2') rec.d++;
   else if ((G.result === '1-0') === (cpu.human === 'w')) rec.w++;
   else rec.l++;
+  /* per level, plus a short log of recent games (positions after every move) for the stats screen */
+  const outcome = G.result === '1/2-1/2' ? 'd' : (G.result === '1-0') === (cpu.human === 'w') ? 'w' : 'l';
+  rec.levels = rec.levels || {}; const lv = rec.levels[cpu.level] || (rec.levels[cpu.level] = { w: 0, l: 0, d: 0 }); lv[outcome]++;
   store.set('chess.cpuRecord', rec);
+  try {
+    const fens = []; for (let i = 0; i <= G.moves.length; i++) fens.push(positionFrom(G.moves, i, G.clockActions || []).chess.fen());
+    const log = store.get('chess.cpuGames', []);
+    log.push({ id: k, level: cpu.level, color: cpu.human, result: outcome, reason: G.reason || '', fens, at: Date.now() });
+    store.set('chess.cpuGames', log.slice(-80));
+  } catch { /* storage full or blocked: the counts above still count */ }
 }
+window.familyChessCpuGames = () => store.get('chess.cpuGames', []);
 window.familyChessCpuRecord = () => store.get('chess.cpuRecord', { w: 0, l: 0, d: 0 });
 function maybeShowEndCard() {
   if (G.status === 'over') { processFinishedGame(); recordCpuResult(); }

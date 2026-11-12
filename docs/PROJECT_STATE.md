@@ -45,6 +45,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Training (puzzles, Endgame Academy, Endgame Challenges) | `chess-training.js` / `.css`; board bridge `window.familyChessBoard` + `TRAIN`/`START_FEN` (`G.mode === 'train'`) in `index.html`; dev puzzles `chess-puzzles-dev.json`; loader `tools/import-lichess-puzzles.py`; exact endgame tables `endgame-k{q,r,p}k.bin` built by `tools/build-endgame-tables.mjs` (verified against the Lichess tablebase) | lightbulb beside the colour wheel; saves and restores the current game; progress in localStorage + `chess_training_progress` |
 | Live clock change | `ChessClock.changeLocalMode` (practice), `applyClockChange` in `index.html`, `familyChessChangeClock` → RPC `chess_change_clock` (online) | total→total shifts both clocks by the difference |
 | Last online | `chess-social.js` (`lastOnline`, `touchLastSeen` heartbeat → RPC `chess_touch_last_seen`) | falls back to "Offline" if the column is missing |
+| Stats (record cards on Play online → vs Players / vs Computer) | `chess-stats.js` / `.css`; computer games logged per level in `recordCpuResult` (`chess.cpuRecord`, `chess.cpuGames`, last 80, this device) | online stats read `chess_games` + `chess_moves.fen_after`; move quality graded by the engine on the device, cached per game |
 | Tests | `tests/*.test.mjs` | regex checks on source + VM clock/AI/colour tests; all 39 pass |
 
 ## Feature Registry
