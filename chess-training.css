@@ -262,3 +262,12 @@ body.training-open .bottom-bar, body.training-open #chatFab, body.training-open 
   .tr-sheet .tr-card-ico { width: 38px; height: 38px; font-size: 22px; }
   .tr-sheet .tr-about-row { margin-top: 8px; } .tr-sheet .tr-link { margin-top: 12px; padding: 13px; }
 }
+/* key for what the board marks mean */
+.tr-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 2px 0 2px; font-size: 12.5px; color: #c7c7cc; }
+.tr-lg { display: inline-flex; align-items: center; gap: 6px; }
+.tr-lg i { flex: none; width: 14px; height: 14px; border-radius: 3px; }
+.tr-lg.zone i { background: rgba(255,59,48,.38); box-shadow: inset 0 0 0 2px #ff3b30; }
+.tr-lg.arrow i { height: 4px; border-radius: 2px; background: #ff9f0a; position: relative; width: 12px; margin-right: 8px; }
+.tr-lg.arrow i::after { content: ""; position: absolute; right: -5px; top: -4px; border: 6px solid transparent; border-left: 7px solid #ff9f0a; border-right: 0; }
+.tr-lg.lift i { background: rgba(255,214,10,.4); box-shadow: inset 0 0 0 2px #ffd60a; }
+body.training.view-2d #stage { opacity: 0 !important; }

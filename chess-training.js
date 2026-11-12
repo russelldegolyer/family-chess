@@ -250,10 +250,22 @@
     B()?.exit();
   }
 
+  /* board marks + a one-line key under the task so the colours are never a guess */
+  function mark(m) {
+    m = m || {}; B().mark(m);
+    let lg = panel.querySelector('.tr-legend');
+    const items = [];
+    if (m.tint && m.tint.length && !m.noLegend) items.push(['zone', 'Red zone: squares the enemy king can reach']);
+    if (m.arrows && m.arrows.length) items.push(['arrow', 'Arrow: the move to play']);
+    if (m.lift && !(m.arrows && m.arrows.length)) items.push(['lift', 'Highlighted: the piece to move']);
+    if (!items.length || panel.hidden) { lg?.remove(); return; }
+    if (!lg) { lg = el('div', 'tr-legend'); const head = panel.querySelector('.tr-head2'); if (head) head.after(lg); else panel.prepend(lg); }
+    lg.replaceChildren(...items.map(([k, t]) => { const i = el('span', 'tr-lg ' + k); i.append(el('i'), document.createTextNode(t)); return i; }));
+  }
   function openHub() {
     session++; screen = 'hub';
     top.hidden = true; panel.hidden = true;
-    B().onMove(null); B().mark({});
+    B().onMove(null); mark({});
     renderHub(); hub.hidden = false;
   }
   function renderHub() {
@@ -435,7 +447,7 @@
     const C = B().Chess, c0 = new C(p.fen);
     const side = other(c0.turn());
     PZ = { p, side, i: 1, hints: 0, failed: !!retry, done: false, retry, rated: !retry, recorded: !!retry };
-    B().setup({ fen: p.fen, side, opponent: 'Puzzle' }); B().busy(true); B().mark({});
+    B().setup({ fen: p.fen, side, opponent: 'Puzzle' }); B().busy(true); mark({});
     const level = Object.entries(BANDS).find(([, [lo, hi]]) => p.rating >= lo && p.rating <= hi)?.[1][2] || '';
     renderPuzzlePanel(level);
     await sleep(650); if (my !== session) return;
@@ -466,15 +478,15 @@
     const want = PZ.p.moves[PZ.i]; if (!want) return;
     PZ.hints = Math.min(3, PZ.hints + 1); P.puzzle.hints++; save();
     if (PZ.hints === 1) { const th = themesList(PZ.p.themes); say(PZ.msgNode, '' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]] || 'Look for checks, captures and threats.'), 'idea'); }
-    else if (PZ.hints === 2) { B().mark({ sel: want.slice(0, 2), lift: want.slice(0, 2) }); say(PZ.msgNode, 'Move the raised piece.'); }
-    else { B().mark({ arrows: [[want.slice(0, 2), want.slice(2, 4)]], lift: want.slice(0, 2) }); say(PZ.msgNode, 'Play the arrow move.'); }
+    else if (PZ.hints === 2) { mark({ sel: want.slice(0, 2), lift: want.slice(0, 2) }); say(PZ.msgNode, 'Hint: move the highlighted piece.'); }
+    else { mark({ arrows: [[want.slice(0, 2), want.slice(2, 4)]], lift: want.slice(0, 2) }); say(PZ.msgNode, 'Hint: play the move the arrow shows.'); }
     PZ.hintBtn.querySelectorAll('.tr-pips i').forEach((p, k) => p.classList.toggle('on', k < PZ.hints));
     if (PZ.hints >= 3) PZ.hintBtn.classList.add('used');
   }
   async function onPuzzleMove(uci, my) {
     if (!PZ || PZ.done || my !== session) return;
     const want = PZ.p.moves[PZ.i];
-    B().mark({});
+    mark({});
     const C = B().Chess, c = new C(B().fen());
     const mateNow = c.isCheckmate();
     if (uci === want || (mateNow && PZ.i === PZ.p.moves.length - 1) || (mateNow)) {
@@ -546,10 +558,10 @@
     PZ.done = true; B().busy(true); say(PZ.msgNode, 'Solution:');
     for (let k = PZ.i; k < PZ.p.moves.length; k++) {
       const u = PZ.p.moves[k];
-      B().mark({ arrows: [[u.slice(0, 2), u.slice(2, 4)]] }); await sleep(700); if (my !== session) return;
+      mark({ arrows: [[u.slice(0, 2), u.slice(2, 4)]] }); await sleep(700); if (my !== session) return;
       B().play(u); await sleep(650); if (my !== session) return;
     }
-    B().mark({});
+    mark({});
     panel.replaceChildren();
     const th = themesList(PZ.p.themes);
     panel.append(el('div', 'tr-result bad', 'Puzzle failed'), el('div', 'tr-say', th.length ? (NAME[th[0]] || th[0]) + ' — ' + IDEA[th[0]] : ''));
@@ -620,7 +632,7 @@
     if (bxAfter < bxBefore) return { ...out, kind: 'good', text: 'Good — the king\'s box shrinks to ' + bxAfter + ' squares.' };
     if (bxAfter > bxBefore) return { ...out, kind: 'inefficient', text: (c.inCheck() ? 'You checked the king, but ' : '') + 'the box grew to ' + bxAfter + ' squares — the king escapes toward the centre. Restrict a rank or file first.' };
     if (m.piece === 'k') return { ...out, kind: 'good', text: 'Good — your king joins the attack.' };
-    return { ...out, kind: 'ok', text: c.inCheck() ? 'Check, but the box did not shrink. Checks alone rarely help.' : 'Still winning. Look for a move that takes squares away.' };
+    return { ...out, kind: 'ok', text: c.inCheck() ? 'Check, but the red zone did not shrink. Checks alone rarely help.' : 'Still winning. Look for a move that takes squares away.' };
   }
   const PIECE = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
   function sanOf(fen, uci) { try { const c = new (B().Chess)(fen); return c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || 'q' }).san; } catch { return uci; } }
@@ -717,17 +729,17 @@
       harder: { fen: '7k/8/5K2/8/8/8/8/6Q1 w - - 0 1', task: 'Mate in one — but several queen moves are stalemate!', type: 'mate1' },
       mastery: { fen: '6k1/8/5K2/8/8/8/8/7Q w - - 0 1', task: 'Checkmate the king. The computer will defend.', goal: 'mate', kind: 'teacher' } },
     { id: 'l2', title: 'Restricting the king',
-      intro: ['Before you can mate, the king must be trapped. Rooks and queens cut off whole ranks and files; your king takes away the rest.', 'The red squares are the king\'s "box": every square it can still reach. Make the box smaller with each move.'],
-      demo: { fen: '8/8/8/3k4/8/8/8/R3K3 w - - 0 1', auto: 'teacher', plies: 8, say: 'Watch the box shrink as the rook cuts files and ranks and the king walks up.' },
-      guided: [{ fen: '8/8/8/3k4/8/8/8/R3K3 w - - 0 1', task: 'Make the king\'s box smaller (without losing your rook).', type: 'shrink' },
-        { fen: '8/8/2k5/8/8/8/8/4K1Q1 w - - 0 1', task: 'Use the queen to cut the king off. Shrink the box.', type: 'shrink' }],
-      harder: { fen: '8/8/8/4k3/8/8/8/4K2R w - - 0 1', task: 'Shrink the box twice in a row.', type: 'shrink', count: 2 },
+      intro: ['Before you can mate, the king must be trapped. Rooks and queens cut off whole ranks and files; your king takes away the rest.', 'The red zone is the king\'s "box": every square it can still reach. Make it smaller with each move.'],
+      demo: { fen: '8/8/8/3k4/8/8/8/R3K3 w - - 0 1', auto: 'teacher', plies: 8, say: 'Watch the red zone shrink as the rook cuts off files and ranks and the king walks up.' },
+      guided: [{ fen: '8/8/8/3k4/8/8/8/R3K3 w - - 0 1', task: 'Make the red zone smaller without losing your rook.', type: 'shrink' },
+        { fen: '8/8/2k5/8/8/8/8/4K1Q1 w - - 0 1', task: 'Use the queen to cut the king off and make the red zone smaller.', type: 'shrink' }],
+      harder: { fen: '8/8/8/4k3/8/8/8/4K2R w - - 0 1', task: 'Make the red zone smaller on two moves in a row.', type: 'shrink', count: 2 },
       mastery: { fen: '8/8/8/3k4/8/8/8/2Q1K3 w - - 0 1', task: 'Drive the king to the edge of the board.', goal: 'edge', kind: 'teacher' } },
     { id: 'f3', title: 'The opposition',
       intro: ['When the two kings face each other with ONE square between them, they are in opposition. Neither may step forward.', 'The side that does NOT have to move holds the opposition — the other king must give way. In pawn endings this single tempo decides win or draw.'],
       demo: { fen: '8/5k2/8/8/4K1P1/8/8/8 w - - 0 1', auto: 'table', plies: 14, say: 'Watch the white king take the opposition, then outflank — the pawn only moves when its path is safe.' },
       guided: [
-        { fen: '8/5k2/8/8/4K1P1/8/8/8 w - - 0 1', task: 'Take the opposition. Only one move wins.', type: 'keep' },
+        { fen: '8/5k2/8/8/4K1P1/8/8/8 w - - 0 1', task: 'Take the opposition: face the black king with one square between you. Only one move wins.', type: 'keep' },
         { fen: '8/6k1/8/8/5PK1/8/8/8 w - - 0 1', task: 'Find the only winning move.', type: 'keep' },
         { fen: '8/8/5k2/8/4K3/6P1/8/8 w - - 0 1', task: 'Distant opposition: only one king move wins.', type: 'keep' },
       ],
@@ -762,7 +774,7 @@
     { id: 'l4', title: 'King and queen vs king',
       intro: ['The box method: put the queen a knight\'s jump from the king and follow it, shrinking the box each move.', 'When the king is on the edge, STOP shrinking — bring your king next to it, then mate. A queen move that leaves no squares but no check is stalemate.'],
       demo: { fen: '8/8/8/4k3/8/8/8/1Q2K3 w - - 0 1', auto: 'teacher', plies: 30, say: 'The queen shadows the king; the white king walks up; mate on the edge.' },
-      guided: [{ fen: '8/8/8/2k5/8/8/8/4K2Q w - - 0 1', task: 'Shrink the box with the queen.', type: 'shrink' }],
+      guided: [{ fen: '8/8/8/2k5/8/8/8/4K2Q w - - 0 1', task: 'Make the red zone smaller with the queen.', type: 'shrink' }],
       harder: { fen: 'k7/8/1K6/8/8/8/7Q/8 w - - 0 1', task: 'Mate in one — one wrong queen move is stalemate.', type: 'mate1' },
       mastery: { gen: ['q'], task: 'Checkmate with king and queen.', goal: 'mate', kind: 'teacher' } },
     { id: 'l5', title: 'King and rook vs king',
@@ -874,11 +886,11 @@
     runStage();
   }
   async function runStage() {
-    const my = ++session; const l = LS.l; stageTop(); B().onMove(null); B().mark({});
+    const my = ++session; const l = LS.l; stageTop(); B().onMove(null); mark({});
     if (LS.stage === 0) {
       const f = l.demo.fen || (l.guided[0] && l.guided[0].fen);
       B().setup({ fen: f, side: lessonSide(l), opponent: 'Defender' }); B().busy(true);
-      if (!isPawnLesson(l)) tintBox(); else B().mark({});
+      if (!isPawnLesson(l)) tintBox(); else mark({});
       lessonPanel('The idea', [btn('Show me', 'primary', nextStage, 'play'), btn('Skip ahead', 'quiet', () => { LS.stage = 3; nextStage(); }, 'skip')], l.intro.join('\n\n'));
       return;
     }
@@ -909,7 +921,7 @@
     return genEnding(m.gen, { bk: m.bk, minBox: m.gen.length === 1 ? 12 : 8 });
   }
   function tintBox(def = 'b') {
-    const bx = box(B().fen(), def); B().mark({ tint: bx.squares });
+    const bx = box(B().fen(), def); mark({ tint: bx.squares });
   }
   async function runDemo(my) {
     const d = LS.l.demo;
@@ -920,8 +932,8 @@
       for (const s of d.steps) {
         if (my !== session) return;
         if (s.fen) { B().setup({ fen: s.fen, side: 'w', opponent: 'Defender' }); B().busy(true); }
-        if (s.move) { B().mark({ arrows: [[s.move.slice(0, 2), s.move.slice(2, 4)]] }); await sleep(600); if (my !== session) return; B().play(s.move); await sleep(500); }
-        B().mark({ rings: s.rings || [], tint: s.tint || [] });
+        if (s.move) { mark({ arrows: [[s.move.slice(0, 2), s.move.slice(2, 4)]] }); await sleep(600); if (my !== session) return; B().play(s.move); await sleep(500); }
+        mark({ rings: s.rings || [], tint: s.tint || [], noLegend: true });
         say(msg, s.say); await sleep(2600);
       }
       return;
@@ -936,14 +948,14 @@
       if (my !== session || !u) return;
       seen.add(fen.split(' ').slice(0, 2).join(' '));
       const before = box(fen, 'b').area;
-      if (white) { B().mark({ arrows: [[u.slice(0, 2), u.slice(2, 4)]] }); await sleep(450); }
+      if (white) { mark({ arrows: [[u.slice(0, 2), u.slice(2, 4)]] }); await sleep(450); }
       B().play(u); await sleep(350);
       const after = new C(B().fen());
       const bx = box(B().fen(), 'b');
-      B().mark({ tint: bx.squares });
+      mark({ tint: bx.squares });
       if (after.isCheckmate()) { say(msg, 'Checkmate! ' + (d.say || '')); break; }
-      if (isPawnLesson(LS.l)) { say(msg, (white ? '' : 'Black: ') + sanOf(fen, u) + (white ? ' — ' + explainPawn(fen, u, B().fen(), true).replace(/^Correct — /, '') : ' — the best defence.')); B().mark(d.rings && white && i < 2 ? { rings: d.rings } : {}); }
-      else if (white && d.auto !== 'teacher') { say(msg, sanOf(fen, u) + (after.inCheck() ? ' — check. ' : '. ') + (d.say || '')); B().mark(new C(B().fen()).moves().length && /p/i.test(fen.split(' ')[0].replace(/[^pP]/g, '')) ? {} : { tint: bx.squares }); }
+      if (isPawnLesson(LS.l)) { say(msg, (white ? '' : 'Black: ') + sanOf(fen, u) + (white ? ' — ' + explainPawn(fen, u, B().fen(), true).replace(/^Correct — /, '') : ' — the best defence.')); mark(d.rings && white && i < 2 ? { rings: d.rings } : {}); }
+      else if (white && d.auto !== 'teacher') { say(msg, sanOf(fen, u) + (after.inCheck() ? ' — check. ' : '. ') + (d.say || '')); mark(new C(B().fen()).moves().length && /p/i.test(fen.split(' ')[0].replace(/[^pP]/g, '')) ? {} : { tint: bx.squares }); }
       else if (white) say(msg, (after.inCheck() ? 'Check. ' : '') + (bx.area < before ? 'Box: ' + before + ' → ' + bx.area + ' squares.' : 'Box ' + bx.area + ' squares — ' + (u.length && new C(fen).get(u.slice(0, 2))?.type === 'k' ? 'the king steps up to help.' : 'keeping the cut.')));
       await sleep(900);
     }
@@ -962,7 +974,7 @@
     let need = g.count || 1;
     const msg = lessonPanel(g.task, [btn('Hint', 'hint', async () => {
       const u = g.type === 'mate1' ? uciOf(mateMoves(B().chess())[0]) : await suggest(B().fen(), 'teacher');
-      if (u) B().mark({ tint: box(B().fen(), 'b').squares, arrows: [[u.slice(0, 2), u.slice(2, 4)]], lift: u.slice(0, 2) });
+      if (u) mark({ tint: box(B().fen(), 'b').squares, arrows: [[u.slice(0, 2), u.slice(2, 4)]], lift: u.slice(0, 2) });
     }, 'hint'), btn('Skip', 'quiet', done, 'skip')]);
     B().onMove(async (uci) => {
       if (my !== session) return;
@@ -970,7 +982,7 @@
       const fenBefore = B().prevFen();
       const C = B().Chess, after = new C(B().fen());
       if (g.type === 'mate1') {
-        if (after.isCheckmate()) { say(msg, 'Checkmate! ' + (g.type === 'mate1' ? 'Every escape square is covered.' : ''), 'good'); B().mark({}); await sleep(900); if (my === session) done(); return; }
+        if (after.isCheckmate()) { say(msg, 'Checkmate! ' + (g.type === 'mate1' ? 'Every escape square is covered.' : ''), 'good'); mark({}); await sleep(900); if (my === session) done(); return; }
         const text = after.isStalemate() ? 'Stalemate! The king has no move but is not in check — a draw. Give check while taking the last squares.' : after.inCheck() ? 'Check, but the king escapes to ' + after.moves({ verbose: true }).filter((m) => m.piece === 'k').map((m) => m.to).join(', ') + '.' : 'That is not even check. Look for a check that leaves no escape.';
         say(msg, text, after.isStalemate() ? 'bad' : 'warn'); await sleep(1300); if (my !== session) return;
         B().takeBack(1); tintBox(); B().busy(false); return;
@@ -978,7 +990,7 @@
       const a = await assess(fenBefore, uci, 'mate', 'w'); if (my !== session) return;
       if (a.kind === 'mate') { say(msg, 'Checkmate!', 'good'); await sleep(900); if (my === session) done(); return; }
       if (a.kind === 'good' && (a.text.startsWith('Good — the king') || box(a.fenAfter, 'b').area < box(fenBefore, 'b').area)) {
-        need--; say(msg, a.text + (need > 0 ? ' Once more.' : ''), 'good'); B().mark({ tint: box(B().fen(), 'b').squares });
+        need--; say(msg, a.text + (need > 0 ? ' Once more.' : ''), 'good'); mark({ tint: box(B().fen(), 'b').squares });
         if (need <= 0) { await sleep(1100); if (my === session) done(); return; }
         const reply = await bestMove(B().fen()); if (my !== session) return;
         if (reply) B().play(reply); await sleep(300); tintBox(); B().busy(false); return;
@@ -990,13 +1002,13 @@
 
   /* one-move exercise judged by the exact table: any move that keeps the result is right (not just the "book" move) */
   function runKeep(g, my, done) {
-    B().mark({});
+    mark({});
     let tries = 0;
     const msg = lessonPanel(g.task, [btn('Hint', 'hint', () => {
       const ks = keepers(B().fen()); if (!ks.length) return;
       tries++;
-      const m = ks[0]; B().mark(tries === 1 ? { lift: m.from } : { lift: m.from, arrows: [[m.from, m.to]] });
-      say(msg, tries === 1 ? 'Move the raised piece.' : 'Play the arrow move.');
+      const m = ks[0]; mark(tries === 1 ? { lift: m.from } : { lift: m.from, arrows: [[m.from, m.to]] });
+      say(msg, tries === 1 ? 'Hint: move the highlighted piece.' : 'Hint: play the move the arrow shows.');
     }, 'hint'), btn('Skip', 'quiet', done, 'skip')]);
     B().onMove(async (uci) => {
       if (my !== session) return;
@@ -1007,7 +1019,7 @@
       const text = /p/i.test(fenBefore.split(' ')[0].replace(/[kK]/g, '')) ? explainPawn(fenBefore, uci, fenAfter, ok) : ok ? 'Correct.' : 'That gives away the result.';
       if (ok) {
         const alt = keepers(fenBefore).length;
-        say(msg, text + (alt > 1 ? ' (' + alt + ' moves work here.)' : ''), 'good'); B().mark({});
+        say(msg, text + (alt > 1 ? ' (' + alt + ' moves work here.)' : ''), 'good'); mark({});
         await sleep(1700); if (my === session) done(); return;
       }
       say(msg, text, 'bad');
@@ -1029,13 +1041,13 @@
     if (mode !== 'challenge') buttons.push(btn('Hint', 'hint', async () => {
       if (done || B().turn() !== side) return;
       stats.hints++; const u = await suggest(B().fen(), kind === 'teacher' ? 'teacher' : 'engine');
-      if (u && my === session) { B().mark({ tint: goal === 'hold' ? [] : box(B().fen(), other(side)).squares, arrows: [[u.slice(0, 2), u.slice(2, 4)]], lift: u.slice(0, 2) }); say(msg, 'Try ' + sanOf(B().fen(), u) + ' — the raised piece.'); }
+      if (u && my === session) { mark({ tint: goal === 'hold' ? [] : box(B().fen(), other(side)).squares, arrows: [[u.slice(0, 2), u.slice(2, 4)]], lift: u.slice(0, 2) }); say(msg, 'Hint: play ' + sanOf(B().fen(), u) + ', following the arrow.'); }
     }, 'hint'));
     buttons.push(btn('Restart', 'quiet', () => void playEnding({ fen, goal, kind, task, limit, mode, side, onDone }), 'retry'));
     buttons.push(btn('Give up', 'quiet', () => finish(false, 'You stopped this attempt.'), 'flag'));
-    msg = lessonPanel(task, buttons, mode === 'challenge' ? 'No hints — full review afterwards.' : 'Your move.');
+    msg = lessonPanel(task, buttons, mode === 'challenge' ? 'No hints. You get a full review afterwards.' : ({ mate: 'Your move. Shrink the red zone until the king has nowhere to go.', edge: 'Your move. Push the red zone toward the edge of the board.', promote: 'Your move. Walk the pawn to the last rank safely.', hold: 'Your move. Stop the pawn: a draw counts as a win here.' }[goal] || 'Your move.'));
     const guided = mode === 'guided';
-    const showBox = () => { if (mode !== 'challenge' && goal !== 'hold' && goal !== 'promote') B().mark({ tint: box(B().fen(), other(side)).squares }); else B().mark({}); };
+    const showBox = () => { if (mode !== 'challenge' && goal !== 'hold' && goal !== 'promote') mark({ tint: box(B().fen(), other(side)).squares }); else mark({}); };
     const finish = (win, why) => {
       if (done) return; done = true; B().busy(true); B().onMove(null);
       const parts = [why];
@@ -1059,7 +1071,7 @@
       if (after.isGameOver()) return finish(goal === 'hold', goal === 'hold' ? 'Draw — you held it!' : 'Draw.');
       if (goal === 'hold' && u.length === 5) { const j = await judge(B().fen()); if (j.r === 'loss') return finish(false, 'The pawn promoted.'); }
       showBox();
-      if (guided && !done) { const s = await suggest(B().fen(), kind === 'teacher' ? 'teacher' : 'engine'); if (s && my === session && !done) B().mark({ tint: goal === 'hold' || goal === 'promote' ? [] : box(B().fen(), other(side)).squares, arrows: [[s.slice(0, 2), s.slice(2, 4), 'rgba(255,214,10,.75)']] }); }
+      if (guided && !done) { const s = await suggest(B().fen(), kind === 'teacher' ? 'teacher' : 'engine'); if (s && my === session && !done) mark({ tint: goal === 'hold' || goal === 'promote' ? [] : box(B().fen(), other(side)).squares, arrows: [[s.slice(0, 2), s.slice(2, 4), 'rgba(255,214,10,.75)']] }); }
       B().busy(false);
     };
     B().onMove(async (uci) => {
@@ -1086,11 +1098,11 @@
       if (goal === 'promote' && uci.length === 5) return finish(true, 'Promoted — and the new queen is safe.');
       if (goal === 'hold' && stats.moves >= 25) return finish(true, 'You held the draw for 25 moves!');
       if (limit && stats.moves >= limit) return finish(false, 'Not mate within ' + limit + ' moves. Look for the most forcing line.');
-      if (stats.moves >= 60) return finish(false, 'Too many moves — use the box method to finish faster.');
+      if (stats.moves >= 60) return finish(false, 'Too many moves. Keep shrinking the red zone to finish faster.');
       await reply();
     });
     await sleep(500); if (my !== session) return;
-    if (start.turn() !== side) await reply(); else { showBox(); if (guided) { const s = await suggest(fen, kind === 'teacher' ? 'teacher' : 'engine'); if (s && my === session) B().mark({ tint: goal === 'hold' || goal === 'promote' ? [] : box(fen, other(side)).squares, arrows: [[s.slice(0, 2), s.slice(2, 4), 'rgba(255,214,10,.75)']] }); } B().busy(false); }
+    if (start.turn() !== side) await reply(); else { showBox(); if (guided) { const s = await suggest(fen, kind === 'teacher' ? 'teacher' : 'engine'); if (s && my === session) mark({ tint: goal === 'hold' || goal === 'promote' ? [] : box(fen, other(side)).squares, arrows: [[s.slice(0, 2), s.slice(2, 4), 'rgba(255,214,10,.75)']] }); } B().busy(false); }
   }
 
   /* ------------------------------------------------------------------ Endgame Challenges */
