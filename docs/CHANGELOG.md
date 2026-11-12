@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-12 | 17 |
+| 2026-11-12 | 22 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
 | 2026-11-09 | 130 |
@@ -14,7 +14,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-12 — Friends, colour wheel, last move (deployed 4:16 PM)
 
 **Added**
 - **Friends**: everyone has a friend code; add friends by code, accept or decline requests, remove friends (Edit).
