@@ -16,6 +16,12 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ## Unreleased
 
+**Added**
+- **Accuracy** (0–100, like chess.com): worked out on your phone after every game and shown on the end card,
+  next to each finished game in My matches, and as an average on both record cards. Saved with online games.
+- **Captured pieces and +N**: on phones, each player's taken pieces show in a small strip (opponent under their
+  name, yours above the bottom bar) with the material lead, e.g. +3.
+
 **Fixed**
 - New friends now appear in your Friends list right after accepting (server fix, live already).
 
@@ -24,6 +30,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 **Improved**
 - The **New** button is now **Home**: it takes you straight back to the opening screen (asks first mid-game).
+- End card "New game" link is now "Home".
 - 2D last move toned down: a soft yellow on both squares, no frames.
 - Going home fades smoothly through black into the opening screen instead of snapping.
 - Tapping **Your friend code** always shows it (loads it if it hadn’t appeared yet), then copies it.

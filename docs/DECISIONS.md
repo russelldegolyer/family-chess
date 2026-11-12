@@ -31,3 +31,6 @@ Dates are when the decision was made or shipped (2026).
 | D-23 | Only two 3D boards: Default (black & white) and Wooden; the other four were removed, and anyone who had one falls back to Default | Russell: the extra 3D boards were pointless | Nov 11 | boards | Active |
 | D-24 | Saved games live in the player's account (chess_saved_games), including computer games; each player saves for themselves (a second save of the same game asks overwrite or save new). Resuming with a person goes through the chess-saved-game Edge Function (moves re-checked with chess.js, 10-minute "saved" invite, inviter keeps their side). Unkept saves are deleted once picked up | Russell's spec, Nov 12 | Nov 12 | saved games, supabase | Active |
 | D-25 | Friends system: you only see, invite, watch and look up people you are friends with (friend codes; existing opponents auto-friended). Invite links still work for anyone holding the link | Russell, Nov 12 | Nov 12 | friends, privacy | Active |
+
+## D-26 Accuracy (2026-11-12)
+Per-player accuracy uses Lichess's win-chance formula on the built-in engine, run on the player's device after the game. Online values are saved once per game via `chess_set_game_accuracy` (first values stay); computer games keep it in the device game log.

@@ -76,3 +76,6 @@
 .st-level .st-wdl { height: 7px; }
 .st-level { padding: 5px 4px; }
 .st-alllv { align-self: flex-start; border: 0; background: rgba(10,132,255,.14); color: #64b5ff; border-radius: 999px; padding: 6px 12px; font: 600 13px/1 inherit; cursor: pointer; }
+
+.cgRecAcc { font-size: 12px; color: #8e8e93; white-space: nowrap; }
+.cgRecAcc b { color: #7ee99a; font-weight: 700; font-variant-numeric: tabular-nums; }

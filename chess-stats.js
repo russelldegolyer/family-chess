@@ -231,5 +231,45 @@
     }
     render('vs Computer', level ? 'Level ' + level + ' · games on this device' : 'All levels · games on this device', games, lv);
   }
+  /* ---------------- accuracy (0-100 per player, like chess.com / Lichess) ----------------
+     Each move is scored by how much of the mover's winning chances it gave away compared with the
+     engine's best move (Lichess's published formula), then a game score blends the average with the
+     harmonic mean so a few big blunders weigh in properly. Runs on this device; cached per game. */
+  const AKEY = 'chess.acc1.';
+  const winPct = (cp) => { const c = Math.max(-1500, Math.min(1500, cp)); return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * c)) - 1); };
+  function moveAcc(r, uci) {
+    if (!r || !Number.isFinite(r.bestScore) || !Number.isFinite(r.playedScore)) return null;
+    if (r.forced || r.move === uci) return 100;
+    const drop = Math.max(0, winPct(r.bestScore) - winPct(Math.min(r.playedScore, r.bestScore)));
+    return Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * drop) - 3.1669));
+  }
+  function gameAcc(list) {
+    if (!list.length) return null;
+    const mean = list.reduce((a, b) => a + b, 0) / list.length;
+    const harm = list.length / list.reduce((a, b) => a + 1 / Math.max(b, 1), 0);
+    return Math.round(((mean + harm) / 2) * 10) / 10;
+  }
+  const accCached = (key) => { try { return JSON.parse(localStorage.getItem(AKEY + key) || 'null'); } catch { return null; } };
+  const running = new Map();
+  /* fens[i] is the position before move i (fens.length === moves.length + 1); moves are UCI */
+  function accFor(key, fens, moves, onProgress) {
+    const hit = accCached(key); if (hit) return Promise.resolve(hit);
+    if (running.has(key)) return running.get(key);
+    const job = (async () => {
+      const per = { w: [], b: [] };
+      for (let i = 0; i < moves.length; i++) {
+        const side = fens[i].split(' ')[1] === 'b' ? 'b' : 'w';
+        const r = await engine(fens[i], moves[i]); const a = moveAcc(r, moves[i]);
+        if (a != null) per[side].push(a);
+        try { onProgress?.(i + 1, moves.length); } catch { /* UI only */ }
+      }
+      const out = { w: gameAcc(per.w), b: gameAcc(per.b) };
+      if (out.w != null || out.b != null) try { localStorage.setItem(AKEY + key, JSON.stringify(out)); } catch { /* memory only */ }
+      return out;
+    })().finally(() => running.delete(key));
+    running.set(key, job);
+    return job;
+  }
+  window.familyChessAccuracy = Object.freeze({ forGame: accFor, cached: accCached });
   window.familyChessStats = { openPlayers, openComputer, close };
 })();

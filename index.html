@@ -18,14 +18,14 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=11"></script>
-<script defer src="./chess-online.js?v=19"></script>
+<script defer src="./chess-online.js?v=20"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
 <script defer src="./chess-social.js?v=18"></script>
 <link rel="stylesheet" href="./chess-training.css?v=16">
-<link rel="stylesheet" href="./chess-stats.css?v=1">
-<script defer src="./chess-stats.js?v=1"></script>
+<link rel="stylesheet" href="./chess-stats.css?v=2">
+<script defer src="./chess-stats.js?v=2"></script>
 <script defer src="./chess-training.js?v=21"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -109,7 +109,18 @@ body.player-colors.player-colors .orb.white { background: radial-gradient(circle
 body.player-colors.player-colors .orb:not(.white) { background: radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--orbB) 45%, #fff) 0, var(--orbB) 45%, color-mix(in srgb, var(--orbB) 55%, #000) 100%); box-shadow: 0 0 0 1px rgba(255,255,255,0.3); }
 .pcap { display: flex; flex-wrap: wrap; align-items: center; max-width: 150px; padding-left: 2px; }
 .pcap[hidden] { display: none; }
-.pcap svg { display: block; margin-right: -5px; }
+.pcap svg { display: block; margin-right: -8px; }
+.pcap svg.new-type { margin-left: 11px; }
+.cap-strip { position: fixed; z-index: 60; display: flex; align-items: center; height: 26px; padding: 0 11px 0 9px; border-radius: 999px; background: rgba(28,28,32,.94); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); pointer-events: none; }
+.cap-strip[hidden] { display: none; }
+.cap-strip svg { display: block; flex: none; margin-right: -9px; }
+.cap-strip svg:last-of-type { margin-right: 0; }
+.cap-strip svg.new-type { margin-left: 12px; }
+.cap-strip.dark-pieces { background: rgba(236,236,240,.88); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+.cap-strip.dark-pieces b { color: #2c2c30; }
+.cap-strip b { margin-left: 8px; font: 650 13px/1 var(--body); color: #c7c7cc; font-variant-numeric: tabular-nums; }
+.cap-strip svg + b { margin-left: 8px; }
+.pcap .padv { margin-left: 13px; font: 650 12px/1 var(--body); color: var(--ink-2); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .ptag { font: 500 11px/1 var(--body); white-space: nowrap; }
 .plate.turn.black .ptag { color: var(--gold-hi); }
 .plate.turn.white .ptag { color: var(--silver); }
@@ -1171,6 +1182,17 @@ body.compact.chat2d:not(.landscape) .chat-list>.chat-empty-state { background: r
 #endCard .ec h2 { margin: 6px 0 0; font: 600 16px/1.3 var(--body); letter-spacing: 0; color: var(--ink-2); }
 #endCard .ec p { margin: 4px 0 0; font: 400 14px/1.35 var(--body); color: var(--ink-3); }
 #endCard .ec-meta { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 12px 0 18px; text-transform: none; letter-spacing: 0; }
+#endCard .ec-acc { margin: -4px 0 16px; padding: 12px 14px 13px; border-radius: 16px; background: #1f1f23; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+#endCard .ec-acc[hidden] { display: none; }
+#endCard .ec-acc-head { font: 700 11px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: #8e8e93; margin-bottom: 10px; }
+#endCard .ec-acc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#endCard .ec-acc-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 9px 4px; border-radius: 12px; background: #2a2a2e; min-width: 0; }
+#endCard .ec-acc-cell b { font: 700 24px/1 var(--body); letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: #f2f2f7; }
+#endCard .ec-acc-cell span { font: 500 12px/1.1 var(--body); color: #a1a1a6; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#endCard .ec-acc-cell.me { background: rgba(48,209,88,.14); box-shadow: inset 0 0 0 1px rgba(48,209,88,.35); }
+#endCard .ec-acc-cell.me b { color: #7ee99a; }
+#endCard .ec-acc-bar { margin-top: 10px; height: 4px; border-radius: 2px; background: #2c2c30; overflow: hidden; }
+#endCard .ec-acc-bar i { display: block; height: 100%; background: #30d158; transition: width .25s ease; }
 #endCard .ec-meta span { padding: 5px 10px; border-radius: 999px; background: #2c2c30; font: 600 12px/1 var(--body); color: #c7c7cc; }
 #endCard .end-actions { display: flex; flex-direction: column; gap: 8px; }
 #endCard .end-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; margin: 0; border-radius: 16px; font: 700 16px/1 var(--body); }
@@ -1425,6 +1447,7 @@ body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
       <h2 id="endTitle"></h2>
       <p id="endLine"></p>
       <div class="ec-meta" id="endEyebrow"></div>
+      <div class="ec-acc" id="endAcc" hidden></div>
       <div class="end-actions" id="endActions"></div>
     </div>
   </div>
@@ -3284,14 +3307,22 @@ function fillPlate(node, side) {
   /* on phones the pieces this side has taken show as a row of small icons in its plate */
   const cap = node.querySelector('.pcap');
   if (cap) {
-    const taken = trayMode === 'chips' && VIEW === '3d' ? byType(pos.captured[other(side)]) : [];
-    const sig = taken.join('');
+    /* phones: always in the plate (3D and 2D); bigger screens: only when there are no trays beside the board */
+    const taken = !compact && trayMode === 'chips' && VIEW === '3d' ? byType(pos.captured[other(side)]) : [];
+    const lead = !compact && adv > 0 ? adv : 0;
+    const sig = taken.join('') + '|' + lead + '|' + other(side);
     if (cap.dataset.sig !== sig) {
       cap.dataset.sig = sig; cap.replaceChildren();
-      for (const t of taken) { const svg = sv('svg', { viewBox: '-0.55 -0.6 1.1 1.2', width: 20, height: 22, 'aria-hidden': 'true' }); svg.append(piece2D(t, other(side), 0.86, true)); cap.append(svg); }
-      cap.setAttribute('aria-label', taken.length ? `Captured: ${taken.length} pieces` : '');
+      taken.forEach((t, i) => {
+        const svg = sv('svg', { viewBox: '-0.55 -0.6 1.1 1.2', width: 18, height: 20, 'aria-hidden': 'true' });
+        svg.append(piece2D(t, other(side), 0.86, true));
+        if (i && taken[i - 1] !== t) svg.classList.add('new-type');
+        cap.append(svg);
+      });
+      if (lead) { const b = document.createElement('b'); b.className = 'padv'; b.textContent = '+' + lead; cap.append(b); }
+      cap.setAttribute('aria-label', (taken.length ? `Captured ${taken.length} piece${taken.length > 1 ? 's' : ''}` : '') + (lead ? `, ahead by ${lead}` : ''));
     }
-    cap.hidden = !taken.length;
+    cap.hidden = !taken.length && !lead;
   }
   node.querySelector('.live-dot').hidden = true;
 }
@@ -3324,7 +3355,49 @@ function updateStatus() {
   s.classList.toggle('alert',alert||penalty);
   $('btnUndo').disabled=$('btnChatUndo').disabled=!canUndo();
 }
-function updatePlates() { fillPlate($('plateTop'), other(viewSide)); fillPlate($('plateBottom'), viewSide); updateStatus(); }
+function updatePlates() { fillPlate($('plateTop'), other(viewSide)); fillPlate($('plateBottom'), viewSide); updateStatus(); updateCapStrips(); }
+/* Phones: captured pieces and the material lead (+N), like chess.com. The opponent's line sits under their
+   name plate, yours sits just above the bottom bar. Each line shows the pieces that player has taken. */
+function capStrip(id) {
+  let el = $(id);
+  if (!el) { el = document.createElement('div'); el.id = id; el.className = 'cap-strip'; el.hidden = true; document.body.append(el); }
+  return el;
+}
+function fillCapStrip(el, side, pos) {
+  const taken = byType(pos.captured[other(side)]), lead = Math.max(0, material(pos, side));
+  const sig = taken.join('') + '|' + lead + '|' + side;
+  if (el.dataset.sig === sig) return taken.length || lead;
+  el.dataset.sig = sig; el.replaceChildren(); el.classList.toggle('dark-pieces', other(side) === 'b');
+  taken.forEach((t, i) => {
+    const svg = sv('svg', { viewBox: '-0.55 -0.6 1.1 1.2', width: 19, height: 21, 'aria-hidden': 'true' });
+    svg.append(piece2D(t, other(side), 0.9, true));
+    if (i && taken[i - 1] !== t) svg.classList.add('new-type');
+    el.append(svg);
+  });
+  if (lead) { const b = document.createElement('b'); b.textContent = '+' + lead; el.append(b); }
+  el.setAttribute('aria-label', seatName(side) + (taken.length ? ' has taken ' + taken.length + ' piece' + (taken.length > 1 ? 's' : '') : '') + (lead ? ', ahead by ' + lead : ''));
+  return taken.length || lead;
+}
+function updateCapStrips() {
+  const top = capStrip('capTop'), bot = capStrip('capBottom');
+  const b = document.body.classList;
+  const show = compact && !b.contains('landscape') && !b.contains('chat2d') && !b.contains('pregame') && !b.contains('training') && !review && G.mode !== 'connecting' && $('endCard')?.hidden !== false;
+  if (!show) { top.hidden = bot.hidden = true; return; }
+  const pos = displayPos();
+  const tHas = fillCapStrip(top, other(viewSide), pos), bHas = fillCapStrip(bot, viewSide, pos);
+  const pr = $('plateTop').getBoundingClientRect(), bar = document.querySelector('.bottom-bar')?.getBoundingClientRect();
+  top.style.left = Math.round(pr.left + 6) + 'px'; top.style.top = Math.round(pr.bottom + 8) + 'px';
+  if (bar) {
+    const rb = document.querySelector('.resume-banner'), rr = rb && !rb.hidden && rb.getClientRects().length ? rb.getBoundingClientRect() : null;
+    bot.style.left = Math.round(bar.left + 10) + 'px'; bot.style.bottom = Math.round(window.innerHeight - bar.top + 10) + 'px';
+    if (rr && rr.height) bot.dataset.covered = '1'; else delete bot.dataset.covered;
+  }
+  top.hidden = !tHas; bot.hidden = !bHas || !bar || !!bot.dataset.covered;
+}
+{ let capRaf = 0; const later = () => { if (!capRaf) capRaf = requestAnimationFrame(() => { capRaf = 0; if (G.pos) updateCapStrips(); }); };
+  new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  const ec = document.getElementById('endCard'); if (ec) new MutationObserver(later).observe(ec, { attributes: true, attributeFilter: ['hidden'] });
+  window.addEventListener('resize', () => setTimeout(later, 60)); }
 
 function updateBanner() {
   const acts = $('bannerActions');
@@ -4027,6 +4100,7 @@ function sync2D(pos, opts = {}) {
 }
 function lost2D(pos) {
   b2.lost.replaceChildren();
+  if (compact) return;   /* phones show captured pieces in the name plates instead */
   for (const color of ['w', 'b']) {
     const own = color === viewSide, list = byType(pos.captured[color]);
     const y = own ? 9.43 : -1.43;
@@ -5567,9 +5641,54 @@ function maybeShowEndCard() {
   row.append(ico(button('Review', 'ec-tile', () => { endDismissed = endKey(); beginGameReview(); }), '<path d="M7 5l12 7-12 7z"/>'));
   acts.append(row);
   const links = el('div', 'ec-links');
-  links.append(button('New game', 'ec-link', () => { endDismissed = endKey(); card.hidden = true; goHome(); }), button('Close', 'ec-link', () => { endDismissed = endKey(); card.hidden = true; }));
+  links.append(button('Home', 'ec-link', () => { endDismissed = endKey(); card.hidden = true; goHome(); }), button('Close', 'ec-link', () => { endDismissed = endKey(); card.hidden = true; }));
   acts.append(links);
   card.hidden = false;
+  fillEndAccuracy(me);
+}
+/* Accuracy on the end card: worked out on this device (a few seconds), then saved with the game
+   (online: on the server for both players; computer games: in this device's game log). */
+function accuracyKey() { return G.mode === 'live' && G.gid ? 'g:' + G.gid : G.mode === 'cpu' ? 'c:' + endKey() : G.mode === 'local' ? 'l:' + endKey() : null; }
+function fillEndAccuracy(me) {
+  const box = $('endAcc'), A = window.familyChessAccuracy, key = accuracyKey();
+  if (!box) return;
+  if (!A || !key || G.moves.length < 4) { box.hidden = true; return; }
+  const k = endKey();
+  const names = { w: G.mode === 'cpu' ? (cpu.human === 'w' ? 'You' : 'Computer') : me ? (me === 'w' ? 'You' : seatName('w')) : 'White',
+                  b: G.mode === 'cpu' ? (cpu.human === 'b' ? 'You' : 'Computer') : me ? (me === 'b' ? 'You' : seatName('b')) : 'Black' };
+  const order = me === 'b' ? ['b', 'w'] : ['w', 'b'];
+  const paint = (acc, done, total) => {
+    if (endKey() !== k || $('endCard').hidden) return;
+    box.replaceChildren();
+    const head = el('div', 'ec-acc-head'); head.textContent = 'Accuracy';
+    box.append(head);
+    const row = el('div', 'ec-acc-row');
+    for (const c of order) {
+      const cell = el('div', 'ec-acc-cell' + (names[c] === 'You' ? ' me' : ''));
+      const v = el('b'); v.textContent = acc ? (acc[c] == null ? '–' : acc[c].toFixed(1)) : '…';
+      const n = el('span'); n.textContent = names[c];
+      cell.append(v, n); row.append(cell);
+    }
+    box.append(row);
+    if (!acc) { const bar = el('div', 'ec-acc-bar'); const i = el('i'); i.style.width = Math.round((done / Math.max(1, total)) * 100) + '%'; bar.append(i); box.append(bar); }
+    box.hidden = false;
+  };
+  const have = A.cached(key);
+  if (have) { paint(have); saveAccuracy(key, have); return; }
+  let fens;
+  try { fens = []; for (let i = 0; i < G.moves.length; i++) fens.push(positionFrom(G.moves, i, G.clockActions || []).chess.fen()); }
+  catch { box.hidden = true; return; }
+  paint(null, 0, G.moves.length);
+  const moves = G.moves.slice();
+  A.forGame(key, fens, moves, (d, t) => paint(null, d, t)).then((acc) => { paint(acc); saveAccuracy(key, acc); }).catch(() => { box.hidden = true; });
+}
+function saveAccuracy(key, acc) {
+  if (!acc) return;
+  if (key.startsWith('g:') && G.onlineProvider === 'supabase' && window.chessSupabase)
+    void Promise.resolve(window.chessSupabase.rpc('chess_set_game_accuracy', { p_game_id: key.slice(2), p_white: acc.w, p_black: acc.b })).catch(() => {});
+  if (key.startsWith('c:')) {
+    try { const log = store.get('chess.cpuGames', []); const g = log.find((x) => x.id === key.slice(2)); if (g && g.acc == null) { g.acc = acc[g.color]; store.set('chess.cpuGames', log); } } catch { /* storage blocked */ }
+  }
 }
 
 

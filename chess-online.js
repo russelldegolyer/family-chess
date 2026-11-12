@@ -51,6 +51,9 @@
     .cgGameText span{font-size:12px;color:#8e8e93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .cgGameCopy{flex:none;min-height:30px;padding:0 10px;border:0;border-radius:999px;background:#2c2c2e;color:#0a84ff;font:600 12px inherit;cursor:pointer}
     .cgChevron{flex:none;color:#636366;font-size:18px}
+    .cgAcc{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin-left:4px}
+    .cgAcc b{font:700 16px/1 inherit;color:#f2f2f7;font-variant-numeric:tabular-nums}
+    .cgAcc small{font-size:10px;color:#8e8e93;letter-spacing:.02em}
     #cgMessage{min-height:20px;color:#ccc;font-size:12px;line-height:1.5;margin-top:12px}
     #cgMessage.error{color:#ffa7a7}
     .cgLiveCount{color:#b2f1c2;font-size:12px;font-weight:600;white-space:nowrap}
@@ -650,7 +653,7 @@
     void refreshLive(false);
     const games = $('cgGames'); games.replaceChildren(); games.textContent = 'Loading…';
     const {data,error} = await api.from('chess_games')
-      .select('id,status,result,end_reason,white_player_id,black_player_id,created_at,updated_at')
+      .select('id,status,result,end_reason,white_player_id,black_player_id,created_at,updated_at,accuracy_white,accuracy_black')
       .or('white_player_id.eq.'+player.id+',black_player_id.eq.'+player.id)
       .order('created_at',{ascending:false}).limit(20);
     if (!player) return;
@@ -689,6 +692,13 @@
       const sub=document.createElement('span');
       sub.textContent=[mine==='w'?'White':'Black',outcome,when(g.updated_at||g.created_at)].filter(Boolean).join(' · ');
       text.append(title,sub);row.append(badge,text);
+      /* accuracy (yours), like chess.com's game list: saved with the game, or this device's copy */
+      if(g.status==='finished'&&g.result){
+        const loc=window.familyChessAccuracy?.cached?.('g:'+g.id);
+        const v=(mine==='w'?g.accuracy_white:g.accuracy_black)??loc?.[mine];
+        if(v!=null){const acc=document.createElement('span');acc.className='cgAcc';acc.innerHTML='<b>'+Number(v).toFixed(1)+'</b><small>accuracy</small>';
+          acc.setAttribute('aria-label','Your accuracy '+Number(v).toFixed(1));row.append(acc);}
+      }
       /* only open games have a link worth sharing */
       if(g.status==='waiting'||g.status==='active'){
         const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='cgGameCopy';
@@ -723,17 +733,24 @@
     return '<span class="cgRecMain"><b>'+(n?Math.round(w/n*100)+'%':'–')+'</b><small>'+(n?'won':'no games')+'</small></span>'+
       '<span class="cgRecWdl"><i class="w">'+w+'W</i> · <i class="l">'+l+'L</i> · <i class="d">'+d+'D</i></span>'+
       '<span class="st-wdl">'+f(w,'w')+f(d,'d')+f(l,'l')+'</span>';};
+  /* average accuracy across games that have one */
+  const fmtAcc=(list)=>list.length?'<span class="cgRecAcc"><b>'+(list.reduce((a,b)=>a+b,0)/list.length).toFixed(1)+'</b> avg accuracy</span>':'';
   async function renderRecord(pid){
     const c=window.familyChessCpuRecord?.()||{w:0,l:0,d:0};
     $('cgRecCpu').innerHTML=fmtRec(c.w,c.l,c.d);
-    const {data}=await api.from('chess_games').select('result,white_player_id,end_reason')
+    const cg=window.familyChessCpuGames?.()||[],ca=cg.map(x=>x.acc).filter(v=>typeof v==='number');
+    $('cgRecCpu').innerHTML+=fmtAcc(ca);
+    const {data}=await api.from('chess_games').select('id,result,white_player_id,end_reason,accuracy_white,accuracy_black')
       .eq('status','finished').or('white_player_id.eq.'+pid+',black_player_id.eq.'+pid).limit(1000);
-    let w=0,l=0,d=0;
+    let w=0,l=0,d=0;const accs=[];
     for(const g of data||[]){
       if(g.end_reason==='replaced'||!g.result)continue;
       if(g.result==='1/2-1/2')d++;else if((g.result==='1-0')===(g.white_player_id===pid))w++;else l++;
+      const me=g.white_player_id===pid?'w':'b';
+      const v=(me==='w'?g.accuracy_white:g.accuracy_black)??window.familyChessAccuracy?.cached?.('g:'+g.id)?.[me];
+      if(v!=null)accs.push(Number(v));
     }
-    $('cgRecOnline').innerHTML=fmtRec(w,l,d);
+    $('cgRecOnline').innerHTML=fmtRec(w,l,d)+fmtAcc(accs);
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
   $('cgRecOnlineCard').addEventListener('click',()=>{if(player)void window.familyChessStats?.openPlayers(api,player.id);});
