@@ -6449,7 +6449,7 @@ window.familyChessNative = {
     const white = game.white_player_id, black = game.black_player_id;
     G.mode = 'live'; G.onlineProvider = 'supabase'; G.gid = game.id;
     G.n = 1; G.seats = {w:white,b:black}; G.colors=filteredColors;
-    G.names = {w:labels[white] || 'White',b:black ? (labels[black] || 'Black') : ''};
+    G.names = {w:white ? (labels[white] || 'White') : 'Waiting to join',b:black ? (labels[black] || 'Black') : ''};
     G.status = game.status === 'finished' ? 'over' : game.status;
     G.result = game.result || null;
     G.reason = G.status === 'over' ?
