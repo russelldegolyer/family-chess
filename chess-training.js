@@ -370,10 +370,13 @@
     const ov = el('div', 'tr-pop-ov'), card = el('div', 'tr-pop');
     const close = () => ov.remove();
     ov.addEventListener('pointerdown', (e) => { if (e.target === ov) close(); });
-    card.append(el('h3', '', 'Puzzle settings'));
-    const lv = el('div', 'tr-seg');
+    const hd = el('div', 'tr-pop-head'); hd.append(el('h3', '', 'Puzzle settings'), el('span', 'tr-pop-sub', 'Rating ' + Math.round(P.puzzle.rating)));
+    card.append(el('i', 'tr-grab'), hd);
+    const lv = el('div', 'tr-seg tr-lv');
     for (const [v, label] of [['adaptive', 'Adaptive'], [1, 'Beginner'], [2, 'Easy'], [3, 'Intermediate'], [4, 'Advanced'], [5, 'Expert']]) {
-      const b = btn(label, P.settings.level === v ? 'on' : '', () => { P.settings.level = v; save(); close(); void startPuzzle(); }); lv.append(b);
+      const b = btn('', P.settings.level === v ? 'on' : '', () => { P.settings.level = v; save(); close(); void startPuzzle(); });
+      b.append(el('b', '', label), el('small', '', v === 'adaptive' ? 'Matches you' : BANDS[v][0] + (v === 5 ? '+' : '–' + BANDS[v][1])));
+      lv.append(b);
     }
     card.append(el('span', 'tr-label', 'Difficulty'), lv);
     const cs = el('div', 'tr-seg wrap');
