@@ -4059,11 +4059,9 @@ function markers2D() {
   const edge = (sq, a) => { const [c, r] = sqCR(sq); return sv('rect', { x: c + 0.05, y: r + 0.05, width: 0.9, height: 0.9, fill: C2.hl + (a * 0.25) + ')', stroke: C2.hl + a + ')', 'stroke-width': 0.035 }, g); };
   // Muted yellow shows the move's two squares without a directional arrow.
   if (last) {
-    // Stronger last move: warm yellow wash on both squares, a bright frame on the destination.
-    cell(last.from, { fill:'rgba(255,214,10,.30)' });
-    cell(last.to, { fill:'rgba(255,214,10,'+(pending?'.32':'.46')+')' });
-    { const [c, r] = sqCR(last.to); sv('rect', { x: c + 0.04, y: r + 0.04, width: 0.92, height: 0.92, rx: 0.04, fill: 'none', stroke: 'rgba(255,196,0,.95)', 'stroke-width': 0.075 }, g); }
-    { const [c, r] = sqCR(last.from); sv('rect', { x: c + 0.06, y: r + 0.06, width: 0.88, height: 0.88, rx: 0.04, fill: 'none', stroke: 'rgba(255,196,0,.55)', 'stroke-width': 0.04, 'stroke-dasharray': '.12 .08' }, g); }
+    // Last move: a soft yellow wash on both squares, the destination a touch stronger. No frames.
+    cell(last.from, { fill:'rgba(255,214,10,.20)' });
+    cell(last.to, { fill:'rgba(255,214,10,'+(pending?'.24':'.32')+')' });
   }
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   if (kingSq) { const [c, r] = sqCR(kingSq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.5, fill: 'url(#chk2)' }, g); }
