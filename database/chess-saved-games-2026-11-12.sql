@@ -229,3 +229,10 @@ do $$ begin
     alter table public.chess_games add constraint chess_games_one_seat_filled check (white_player_id is not null or black_player_id is not null);
   end if;
 end $$;
+
+-- Follow-up migration chess_decline_closes_waiting_game (same day): declining a SAVED-game invite closes the
+-- inviter's waiting board (the saved game itself stays). chess_respond_challenge decline branch now reads:
+--   update chess_challenges set status='declined' ...;
+--   if c.game_id is not null and c.kind='saved' then
+--     update chess_games set status='finished', end_reason='replaced', updated_at=now() where id=c.game_id and status='waiting';
+--   end if; return null;

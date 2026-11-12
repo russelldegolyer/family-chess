@@ -236,6 +236,11 @@
     if(linked&&(linked.status!=='pending'||remaining(linked)===0))
       message('That invitation has expired or was already answered. Ask the player to send another.');
    }
+   // A declined saved-game invite: say so (the waiting board closes; the save stays in Saved games).
+   const declined=challenges.find(c=>c.challenger_id===uid&&c.kind==='saved'&&c.status==='declined'&&c.responded_at
+     &&Date.now()-Date.parse(c.responded_at)<60000&&!openedGameIds.has('d'+c.id));
+   if(declined){openedGameIds.add('d'+declined.id);
+     window.familyChessToast?.(nameFor(declined.target_id)+' declined your saved game. It’s still in Challenges → Saved games.',5000);}
    // Accepting on another device also opens the challenger's board automatically.
    const accepted=challenges.find(c=>c.challenger_id===uid&&c.status==='accepted'&&c.game_id
      &&Date.now()-Date.parse(c.responded_at||c.created_at)<120000&&!openedGameIds.has(c.game_id));
