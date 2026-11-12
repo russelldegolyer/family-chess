@@ -108,19 +108,13 @@
     const seconds = Math.ceil(Math.max(0,ms)/1000);
     return Math.floor(seconds/60) + ':' + String(seconds%60).padStart(2,'0');
   };
-  function chatStrip(){
-    let el=document.getElementById('chatClockStrip');
-    const head=document.querySelector('#panel .panel-head');
-    if(!el&&head){ el=document.createElement('div'); el.id='chatClockStrip'; el.hidden=true; head.after(el); }
-    return el;
-  }
   function redraw() {
     const on = state.mode!=='off';
     const shown = !hud.hidden;
     hud.hidden = !on;
     document.body.classList.toggle('clock-timed',on);
     if (shown!==on) window.dispatchEvent(new Event('resize'));
-    if (!on) { const st=document.getElementById('chatClockStrip'); if(st) st.hidden=true; return; }
+    if (!on) { document.body.classList.remove('clock-in-chat'); return; }
     const at = Date.now();
     const own=state.viewSide,opp=own==='w'?'b':'w';
     for(const side of ['w','b']){
@@ -138,12 +132,12 @@
     const bottom=Math.max(top+53,Math.min(visibleBottom-58,lowerLimit-53));
     // Chat open on a phone: both clocks shrink into a strip inside the chat so the board keeps the screen.
     const row=split&&!document.body.classList.contains('landscape');
-    const strip=chatStrip();
-    if(strip){
-      if(row){ if(strip.firstChild!==nodes[opp].node||nodes[own].node.parentNode!==strip||actions.parentNode!==strip) strip.append(nodes[opp].node,nodes[own].node,actions); }
-      else if(nodes.w.node.parentNode===strip){ hud.prepend(nodes.w.node,nodes.b.node); hud.append(actions); }
-      strip.hidden=!row;
-    }
+    const plate=document.getElementById('plateTop'),title=document.querySelector('#panel .panel-head .chat-title');
+    if(row&&plate&&title){
+      if(nodes[opp].node.parentNode!==plate) plate.append(nodes[opp].node);
+      if(nodes[own].node.nextSibling!==actions||actions.nextSibling!==title) title.before(nodes[own].node,actions);
+    }else if(nodes.w.node.parentNode&&nodes.w.node.parentNode!==hud&&hud.prepend){ hud.prepend(nodes.w.node,nodes.b.node); hud.append(actions); }
+    document.body.classList.toggle('clock-in-chat',!!(row&&plate&&title));
     nodes[opp].node.style.top=top+'px';
     const ownTop=bottom;
     nodes[own].node.style.top=ownTop+'px';

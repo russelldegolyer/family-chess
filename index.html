@@ -15,7 +15,7 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=9"></script>
+<script defer src="./chess-clock.js?v=10"></script>
 <script defer src="./chess-online.js?v=15"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
@@ -1063,22 +1063,45 @@ body.compact.chat2d:not(.landscape) .panel-head #btnChatResign, body.compact.cha
 body.compact.chat2d:not(.landscape) .panel-head .chat-clear, body.compact.chat2d:not(.landscape) .panel-head .sheet-close { width: 34px; height: 34px; border-radius: 50% !important; background: rgba(255,255,255,.06) !important; display: inline-grid; place-items: center; }
 body.compact.chat2d:not(.landscape) .chat-form { padding: 8px 10px; border-top: 1px solid rgba(255,255,255,.06); }
 body.compact.chat2d:not(.landscape) #chatInput { border-radius: 999px; background: #2a2a2f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
-/* clocks inside the open chat: one slim row under the header */
-#chatClockStrip { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,.06); }
-#chatClockStrip[hidden], body.reviewing #chatClockStrip { display: none; }
-#chatClockStrip .chess-clock { position: static !important; top: auto !important; left: auto !important; flex: 1 1 0; min-width: 0; width: auto !important; display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 34px; padding: 0 11px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); box-shadow: none; transition: background .2s, border-color .2s; }
-#chatClockStrip .chess-clock-label { font: 700 10px/1 var(--body); letter-spacing: .07em; text-transform: uppercase; color: #9a9aa3; }
-#chatClockStrip .chess-clock-time { font: 750 17px/1 var(--body); letter-spacing: -.01em; color: #e8e8ee; font-variant-numeric: tabular-nums; }
-#chatClockStrip .chess-clock.active { background: rgba(53,205,122,.14); border-color: rgba(53,205,122,.75); box-shadow: inset 3px 0 #35cd7a; }
-#chatClockStrip .chess-clock.active .chess-clock-label { color: #83efac; }
-#chatClockStrip .chess-clock.active .chess-clock-time { color: #fff; }
-#chatClockStrip .chess-clock.low { background: rgba(240,96,112,.16); border-color: #f06070; }
-#chatClockStrip .chess-clock.low .chess-clock-time { color: #ff8b98; }
-#chatClockStrip .chess-clock::after { display: none; }
-#chatClockStrip .chess-clock-actions { position: static !important; width: auto !important; display: flex; gap: 5px; flex: none; }
-#chatClockStrip .chess-clock-actions:not(:has(button:not([hidden]))) { display: none; }
-#chatClockStrip .chess-clock-actions button { height: 34px; min-height: 0; padding: 0 9px; border-radius: 10px; font: 700 11px/1 var(--body); color: #f2f2f4; background: #3c2e26; border: 1px solid #b78a48; white-space: nowrap; cursor: pointer; }
-#chatClockStrip .chess-clock-actions button[hidden] { display: none; }
+/* chat open: opponent clock sits inside the top name plate, your clock takes the "Chat" title spot */
+body.clock-in-chat:not(.reviewing) .panel-head .chat-title { display: none; }
+body.reviewing .panel-head .chess-clock, body.reviewing #plateTop .chess-clock, body.reviewing .panel-head .chess-clock-actions { display: none !important; }
+#plateTop .chess-clock, .panel-head .chess-clock { position: static !important; top: auto !important; left: auto !important; width: auto !important; min-width: 0; flex: none; display: flex; align-items: center; gap: 7px; box-shadow: none; transition: background .2s, border-color .2s, color .2s; }
+#plateTop .chess-clock { margin-left: 10px; padding: 0 0 0 12px; height: 34px; border: 0; border-left: 1px solid rgba(255,255,255,.14); border-radius: 0; background: none; }
+#plateTop .chess-clock-label { display: none; }
+#plateTop .chess-clock-time { font: 750 21px/1 var(--body); letter-spacing: -.02em; color: #f2f2f6; font-variant-numeric: tabular-nums; }
+#plateTop .chess-clock.active .chess-clock-time { color: #83efac; }
+#plateTop .chess-clock.low .chess-clock-time { color: #ff8b98; }
+#plateTop .chess-clock::after, .panel-head .chess-clock::after { display: none; }
+.panel-head .chess-clock { height: 36px; padding: 0 12px 0 10px; border-radius: 11px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); }
+.panel-head .chess-clock-label { font: 700 10px/1 var(--body); letter-spacing: .07em; text-transform: uppercase; color: #9a9aa3; }
+.panel-head .chess-clock-time { font: 750 19px/1 var(--body); letter-spacing: -.02em; color: #e8e8ee; font-variant-numeric: tabular-nums; }
+.panel-head .chess-clock.active { background: rgba(53,205,122,.15); border-color: rgba(53,205,122,.8); box-shadow: inset 3px 0 #35cd7a; }
+.panel-head .chess-clock.active .chess-clock-label { color: #83efac; }
+.panel-head .chess-clock.active .chess-clock-time { color: #fff; }
+.panel-head .chess-clock.low { background: rgba(240,96,112,.16); border-color: #f06070; }
+.panel-head .chess-clock.low .chess-clock-time { color: #ff8b98; }
+.panel-head .chess-clock-actions { position: static !important; width: auto !important; display: flex; gap: 4px; flex: none; }
+.panel-head .chess-clock-actions:not(:has(button:not([hidden]))) { display: none; }
+.panel-head .chess-clock-actions button { height: 32px; min-height: 0; padding: 0 8px; border-radius: 10px; font: 700 10px/1 var(--body); color: #f2f2f4; background: #3c2e26; border: 1px solid #b78a48; white-space: nowrap; cursor: pointer; }
+.panel-head .chess-clock-actions button[hidden] { display: none; }
+body.clock-in-chat .panel-head { gap: 5px !important; }
+body.clock-in-chat .panel-head .chat-tools { flex: 0 1 auto; min-width: 0; }
+body.clock-in-chat .panel-head .chat-tool { min-width: 28px !important; padding: 0 3px !important; }
+body.clock-in-chat .panel-head .chat-tool.chat-word { padding: 0 5px !important; font-size: 14px !important; }
+body.clock-in-chat .panel-head #btnChatResign, body.clock-in-chat .panel-head #btnChatPause { width: 28px !important; min-width: 28px !important; }
+body.clock-in-chat .panel-head .chat-clear, body.clock-in-chat .panel-head .sheet-close { width: 32px !important; height: 32px !important; }
+@media (max-width: 430px) { .panel-head .chess-clock-label { display: none; } .panel-head .chess-clock { padding: 0 10px; } }
+@media (max-width: 400px) {
+  body.clock-in-chat #plateTop .orb { display: none; }
+  body.clock-in-chat #plateTop .chess-clock { margin-left: 6px; padding-left: 8px; }
+  body.clock-in-chat #plateTop { padding-left: 12px; padding-right: 12px; }
+  body.clock-in-chat #plateTop .chess-clock-time { font-size: 18px; }
+  body.clock-in-chat .panel-head .chess-clock { padding: 0 8px; }
+  body.clock-in-chat .panel-head .chess-clock-time { font-size: 17px; }
+  body.clock-in-chat .panel-head .chat-tool { min-width: 26px !important; }
+  body.clock-in-chat .train-top { padding-left: 11px; padding-right: 11px; font-size: 14px; }
+}
 body.compact.chat2d:not(.landscape) .chat-list>.chat-empty-state { background: rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); border: 0; }
 .set-pick { border: 0; background: var(--fill-2, #2c2c2e); color: inherit; font: 600 14px/1 var(--body); padding: 9px 14px; border-radius: 10px; cursor: pointer; white-space: pre; }
 
@@ -3950,7 +3973,7 @@ function layout2D() {
     // Real bottom edge of the open sheet (offsetTop ignores the slide transform), not innerHeight.
     const edge = pnl && pnl.offsetHeight ? pnl.offsetTop + pnl.offsetHeight : H;
     const padB = pnl ? parseFloat(getComputedStyle(pnl).paddingBottom) || 0 : 0;
-    const ph = Math.round(Math.max((clocksShown ? 236 : 196) + padB, Math.min(edge * .55, edge - top - fullH - 8)));
+    const ph = Math.round(Math.max(196 + padB, Math.min(edge * .55, edge - top - fullH - 8)));
     document.body.style.setProperty('--chat-panel-h', ph + 'px');
   } else document.body.style.removeProperty('--chat-panel-h');
   const panelHeight = split ? ($('panel')?.offsetHeight || Math.min(400, H * .4)) : 0;
