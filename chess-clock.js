@@ -108,13 +108,19 @@
     const seconds = Math.ceil(Math.max(0,ms)/1000);
     return Math.floor(seconds/60) + ':' + String(seconds%60).padStart(2,'0');
   };
+  function chatStrip(){
+    let el=document.getElementById('chatClockStrip');
+    const head=document.querySelector('#panel .panel-head');
+    if(!el&&head){ el=document.createElement('div'); el.id='chatClockStrip'; el.hidden=true; head.after(el); }
+    return el;
+  }
   function redraw() {
     const on = state.mode!=='off';
     const shown = !hud.hidden;
     hud.hidden = !on;
     document.body.classList.toggle('clock-timed',on);
     if (shown!==on) window.dispatchEvent(new Event('resize'));
-    if (!on) return;
+    if (!on) { const st=document.getElementById('chatClockStrip'); if(st) st.hidden=true; return; }
     const at = Date.now();
     const own=state.viewSide,opp=own==='w'?'b':'w';
     for(const side of ['w','b']){
@@ -130,13 +136,17 @@
       window.visualViewport.height+window.visualViewport.offsetTop:innerHeight;
     const lowerLimit=split&&panel?panel.top:(bottomBar?.top||visibleBottom-14);
     const bottom=Math.max(top+53,Math.min(visibleBottom-58,lowerLimit-53));
-    // Chat open on a phone: both clocks share the top row so the board keeps its full width.
+    // Chat open on a phone: both clocks shrink into a strip inside the chat so the board keeps the screen.
     const row=split&&!document.body.classList.contains('landscape');
+    const strip=chatStrip();
+    if(strip){
+      if(row){ if(strip.firstChild!==nodes[opp].node||nodes[own].node.parentNode!==strip||actions.parentNode!==strip) strip.append(nodes[opp].node,nodes[own].node,actions); }
+      else if(nodes.w.node.parentNode===strip){ hud.prepend(nodes.w.node,nodes.b.node); hud.append(actions); }
+      strip.hidden=!row;
+    }
     nodes[opp].node.style.top=top+'px';
-    const ownTop=row?top:bottom;
+    const ownTop=bottom;
     nodes[own].node.style.top=ownTop+'px';
-    nodes[own].node.style.left=row?(nodes[opp].node.getBoundingClientRect().right+6)+'px':'';
-    nodes[opp].node.style.left='';
     actions.style.right='auto';
     pauseBtn.hidden=true; // Game controls render the unified Pause/Resume button.
     pauseBtn.textContent=state.clockState==='paused'?'▶ Resume':'⏸ Pause';
@@ -165,7 +175,7 @@
     if(stacked){
       actions.style.width=actionRoom+'px';
       // Above the bottom toolbar/chat, without crossing into the clock.
-      actions.style.top=(row?ownTop:Math.round(bottom-Math.max(0,buttons.length*29+
+      actions.style.top=(Math.round(bottom-Math.max(0,buttons.length*29+
         Math.max(0,buttons.length-1)*4-49)))+'px';
     }else{
       actions.style.width='max-content';
