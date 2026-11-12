@@ -140,3 +140,52 @@ body.compact .bottom-bar .controls #btnNew .ctl-word, body.compact .bottom-bar .
 .tr-list .tr-group { padding: 14px 14px 6px; margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--tr-red); background: #121214; }
 .tr-list .tr-group:first-child { padding-top: 4px; }
 .tr-list .tr-group + .tr-item { box-shadow: none; }
+
+/* ---- visual pass 3: hub hero, counters, cards; puzzle header ---- */
+.tr-sheet { background: radial-gradient(120% 60% at 100% 0%, rgba(229,48,42,.10), transparent 60%), #111113; }
+.tr-head h2 { font-size: 30px; }
+.tr-hero { display: flex; align-items: center; gap: 14px; padding: 16px 16px 16px 18px; border-radius: 20px;
+  background: linear-gradient(135deg, #1f1f23, #17171a); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.tr-hero-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tr-hero-label { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #8e8e93; }
+.tr-hero-num { font-size: 44px; line-height: 1.05; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.tr-hero-sub { font-size: 13px; color: #a1a1a6; }
+.tr-ring { position: relative; flex: none; width: 78px; height: 78px; }
+.tr-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.tr-ring circle { fill: none; stroke-width: 3.4; stroke-linecap: round; }
+.tr-ring .trk { stroke: #2c2c30; } .tr-ring .val { stroke: var(--tr-red); }
+.tr-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.tr-ring-label b { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tr-ring-label span { font-size: 10px; color: #8e8e93; text-transform: uppercase; letter-spacing: .06em; }
+.tr-mini { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 10px; border-radius: 16px; background: #1a1a1d; box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
+.tr-mini div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 11px 4px; min-width: 0; }
+.tr-mini div + div { box-shadow: inset 1px 0 0 rgba(255,255,255,.06); }
+.tr-mini b { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.tr-mini span { font-size: 11px; color: #8e8e93; white-space: nowrap; }
+.tr-cards { margin-top: 16px; gap: 8px; background: none; overflow: visible; }
+.tr-cards .tr-card { min-height: 70px; border-radius: 16px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05) !important; }
+.tr-cards .tr-card + .tr-card { box-shadow: inset 0 0 0 1px rgba(255,255,255,.05) !important; }
+.tr-card-ico { width: 44px; height: 44px; border-radius: 12px; font-size: 25px; background: linear-gradient(145deg, rgba(229,48,42,.28), rgba(229,48,42,.10)); }
+.tr-card-text b { font-size: 16.5px; }
+.tr-card-badge { flex: none; font-size: 12px; font-weight: 600; color: #ff8a83; font-variant-numeric: tabular-nums; }
+.tr-card-badge:empty { display: none; }
+.tr-link { margin-top: 18px; }
+
+/* puzzle / lesson header: a proper piece badge for the side to move */
+.tr-turn { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 21px; line-height: 1; box-shadow: none; }
+.tr-turn.w { background: #f2f2f7; color: #111; }
+.tr-turn.b { background: #000; color: #f2f2f7; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.28); }
+.tr-turn.lesson { background: rgba(229,48,42,.18); color: #ff8a83; }
+.tr-h-title { font-size: 18px; }
+/* feedback line: plain text, no stray bullet; the hint idea gets its own card */
+.tr-panel .tr-say:not(.good):not(.bad):not(.warn):not(.idea) { padding-left: 2px; color: #a1a1a6; }
+.tr-panel .tr-say:not(.good):not(.bad):not(.warn):not(.idea)::before { content: none; }
+.tr-panel .tr-say.idea { padding: 9px 12px 9px 36px; border-radius: 12px; background: rgba(255,214,10,.09); color: #f5e6a8; }
+.tr-panel .tr-say.idea.idea.idea.idea::before { content: ''; position: absolute; left: 11px; top: 10px; width: 17px; height: 17px; border-radius: 0;
+  background: #ffd60a; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.tr-pips { top: auto; bottom: 7px; right: 50%; transform: translateX(50%); position: absolute; }
+.tr-actions .tr-btn.hint { padding-bottom: 12px; }
+.tr-panel { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+
+.tr-ring .val[stroke-dasharray^="0 "] { display: none; }
+.tr-panel .tr-say.idea.idea.idea.idea { padding: 9px 12px 9px 38px; }

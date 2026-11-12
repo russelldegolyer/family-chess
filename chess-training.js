@@ -273,17 +273,24 @@
     const lessonsDone = LESSONS.filter((l) => P.lessons[l.id]?.mastered).length;
     const chDone = Object.values(P.challenges).reduce((a, c) => a + (c.wins || 0), 0);
     const overall = Math.round(((Math.min(pz.solved, 100) / 100) + lessonsDone / LESSONS.length + Math.min(chDone, 20) / 20) / 3 * 100);
-    const dash = el('div', 'tr-dash');
-    dash.append(stat('Puzzle rating', String(Math.round(pz.rating))), stat('Solved', String(pz.solved)), stat('Accuracy', acc), stat('Streak', String(pz.streak)),
-      stat('Lessons', lessonsDone + '/' + LESSONS.length), stat('Challenges won', String(chDone)));
-    const bar = el('div', 'tr-progress'); const fill = el('i'); fill.style.width = overall + '%'; bar.append(fill);
-    const barRow = el('div', 'tr-progress-row'); barRow.append(el('span', '', 'Overall progress'), el('b', '', overall + '%'));
+    /* hero: puzzle rating + overall progress ring; then four compact counters */
+    const hero = el('div', 'tr-hero');
+    const hm = el('div', 'tr-hero-main');
+    hm.append(el('span', 'tr-hero-label', 'Puzzle rating'), el('b', 'tr-hero-num', String(Math.round(pz.rating))),
+      el('span', 'tr-hero-sub', 'Peak ' + Math.round(pz.peak) + (pz.streak ? ' · 🔥 ' + pz.streak + ' streak' : '')));
+    const ring = el('div', 'tr-ring'); ring.style.setProperty('--p', overall);
+    ring.innerHTML = '<svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.5" class="trk"/><circle cx="18" cy="18" r="15.5" class="val" pathLength="100" stroke-dasharray="' + overall + ' 100"/></svg>';
+    const rl = el('span', 'tr-ring-label'); rl.append(el('b', '', overall + '%'), el('span', '', 'overall')); ring.append(rl);
+    hero.append(hm, ring);
+    const mini = el('div', 'tr-mini');
+    const m = (v, l) => { const d = el('div'); d.append(el('b', '', v), el('span', '', l)); mini.append(d); };
+    m(String(pz.solved), 'Solved'); m(acc, 'Accuracy'); m(lessonsDone + '/' + LESSONS.length, 'Lessons'); m(String(chDone), 'Challenges');
     const cards = el('div', 'tr-cards');
-    const card = (title, sub, icon, fn) => { const c = btn('', 'tr-card', fn); c.innerHTML = '<span class="tr-card-ico" aria-hidden="true">' + icon + '</span><span class="tr-card-text"><b></b><span></span></span><span class="tr-chev" aria-hidden="true">›</span>'; c.querySelector('b').textContent = title; c.querySelector('.tr-card-text span').textContent = sub; cards.append(c); };
-    card('Unlimited Puzzles', 'Tactics by rating · hints · no limits', '♞', () => openPuzzles());
-    card('Endgame Academy', 'Restrict, trap and checkmate the king', '♚', () => openAcademy());
-    card('Endgame Challenges', 'Win endgames against a defending computer', '♜', () => openChallenges());
-    hub.append(head, dash, barRow, bar, cards);
+    const card = (title, sub, icon, badge, fn) => { const c = btn('', 'tr-card', fn); c.innerHTML = '<span class="tr-card-ico" aria-hidden="true">' + icon + '</span><span class="tr-card-text"><b></b><span></span></span><span class="tr-card-badge"></span><span class="tr-chev" aria-hidden="true">›</span>'; c.querySelector('b').textContent = title; c.querySelector('.tr-card-text span').textContent = sub; c.querySelector('.tr-card-badge').textContent = badge; cards.append(c); };
+    card('Unlimited Puzzles', 'Tactics by rating, with hints', '♞', pz.solved ? pz.solved + ' solved' : '', () => openPuzzles());
+    card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
+    card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
+    hub.append(head, hero, mini, cards);
     const back = btn('Back to the game', 'tr-link', close); hub.append(back);
   }
 
@@ -402,7 +409,7 @@
   function renderPuzzlePanel(level) {
     panel.replaceChildren();
     const head = el('div', 'tr-head2');
-    head.append(el('span', 'tr-turn ' + PZ.side), el('b', 'tr-h-title', (PZ.side === 'w' ? 'White' : 'Black') + ' to move'));
+    head.append(el('span', 'tr-turn ' + PZ.side, PZ.side === 'w' ? '♔' : '♚'), el('b', 'tr-h-title', (PZ.side === 'w' ? 'White' : 'Black') + ' to move'));
     const tags = el('span', 'tr-h-tags'); tags.append(el('span', 'tr-tag', level + ' ' + PZ.p.rating));
     if (P.puzzle.streak) tags.append(el('span', 'tr-tag hot', '🔥 ' + P.puzzle.streak));
     head.append(tags);
@@ -419,7 +426,7 @@
     if (!PZ || PZ.done) return;
     const want = PZ.p.moves[PZ.i]; if (!want) return;
     PZ.hints = Math.min(3, PZ.hints + 1); P.puzzle.hints++; save();
-    if (PZ.hints === 1) { const th = themesList(PZ.p.themes); say(PZ.msgNode, 'Idea: ' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]] || 'Look for checks, captures and threats.')); }
+    if (PZ.hints === 1) { const th = themesList(PZ.p.themes); say(PZ.msgNode, '' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]] || 'Look for checks, captures and threats.'), 'idea'); }
     else if (PZ.hints === 2) { B().mark({ sel: want.slice(0, 2), lift: want.slice(0, 2) }); say(PZ.msgNode, 'Move the raised piece.'); }
     else { B().mark({ arrows: [[want.slice(0, 2), want.slice(2, 4)]], lift: want.slice(0, 2) }); say(PZ.msgNode, 'Play the arrow move.'); }
     PZ.hintBtn.querySelectorAll('.tr-pips i').forEach((p, k) => p.classList.toggle('on', k < PZ.hints));
@@ -818,7 +825,7 @@
   }
   function lessonPanel(title, buttons = [], sub = '') {
     panel.hidden = false; panel.replaceChildren();
-    const head = el('div', 'tr-head2'); head.append(el('span', 'tr-turn w'), el('b', 'tr-h-title', title));
+    const head = el('div', 'tr-head2'); head.append(el('span', 'tr-turn lesson', '♔'), el('b', 'tr-h-title', title));
     const msg = el('div', 'tr-say', sub); const row = el('div', 'tr-actions'); buttons.forEach((b) => row.append(b));
     panel.append(head, msg, row); return msg;
   }
