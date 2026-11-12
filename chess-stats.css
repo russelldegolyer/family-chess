@@ -69,9 +69,6 @@
 .st-qtrack { height: 6px; border-radius: 3px; background: #2c2c30; overflow: hidden; } .st-qtrack i { display: block; height: 100%; border-radius: 3px; }
 .st-qrow.best i { background: #30d158; } .st-qrow.good i { background: #64d2ff; } .st-qrow.inaccuracy i { background: #ffd60a; } .st-qrow.mistake i { background: #ff9f0a; } .st-qrow.blunder i { background: #ff453a; }
 .st-worst { width: 100%; font-size: 13px; color: #ff9f0a; }
-.st-chips { display: flex; gap: 6px; }
-.st-chip { flex: 1; min-height: 34px; border: 0; border-radius: 10px; background: #2a2a2e; color: #e5e5ea; font: 600 14px/1 inherit; cursor: pointer; }
-.st-chip.on { background: #0a84ff; color: #fff; }
 .st-level { display: grid; grid-template-columns: 26px 1fr 64px; align-items: center; gap: 10px; padding: 7px 4px; border: 0; border-radius: 10px; background: none; color: #f2f2f7; font: inherit; cursor: pointer; }
 .st-level.on { background: rgba(10,132,255,.14); }
 .st-lvnum { width: 26px; height: 26px; border-radius: 8px; background: #2a2a2e; display: grid; place-items: center; font-weight: 700; font-size: 13px; }

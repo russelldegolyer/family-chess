@@ -16,14 +16,6 @@
 .tr-head { display: flex; align-items: center; gap: 10px; margin: 2px 0 12px; }
 .tr-head h2 { flex: 1; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
 .tr-x { width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--tr-bg2); color: #c7c7cc; display: grid; place-items: center; cursor: pointer; }
-.tr-dash { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.tr-stat { background: var(--tr-bg); border-radius: 12px; padding: 9px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.tr-stat b { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.tr-stat span { font-size: 11px; color: var(--tr-dim); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tr-progress-row { display: flex; justify-content: space-between; margin: 12px 2px 5px; font-size: 12px; color: var(--tr-dim); }
-.tr-progress-row b { color: var(--tr-fg); font-weight: 600; }
-.tr-progress { height: 6px; border-radius: 3px; background: var(--tr-bg2); overflow: hidden; }
-.tr-progress i { display: block; height: 100%; background: var(--tr-red); border-radius: 3px; }
 .tr-cards, .tr-list { display: flex; flex-direction: column; margin-top: 14px; border-radius: 14px; overflow: hidden; background: var(--tr-bg); }
 .tr-card, .tr-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px; padding: 10px 14px; border: 0; background: none; color: var(--tr-fg); text-align: left; font: inherit; cursor: pointer; }
 .tr-card + .tr-card, .tr-item + .tr-item { box-shadow: inset 0 .5px 0 #3a3a3c; }
@@ -58,7 +50,6 @@
 .tr-meta { display: flex; flex-wrap: wrap; gap: 6px; }
 .tr-pill { padding: 4px 9px; border-radius: 999px; background: var(--tr-bg2); font-size: 12px; font-weight: 600; color: #d1d1d6; font-variant-numeric: tabular-nums; }
 .tr-pill.dim { color: var(--tr-dim); }
-.tr-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .tr-btn { flex: 1 1 0; min-width: 84px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--tr-bg2); color: var(--tr-fg); font: 600 15px/1 inherit; cursor: pointer; }
 .tr-btn.primary { background: var(--tr-red); color: #fff; }
 .tr-btn.quiet { background: #232326; color: #d1d1d6; }

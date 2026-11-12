@@ -100,7 +100,6 @@
     }));
     return tablesP;
   }
-  const sqI = (sq) => (Number(sq[1]) - 1) * 8 + FILES.indexOf(sq[0]);
   /* plies to mate for the side to move from an exact table, or null when the position is not covered */
   function probe(fen) {
     const parts = fen.split(' '), rows = parts[0].split('/'); const pcs = [];
@@ -260,7 +259,6 @@
     B().onMove(null); B().mark({});
     renderHub(); hub.hidden = false;
   }
-  function stat(label, value) { const d = el('div', 'tr-stat'); d.append(el('b', '', value), el('span', '', label)); return d; }
   function renderHub() {
     hub.replaceChildren();
     const head = el('div', 'tr-head');
@@ -951,7 +949,6 @@
 
   /* one-move exercise judged by the exact table: any move that keeps the result is right (not just the "book" move) */
   function runKeep(g, my, done) {
-    const side = g.side || 'w';
     B().mark({});
     let tries = 0;
     const msg = lessonPanel(g.task, [btn('Hint', 'hint', () => {

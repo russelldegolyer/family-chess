@@ -38,7 +38,6 @@
     .cgButton{min-height:43px;border:1px solid #555;border-radius:9px;background:#242424;color:#fff;font:600 13px inherit;padding:9px 12px;cursor:pointer}
     .cgButton.primary{background:#eee;color:#111;border-color:#eee;width:100%;font-weight:700}
     .cgButton:disabled{opacity:.5;cursor:default}
-    .cgDivider{border:0;border-top:1px solid #383838;margin:20px 0}
     #cgGames{margin-top:6px;border-radius:12px;overflow:hidden;background:#1a1a1c}
     .cgGame{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:0;background:none;color:#fff;font:inherit;text-align:left;cursor:pointer}
     .cgGame+.cgGame{box-shadow:inset 0 .5px 0 #3a3a3c}
@@ -54,7 +53,6 @@
     .cgChevron{flex:none;color:#636366;font-size:18px}
     #cgMessage{min-height:20px;color:#ccc;font-size:12px;line-height:1.5;margin-top:12px}
     #cgMessage.error{color:#ffa7a7}
-    .cgLiveHeading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}
     .cgLiveCount{color:#b2f1c2;font-size:12px;font-weight:600;white-space:nowrap}
     .cgLiveList{display:flex;flex-direction:column;gap:9px}
     .cgLiveList{gap:0!important;border-radius:14px;overflow:hidden;background:#2c2c2e}
@@ -91,9 +89,6 @@
     .cgGameCopy.cgGameCancel{color:#ff6961}
     .cgQuick button.cgSmallLink:not([hidden]){min-height:30px;background:none;color:#0a84ff;font-size:13px;font-weight:500}
     .cgMore{display:block;width:100%;padding:9px;border:0;background:none;color:#0a84ff;font:500 13px/1 -apple-system,sans-serif;cursor:pointer}
-    .cgQuick b{font-weight:600;color:#30d158;margin-left:2px}
-    .cgQuick b:empty{display:none}
-    .cgQuick button:disabled{opacity:.45;cursor:default}
     .cgCreatedLink{margin:10px 0 0;padding:14px;border:0;border-radius:16px;background:#2c2c2e;gap:10px}
     .cgCreatedHead{display:flex;flex-direction:column;gap:3px}
     .cgCreatedLink a{font-size:12px;color:#8e8e93;text-decoration:none}
@@ -135,8 +130,6 @@
       <div id="cgSocialMount"></div>
       <div id="cgLobbyActions" class="cgQuick" aria-label="More ways to play">
         <button id="cgGoLink" class="cgSmallLink" type="button">or share an invite link</button>
-        <button id="cgGoWatch" type="button" hidden><b id="cgWatchCount"></b></button>
-        <button id="cgGoChallenge" type="button" hidden>Challenge a player</button>
       </div>
       <div id="cgCreatedLink" class="cgCreatedLink" hidden>
         <div class="cgCreatedHead"><strong>Invite link ready</strong><span class="cgMuted">Anyone with it can join as your opponent</span></div>
@@ -287,16 +280,7 @@
     else launch.focus();
   }
   window.familyChessOpenLobby = show;
-  function toSection(id) {
-    show();
-    requestAnimationFrame(()=>{
-      const target=$(id);
-      if(target) { target.scrollIntoView({block:'start',behavior:'smooth'}); }
-    });
-  }
-  $('cgGoChallenge').addEventListener('click',()=>toSection('cgSocialMount'));
   $('cgGoLink').addEventListener('click',()=>{void createInvite();});
-  $('cgGoWatch').addEventListener('click',()=>toSection('cgLiveGames'));
   $('cgCopyNewInvite').addEventListener('click',()=>{
     const url=$('cgNewInviteURL').href;
     if(url&&url!=='#')void copy(url);
@@ -628,9 +612,6 @@
     }
     liveCount=others.length;
     counter.textContent=others.length?`${others.length} to watch`:'';
-    $('cgWatchCount').textContent=others.length?'· '+others.length:'';
-    $('cgGoWatch').disabled=!others.length;
-    $('cgGoWatch').title=others.length?'Watch a game in progress':'No one is playing right now';
     watchShortcut.textContent=`● Watch live${others.length>1?` · ${others.length}`:''}`;
     watchShortcut.hidden=others.length===0||!!matchId;
     container.replaceChildren();
