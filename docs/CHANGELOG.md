@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-12 | 22 |
+| 2026-11-12 | 31 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
 | 2026-11-09 | 130 |
@@ -14,7 +14,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-12 — Accuracy, captured pieces, new opening screen (deployed 5:53 PM)
 
 **Added**
 - **Accuracy** (0–100, like chess.com): worked out on your phone after every game and shown on the end card,
