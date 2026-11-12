@@ -15,7 +15,7 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=6"></script>
+<script defer src="./chess-clock.js?v=7"></script>
 <script defer src="./chess-online.js?v=15"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
@@ -455,8 +455,8 @@ body.compact .panel { height: 34%; min-height: 220px; }
    a proportional, fully playable 2D board above it. */
 body.compact.chat2d:not(.landscape) .panel {
   /* Large readable board + roughly three short messages at once. */
-  height: clamp(285px, 40%, 400px);
-  min-height: 285px;
+  height: var(--chat-panel-h, clamp(285px, 40%, 400px));
+  min-height: 180px;
 }
 body.compact.chat2d:not(.landscape) .panel-head {
   padding-top: 8px;
@@ -1052,6 +1052,18 @@ body.compact .bottom-bar .mine .view2d-btn { height: 40px !important; min-height
 .panel-head .chat-tool.chat-word { font-size: 15px; padding: 0 5px; }
 .panel-head .chat-tools + .chat-clear { margin-left: 0; }
 .panel-head .sheet-close { order: 99; margin-left: 2px; flex: none; }
+/* chat panel (phone, chat open): grouped tool capsule, soft top edge, roomier composer */
+body.compact.chat2d:not(.landscape) .panel { border-radius: 20px 20px 0 0; background: linear-gradient(180deg, #232327, #1a1a1d 64px) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 -10px 30px rgba(0,0,0,.45) !important; }
+body.compact.chat2d:not(.landscape) .panel::before { content: ""; position: absolute; top: 6px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255,255,255,.18); pointer-events: none; }
+body.compact.chat2d:not(.landscape) .panel-head { gap: 6px; padding: 12px 8px 8px 14px !important; border-bottom: 1px solid rgba(255,255,255,.06); }
+body.compact.chat2d:not(.landscape) .panel-head .chat-title { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+body.compact.chat2d:not(.landscape) .panel-head .chat-tools { padding: 2px; border-radius: 999px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+body.compact.chat2d:not(.landscape) .panel-head .chat-tool { height: 32px; min-width: 30px; }
+body.compact.chat2d:not(.landscape) .panel-head #btnChatResign, body.compact.chat2d:not(.landscape) .panel-head #btnChatPause { width: 30px; min-width: 30px; height: 32px; }
+body.compact.chat2d:not(.landscape) .panel-head .chat-clear, body.compact.chat2d:not(.landscape) .panel-head .sheet-close { width: 34px; height: 34px; border-radius: 50% !important; background: rgba(255,255,255,.06) !important; display: inline-grid; place-items: center; }
+body.compact.chat2d:not(.landscape) .chat-form { padding: 8px 10px max(8px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255,255,255,.06); }
+body.compact.chat2d:not(.landscape) #chatInput { border-radius: 999px; background: #2a2a2f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+body.compact.chat2d:not(.landscape) .chat-list>.chat-empty-state { background: rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); border: 0; }
 .set-pick { border: 0; background: var(--fill-2, #2c2c2e); color: inherit; font: 600 14px/1 var(--body); padding: 9px 14px; border-radius: 10px; cursor: pointer; white-space: pre; }
 
 /* end-of-game card */
@@ -3914,8 +3926,14 @@ function layout2D() {
   // The chat panel animates with translateY. Its getBoundingClientRect().top
   // changes during the animation; offsetHeight does not. Reserve its FINAL
   // space even before the opening transition finishes.
+  // Chat open: size the panel so the board keeps its full width; chat takes what is left.
+  if (split && !review) {
+    const fullH = (W - left - right) / 10.04 * 11.72;
+    const ph = Math.round(Math.max(180, Math.min(H * .5, H - top - fullH - 8)));
+    document.body.style.setProperty('--chat-panel-h', ph + 'px');
+  } else document.body.style.removeProperty('--chat-panel-h');
   const panelHeight = split ? ($('panel')?.offsetHeight || Math.min(400, H * .4)) : 0;
-  const bottom = split ? panelHeight + (clocksShown?61:10) : compact ? 80 : 64;
+  const bottom = split ? panelHeight + 8 : compact ? 80 : 64;
   const freeHeight = Math.max(40, H - top - bottom);
   const s = Math.max(3, Math.min((W - left - right) / 10.04, freeHeight / 11.72));
   const w = s * 10.04, height = s * 11.72;

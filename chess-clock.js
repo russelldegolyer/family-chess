@@ -130,8 +130,13 @@
       window.visualViewport.height+window.visualViewport.offsetTop:innerHeight;
     const lowerLimit=split&&panel?panel.top:(bottomBar?.top||visibleBottom-14);
     const bottom=Math.max(top+53,Math.min(visibleBottom-58,lowerLimit-53));
+    // Chat open on a phone: both clocks share the top row so the board keeps its full width.
+    const row=split&&!document.body.classList.contains('landscape');
     nodes[opp].node.style.top=top+'px';
-    nodes[own].node.style.top=bottom+'px';
+    const ownTop=row?top:bottom;
+    nodes[own].node.style.top=ownTop+'px';
+    nodes[own].node.style.left=row?(nodes[opp].node.getBoundingClientRect().right+6)+'px':'';
+    nodes[opp].node.style.left='';
     actions.style.right='auto';
     pauseBtn.hidden=true; // Game controls render the unified Pause/Resume button.
     pauseBtn.textContent=state.clockState==='paused'?'▶ Resume':'⏸ Pause';
@@ -160,11 +165,11 @@
     if(stacked){
       actions.style.width=actionRoom+'px';
       // Above the bottom toolbar/chat, without crossing into the clock.
-      actions.style.top=Math.round(bottom-Math.max(0,buttons.length*29+
-        Math.max(0,buttons.length-1)*4-49))+'px';
+      actions.style.top=(row?ownTop:Math.round(bottom-Math.max(0,buttons.length*29+
+        Math.max(0,buttons.length-1)*4-49)))+'px';
     }else{
       actions.style.width='max-content';
-      actions.style.top=Math.round(bottom+(clockRect.height-
+      actions.style.top=Math.round(ownTop+(clockRect.height-
         Math.max(0,actions.getBoundingClientRect().height))/2)+'px';
     }
     for (const side of ['w','b']) {
