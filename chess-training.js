@@ -274,7 +274,7 @@
     }).catch(() => {});
   }
   function renderHub() {
-    hub.classList.remove('tr-sg-page'); hub.replaceChildren();
+    hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
     const head = el('div', 'tr-head');
     head.append(el('h2', '', 'Training'));
     const x = btn('', 'tr-x', close); x.setAttribute('aria-label', 'Close training');
@@ -321,13 +321,13 @@
   async function loadSavedRows() {
     const c = api(); if (!c || uid === 'local') return null;
     const { data, error } = await c.from('chess_saved_games')
-      .select('id,group_id,source,owner_side,opponent_id,white_name,black_name,moves,sans,actions,fen,level,keep,created_at')
+      .select('id,group_id,source,owner_side,opponent_id,white_name,black_name,moves,sans,actions,fen,level,keep,created_at,start_fen')
       .order('created_at', { ascending: false }).limit(60);
     if (error) throw error;
     savedRows = data || []; savedCount = savedRows.length; return savedRows;
   }
   const oppName = (g) => (g.owner_side === 'w' ? g.black_name : g.white_name) || 'your opponent';
-  const savedTitle = (g) => g.source === 'online' ? 'vs ' + oppName(g) : g.source === 'computer' ? 'vs Computer · Level ' + (g.level || 2) : 'Two players';
+  const savedTitle = (g) => g.source === 'custom' ? 'Custom position' : g.source === 'online' ? 'vs ' + oppName(g) : g.source === 'computer' ? 'vs Computer · Level ' + (g.level || 2) : 'Two players';
   const sideName = (s) => (s === 'b' ? 'Black' : 'White');
   const turnOf = (g) => ((g.fen || '').split(' ')[1] === 'b' ? 'b' : 'w');
   const whenOf = (g) => { const d = new Date(g.created_at); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
@@ -355,16 +355,142 @@
       return out;
     }
   }
+  /* ------------------------------------------------------------------ create game (position editor) */
+  const PCS = ['K', 'Q', 'R', 'B', 'N', 'P'];
+  function parseFen(fen) {
+    const b = {}, parts = (fen || '').split(' '), rows = (parts[0] || '').split('/');
+    for (let r = 0; r < 8; r++) { let f = 0; for (const ch of rows[r] || '') { if (/\d/.test(ch)) f += +ch; else { b['abcdefgh'[f] + (8 - r)] = ch; f++; } } }
+    return { board: b, turn: parts[1] === 'b' ? 'b' : 'w' };
+  }
+  function buildFen(board, turn) {
+    let place = '';
+    for (let r = 8; r >= 1; r--) { let empty = 0; for (const f of 'abcdefgh') { const p = board[f + r]; if (!p) { empty++; continue; } if (empty) { place += empty; empty = 0; } place += p; } if (empty) place += empty; if (r > 1) place += '/'; }
+    let cas = '';
+    if (board.e1 === 'K') { if (board.h1 === 'R') cas += 'K'; if (board.a1 === 'R') cas += 'Q'; }
+    if (board.e8 === 'k') { if (board.h8 === 'r') cas += 'k'; if (board.a8 === 'r') cas += 'q'; }
+    return place + ' ' + turn + ' ' + (cas || '-') + ' - 0 1';
+  }
+  function checkFen(board, turn) {
+    const all = Object.values(board);
+    if (all.filter((p) => p === 'K').length !== 1 || all.filter((p) => p === 'k').length !== 1) return 'Each side needs exactly one king.';
+    for (const sq in board) if (/p/i.test(board[sq]) && (sq[1] === '1' || sq[1] === '8')) return 'Pawns can’t stand on the first or last rank.';
+    const C = B().Chess, fen = buildFen(board, turn);
+    let c; try { c = new C(fen); } catch (e) { return 'That isn’t a legal position.'; }
+    let other; try { other = new C(buildFen(board, turn === 'w' ? 'b' : 'w')); } catch { other = null; }
+    if (other && other.inCheck()) return (turn === 'w' ? 'Black' : 'White') + ' is in check but it’s ' + (turn === 'w' ? 'White' : 'Black') + '’s move.';
+    if (c.isCheckmate()) return 'That position is already checkmate.';
+    if (c.isStalemate()) return 'That position is already stalemate.';
+    return null;
+  }
+  function openEditor(src) {
+    session++; hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
+    hub.classList.add('tr-ed-page');
+    let { board, turn } = parseFen(src ? src.fen : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    let editing = src || null, tool = 'move', from = null, flip = false;
+    hub.append(subHead(editing ? 'Edit position' : 'Create game', () => { hub.classList.remove('tr-ed-page'); editing ? openSavedGame(editing) : openSaved(); }, editing ? 'Back' : 'Saved games'));
+    const boardEl = el('div', 'tr-ed-board');
+    const pal = el('div', 'tr-ed-pal');
+    const note = el('p', 'tr-ed-note');
+    const say = (t, bad) => { note.textContent = t || ''; note.classList.toggle('bad', !!bad); };
+    const glyph = (p) => { const span = el('span', 'tr-ed-pc ' + (p === p.toUpperCase() ? 'w' : 'b'), GLYPH[p.toLowerCase()]); return span; };
+    function draw() {
+      boardEl.replaceChildren();
+      for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+        const file = 'abcdefgh'[flip ? 7 - f : f], rank = flip ? r + 1 : 8 - r, sq = file + rank;
+        const cell = el('button', 'tr-ed-sq ' + ((f + r) % 2 ? 'd' : 'l') + (from === sq ? ' from' : ''));
+        cell.type = 'button'; cell.setAttribute('aria-label', sq);
+        if (board[sq]) cell.append(glyph(board[sq]));
+        if (f === 0) cell.append(el('i', 'tr-ed-rk', String(rank)));
+        if (r === 7) cell.append(el('i', 'tr-ed-fl', file));
+        cell.addEventListener('click', () => tap(sq));
+        boardEl.append(cell);
+      }
+      for (const b of pal.querySelectorAll('button[data-t]')) b.classList.toggle('on', b.dataset.t === tool);
+      for (const b of turnSeg.children) b.classList.toggle('on', b.dataset.v === turn);
+    }
+    function tap(sq) {
+      say('');
+      if (tool === 'move') {
+        if (!from) { if (board[sq]) from = sq; }
+        else { if (from !== sq) { board[sq] = board[from]; delete board[from]; } from = null; }
+      } else if (tool === 'x') { delete board[sq]; }
+      else {
+        if (board[sq] === tool) delete board[sq];
+        else { if (/k/i.test(tool)) for (const q in board) if (board[q] === tool) delete board[q]; board[sq] = tool; }
+      }
+      draw();
+    }
+    const tb = (t, content, label) => { const b = btn('', 'tr-ed-tool', () => { tool = t; from = null; draw(); }); b.dataset.t = t; b.setAttribute('aria-label', label); if (typeof content === 'string') b.textContent = content; else b.append(content); return b; };
+    const r1 = el('div', 'tr-ed-row'), r2 = el('div', 'tr-ed-row'), r3 = el('div', 'tr-ed-row tools');
+    for (const p of PCS) r1.append(tb(p, glyph(p), 'White ' + p));
+    for (const p of PCS) r2.append(tb(p.toLowerCase(), glyph(p.toLowerCase()), 'Black ' + p));
+    const mv = tb('move', '', 'Move pieces'); mv.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Move</span>';
+    const er = tb('x', '', 'Erase'); er.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20H9L4 15l9-9 7 7-6 6M8 11l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Erase</span>';
+    const clear = btn('Clear', 'tr-ed-tool txt', () => { board = {}; from = null; draw(); });
+    const reset = btn('Start', 'tr-ed-tool txt', () => { board = parseFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1').board; from = null; draw(); });
+    const fl = btn('Flip', 'tr-ed-tool txt', () => { flip = !flip; draw(); });
+    r3.append(mv, er, clear, reset, fl);
+    pal.append(r1, r2, r3);
+    const turnSeg = el('div', 'tr-sg-seg tr-ed-turn');
+    for (const v of ['w', 'b']) { const b = btn((v === 'w' ? 'White' : 'Black') + ' to move', '', () => { turn = v; draw(); }); b.dataset.v = v; turnSeg.append(b); }
+    const bottom = el('div', 'tr-ed-actions');
+    const load = btn('Load saved', 'tr-ed-load', () => void pickSaved());
+    const save = btn(editing ? 'Save…' : 'Save', 'tr-sg-primary tr-ed-save', () => void doSaveEdit());
+    bottom.append(load, save);
+    hub.append(boardEl, pal, turnSeg, note, bottom);
+    draw();
+    async function pickSaved() {
+      let rows; try { rows = await loadSavedRows(); } catch (e) { say('Could not load saved games.', true); return; }
+      if (!rows || !rows.length) { say('No saved games to load yet.', true); return; }
+      const ov = el('div', 'tr-pop-ov'), card = el('div', 'tr-pop'), close = () => ov.remove();
+      ov.addEventListener('pointerdown', (e) => { if (e.target === ov) close(); });
+      const hd = el('div', 'tr-pop-head'); hd.append(el('h3', '', 'Load a saved game'));
+      card.append(el('i', 'tr-grab'), hd);
+      const list = el('div', 'tr-saved tr-ed-pick');
+      for (const g of rows) {
+        const row = el('div', 'tr-saved-row');
+        const go = btn('', 'tr-saved-go', () => { close(); editing = g; ({ board, turn } = parseFen(g.fen)); from = null; save.textContent = 'Save…'; hub.querySelector('.tr-head h2').textContent = 'Edit position'; say('Loaded “' + savedTitle(g) + '”. Edit it, then save as new or overwrite it.'); draw(); });
+        const th = el('span', 'tr-saved-thumb'); th.innerHTML = miniBoard(g);
+        const tx = el('span', 'tr-card-text'); tx.append(el('b', '', savedTitle(g)), el('span', 'tr-saved-meta', whenOf(g)));
+        go.append(th, tx); row.append(go); list.append(row);
+      }
+      card.append(list, btn('Cancel', 'primary', close)); ov.append(card); root.append(ov);
+    }
+    async function doSaveEdit() {
+      const err = checkFen(board, turn); if (err) { say(err, true); return; }
+      const fen = buildFen(board, turn);
+      const write = async (replace) => {
+        const c = api(); if (!c || uid === 'local') { say('Sign in to save.', true); return; }
+        say('Saving…');
+        const { error } = await c.rpc('chess_save_local_game', { p_source: 'custom', p_moves: [], p_sans: [], p_fen: fen, p_side: turn, p_level: 2,
+          p_white: 'White', p_black: 'Black', p_replace: replace, p_start_fen: fen });
+        if (error) { say('Could not save: ' + error.message, true); return; }
+        hub.classList.remove('tr-ed-page'); openSaved();
+      };
+      if (!editing) { await write(null); return; }
+      const ov = el('div', 'tr-pop-ov'), card = el('div', 'tr-pop'), close = () => ov.remove();
+      ov.addEventListener('pointerdown', (e) => { if (e.target === ov) close(); });
+      const hd = el('div', 'tr-pop-head'); hd.append(el('h3', '', 'Save position'));
+      card.append(el('i', 'tr-grab'), hd, el('p', 'tr-ed-poptext', 'You loaded “' + savedTitle(editing) + '”. Replace it with this position, or keep both?'),
+        btn('Overwrite original', 'primary', () => { close(); void write(editing.id); }),
+        btn('Save as new', 'tr-ed-alt', () => { close(); void write(null); }),
+        btn('Cancel', 'tr-ed-alt quiet', close));
+      ov.append(card); root.append(ov);
+    }
+  }
   async function openSaved() {
-    session++; hub.classList.remove('tr-sg-page'); hub.replaceChildren(); hub.append(subHead('Saved games', () => openHub()));
+    session++; hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren(); hub.append(subHead('Saved games', () => openHub()));
     const loading = el('p', 'tr-about-foot', 'Loading…'); hub.append(loading);
     let rows;
     try { rows = await loadSavedRows(); } catch (e) { loading.textContent = 'Could not load saved games. ' + (e?.message || ''); return; }
     loading.remove();
     if (rows === null) { const e = el('div', 'tr-saved-empty'); e.append(el('b', '', 'Sign in to use saved games'), el('p', '', 'Saved games live in your account so you can pick them up on any device.')); hub.append(e); return; }
+    const create = btn('', 'tr-create', () => openEditor(null));
+    create.innerHTML = '<span class="tr-create-ico" aria-hidden="true">+</span><span class="tr-card-text"><b>Create game</b><span>Set up any position, then save it</span></span><span class="tr-chev" aria-hidden="true">›</span>';
+    hub.append(create);
     if (!rows.length) {
       const e = el('div', 'tr-saved-empty');
-      e.append(el('b', '', 'No saved games yet'), el('p', '', 'During any game, tap the bookmark next to resign. Games against family are saved for both of you.'));
+      e.append(el('b', '', 'No saved games yet'), el('p', '', 'During any game, tap the bookmark next to resign, or create a position above.'));
       hub.append(e); return;
     }
     const box = el('div', 'tr-saved');
@@ -383,20 +509,22 @@
     hub.append(box, el('p', 'tr-about-foot', 'Picked-up games disappear unless kept ★'));
   }
   function openSavedGame(g) {
-    session++; hub.classList.remove('tr-sg-page'); hub.replaceChildren(); hub.append(subHead(savedTitle(g), () => openSaved(), 'Saved games'));
+    session++; hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren(); hub.append(subHead(savedTitle(g), () => openSaved(), 'Saved games'));
     const top = el('div', 'tr-sg-top');
     const board = el('div', 'tr-sg-board'); board.innerHTML = miniBoard(g);
     const info = el('div', 'tr-sg-info');
-    info.append(el('span', 'tr-sg-label', 'Last moves'));
+    info.append(el('span', 'tr-sg-label', g.moves.length ? 'Last moves' : 'Custom position'));
     for (const m of lastTwo(g)) { const c = el('span', 'tr-sg-move ' + m.color); c.append(el('i'), document.createTextNode(sideName(m.color) + ' · ' + m.san)); info.append(c); }
-    info.append(el('span', 'tr-sg-turn', sideName(turnOf(g)) + ' to move'), el('span', 'tr-sg-meta', 'You were ' + sideName(g.owner_side) + ' · saved ' + whenOf(g)));
+    info.append(el('span', 'tr-sg-turn', sideName(turnOf(g)) + ' to move'), el('span', 'tr-sg-meta', (g.source === 'custom' ? 'You play ' : 'You were ') + sideName(g.owner_side) + ' · saved ' + whenOf(g)));
     top.append(board, info); hub.append(top);
     const note = el('p', 'tr-sg-note'); const say = (t, bad) => { note.textContent = t; note.classList.toggle('bad', !!bad); };
     // Primary: pick it straight back up the way it was being played.
     const actions = el('div', 'tr-sg-actions');
     if (g.source === 'online' && g.opponent_id) actions.append(btn('Invite ' + oppName(g), 'tr-sg-primary', () => void sendSaved(g, g.opponent_id, g.owner_side, oppName(g), say)));
     else if (g.source === 'computer') actions.append(btn('Continue', 'tr-sg-primary', () => resumeHere(g, 'cpu', g.level || 2, g.owner_side)));
+    else if (g.source === 'custom') actions.append(btn('Play vs computer', 'tr-sg-primary', () => resumeHere(g, 'cpu', 2, g.owner_side)));
     else actions.append(btn('Continue on this screen', 'tr-sg-primary', () => resumeHere(g, 'local', 2, g.owner_side)));
+    actions.append(btn('Edit position', 'tr-sg-edit', () => openEditor(g)));
     hub.append(actions, note);
     // Other ways to play this position.
     hub.append(el('div', 'tr-section', 'Play it another way'));
@@ -457,7 +585,7 @@
     } catch (e) { say(e.message || 'Could not send.', true); }
   }
   function openAbout() {
-    hub.classList.remove('tr-sg-page'); hub.replaceChildren();
+    hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
     const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
     back.innerHTML = '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Training';
     head.append(back, el('h2', '', 'About'));
@@ -994,7 +1122,7 @@
   const LESSONS = ALL_LESSONS.filter((l) => l.id);
   function openAcademy() {
     session++; screen = 'academy'; top.hidden = true; panel.hidden = true; B().onMove(null);
-    hub.classList.remove('tr-sg-page'); hub.replaceChildren();
+    hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
     const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
     back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training</span>';
     head.append(back, el('h2', '', 'Endgame Academy'));
@@ -1280,7 +1408,7 @@
   }
   function openChallenges() {
     session++; screen = 'challenges'; top.hidden = true; panel.hidden = true; B().onMove(null);
-    hub.classList.remove('tr-sg-page'); hub.replaceChildren();
+    hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
     const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
     back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training</span>';
     head.append(back, el('h2', '', 'Endgame Challenges'));

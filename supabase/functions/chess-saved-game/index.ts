@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     if (target_id === me) return reply(400, { error: 'Choose another player.' });
 
     const { data: s, error: sErr } = await db.from('chess_saved_games')
-      .select('id,owner_id,group_id,owner_side,moves,actions').eq('id', saved_id).maybeSingle();
+      .select('id,owner_id,group_id,owner_side,moves,actions,start_fen').eq('id', saved_id).maybeSingle();
     if (sErr) throw sErr;
     if (!s || s.owner_id !== me) return reply(404, { error: 'Saved game not found.' });
     const side = body.side === 'w' || body.side === 'b' ? body.side : s.owner_side;
@@ -49,8 +49,11 @@ Deno.serve(async (req) => {
     const moves: string[] = Array.isArray(s.moves) ? s.moves : [];
     const actions: { after_ply: number; kind: string; square: string | null; fen_after: string; side: string }[] =
       Array.isArray(s.actions) ? s.actions : [];
-    if (!moves.length || moves.length > 1000) return reply(422, { error: 'This saved game is empty.' });
-    const chess = new Chess();
+    const startFen: string | null = typeof s.start_fen === 'string' && s.start_fen ? s.start_fen : null;
+    if ((!moves.length && !startFen) || moves.length > 1000) return reply(422, { error: 'This saved game is empty.' });
+    let chess: Chess;
+    try { chess = startFen ? new Chess(startFen) : new Chess(); }
+    catch { return reply(422, { error: 'This saved position is not a legal chess position.' }); }
     const rows: { ply: number; move_uci: string; move_san: string; fen_after: string; mover: string }[] = [];
     const applyActions = (ply: number) => {
       for (const a of actions) if (Number(a.after_ply) === ply) chess.load(a.fen_after);
@@ -78,11 +81,11 @@ Deno.serve(async (req) => {
 
     const { data: game, error: gErr } = await db.from('chess_games').insert({
       white_player_id: side === 'w' ? me : null, black_player_id: side === 'b' ? me : null,
-      status: 'waiting', current_fen: fen, resumed_plies: rows.length, saved_group: s.group_id,
+      status: 'waiting', current_fen: fen, resumed_plies: rows.length, saved_group: s.group_id, start_fen: startFen,
     }).select('id').single();
     if (gErr) throw gErr;
     const other = target_id;
-    const { error: mErr } = await db.from('chess_moves').insert(rows.map((r) => ({
+    const { error: mErr } = !rows.length ? { error: null } : await db.from('chess_moves').insert(rows.map((r) => ({
       game_id: game.id, player_id: r.mover === side ? me : other, ply: r.ply,
       move_uci: r.move_uci, move_san: r.move_san, fen_after: r.fen_after,
     })));

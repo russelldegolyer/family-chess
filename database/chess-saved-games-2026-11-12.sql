@@ -241,3 +241,9 @@ end $$;
 -- chess_save_online_game(p_game_id uuid, p_replace uuid default null) now writes ONE row for the caller only;
 -- chess_save_local_game(..., p_replace uuid default null). p_replace deletes the caller's earlier save first
 -- (the client asks "Overwrite last save" or "Save as new" when the same game was already saved).
+
+-- Follow-up migration chess_custom_positions (same day): "Create game" positions.
+--   chess_saved_games.start_fen (custom start position; moves may then be empty), source adds 'custom';
+--   chess_games.start_fen (a sent custom position starts from it); chess_save_local_game(..., p_replace, p_start_fen)
+--   saves custom positions with keep=true; chess_save_online_game copies start_fen; chess-saved-game Edge Function v2
+--   replays from start_fen and allows zero moves.

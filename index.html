@@ -16,15 +16,15 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=10"></script>
-<script defer src="./chess-online.js?v=16"></script>
+<script defer src="./chess-online.js?v=17"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
 <script defer src="./chess-social.js?v=15"></script>
-<link rel="stylesheet" href="./chess-training.css?v=14">
+<link rel="stylesheet" href="./chess-training.css?v=15">
 <link rel="stylesheet" href="./chess-stats.css?v=1">
 <script defer src="./chess-stats.js?v=1"></script>
-<script defer src="./chess-training.js?v=15"></script>
+<script defer src="./chess-training.js?v=16"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -5183,7 +5183,7 @@ function resetLocalGame(mode, n) {
   if (!$('promoDialog').hidden) { promoCtx = null; hide($('promoDialog')); }
   Object.assign(G, { mode, gid: null, key: 'k' + Date.now().toString(36) + rid(4), board: null, chooser: null, n, moves: [], pos: positionFrom([]), status: 'active', result: null, reason: null, drawOffer: null, turnAt: Date.now(), startedAt: Date.now(), endedAt: null, feedback: null, seats: { w: 'local', b: 'local' }, names: { w: '', b: '' } });
   G.version++;
-  G.clockActions=[]; G.resumePlies=0;
+  G.clockActions=[]; G.resumePlies=0; START_FEN=null; G.pos=positionFrom([]);
   if(mode==='cpu'||mode==='local')
     window.ChessClock?.startLocal(window.ChessClock.getPreference(), (expiredSide)=>{
       if(G.mode!==mode||G.status!=='active')return;
@@ -5295,7 +5295,7 @@ async function doSave(api, key, replace) {
       const names = G.mode === 'cpu' ? (human === 'w' ? [you, 'Computer'] : ['Computer', you]) : ['White', 'Black'];
       const { data, error } = await api.rpc('chess_save_local_game', {
         p_source: G.mode === 'cpu' ? 'computer' : 'local', p_moves: G.moves, p_sans: sansFor(G.moves, []),
-        p_fen: G.pos.chess.fen(), p_side: human, p_level: cpu.level, p_white: names[0], p_black: names[1], p_replace: replace });
+        p_fen: G.pos.chess.fen(), p_side: human, p_level: cpu.level, p_white: names[0], p_black: names[1], p_replace: replace, p_start_fen: START_FEN });
       if (error) throw error; id = data;
     }
     lastSave[key] = id; G.savedPly = G.moves.length; G.savedKey = key;
@@ -5306,13 +5306,14 @@ async function doSave(api, key, replace) {
 }
 /* Resume a saved row on this device: against the computer (mode 'cpu') or two players here ('local'). */
 function loadSavedGame(row, { mode = 'cpu', level = 2, side = 'w' } = {}) {
-  if (!row || !Array.isArray(row.moves) || !row.moves.length) return false;
+  if (!row || !Array.isArray(row.moves) || (!row.moves.length && !row.start_fen)) return false;
   const actions = (Array.isArray(row.actions) ? row.actions : []).map((x, i) => ({ ...x, id: i + 1 }));
   if (PG.on) closePregame(null);
   endPracticeGame();
   if (mode === 'cpu') { cpu.level = clamp(Number(level) || 2, 1, 5); cpu.human = side === 'b' ? 'b' : 'w'; store.set('sg.level', cpu.level); }
   else localView = side === 'b' ? 'b' : 'w';
   resetLocalGame(mode, 1);
+  START_FEN = row.start_fen || null;
   G.moves = row.moves.slice(); G.clockActions = actions; G.pos = positionFrom(G.moves, G.moves.length, actions); G.version++;
   G.resumePlies = G.moves.length;
   const want = wantedSide(); if (want !== viewSide) { viewSide = want; requestRender(); }
@@ -6513,6 +6514,7 @@ window.familyChessNative = {
     if(watching&&(!game.black_player_id||!['active','finished'].includes(game.status)))
       throw new Error('This match is not open for spectators');
     const actions=Array.isArray(options.actions)?options.actions:[];
+    START_FEN = game.start_fen || null;
     const pos = positionFrom(moves,moves.length,actions);
     if (pos.invalid || pos.ply !== moves.length || pos.chess.fen() !== game.current_fen)
       throw new Error('Online position mismatch. Refresh the match.');
