@@ -27,7 +27,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - In online games the New button reads **Leave**.
 - Saved games and Create game use the real board and pieces (your chosen 2D board colours).
 - The top-right profile circle is now an **Online** button, styled like Challenges.
-- Opening screen: **Challenges** and **Online** are two big equal buttons across the top (small again once a game starts).
+- Opening screen redesign: **Challenges** and **Online** are two big equal cards across the top (small again once a game starts), darker spotlight background, glass panel, red difficulty slider.
 - No white flash while the app loads, in light or dark mode.
 
 ## 2026-11-12 — Friends, colour wheel, last move (deployed 4:16 PM)
