@@ -285,7 +285,7 @@
     card('Unlimited Puzzles', 'Tactics by rating, with hints', '♞', pz.solved ? pz.solved + ' solved' : '', () => openPuzzles());
     card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
     card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
-    hub.append(head, hero, mini, cards);
+    hub.append(head, hero, mini, el('div', 'tr-section', 'Practice'), cards);
     const back = btn('Back to the game', 'tr-link', close); hub.append(back);
   }
 

@@ -172,3 +172,52 @@ body.training-open .train-top { display: none; }
 
 .tr-ring .val[stroke-dasharray^="0 "] { display: none; }
 .tr-panel .tr-say.idea.idea.idea.idea { padding: 9px 12px 9px 38px; }
+
+/* ---- visual pass 4: full-screen iOS sheet; the game board never shows behind Training ---- */
+body.training-open #toast, body.training-open #status, body.training-open #banner { visibility: hidden !important; }
+.tr-sheet { inset: 0; top: 0; max-height: none; border-radius: 0; box-shadow: none;
+  background: radial-gradient(90% 38% at 85% -6%, rgba(229,48,42,.16), transparent 70%), #000;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  animation: tr-in .28s cubic-bezier(.2,.8,.2,1); }
+.tr-sheet > * { max-width: 560px; margin-left: auto; margin-right: auto; }
+@keyframes tr-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.tr-sheet .tr-head { margin: 6px auto 16px; }
+.tr-sheet .tr-head h2 { font-size: 34px; font-weight: 800; letter-spacing: -.025em; }
+.tr-sheet .tr-x { width: 32px; height: 32px; background: rgba(120,120,128,.24); color: #d1d1d6; }
+.tr-hero { padding: 18px 18px 18px 20px; border-radius: 22px;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(229,48,42,.20), transparent 55%), linear-gradient(160deg, #1d1d20, #141416);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 12px 30px rgba(0,0,0,.45); }
+.tr-hero-label { font-size: 11px; letter-spacing: .1em; color: #ff8a83; }
+.tr-hero-num { font-size: 52px; font-weight: 800; letter-spacing: -.035em; margin: 2px 0 1px; }
+.tr-hero-sub { font-size: 13px; color: #8e8e93; }
+.tr-ring { width: 84px; height: 84px; }
+.tr-ring .trk { stroke: rgba(255,255,255,.08); }
+.tr-ring .val { stroke: #ff453a; filter: drop-shadow(0 0 3px rgba(255,69,58,.6)); }
+.tr-ring-label b { font-size: 19px; }
+.tr-ring-label span { font-size: 9.5px; letter-spacing: .08em; }
+.tr-mini { margin-top: 12px; border-radius: 18px; background: #151517; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.tr-mini div { padding: 12px 4px 11px; gap: 3px; }
+.tr-mini b { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.tr-mini span { font-size: 11px; color: #8e8e93; letter-spacing: .01em; }
+.tr-section { margin: 24px auto 8px; padding-left: 4px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #8e8e93; }
+.tr-sheet .tr-cards { margin-top: 0; gap: 0; border-radius: 18px; overflow: hidden; background: #151517; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.tr-sheet .tr-cards .tr-card { position: relative; min-height: 72px; padding: 12px 14px; gap: 14px; border-radius: 0; background: none; box-shadow: none !important; transition: background .15s; }
+.tr-sheet .tr-cards .tr-card + .tr-card::before { content: ""; position: absolute; top: 0; left: 72px; right: 0; height: 1px; background: rgba(255,255,255,.07); }
+.tr-sheet .tr-cards .tr-card:active { background: rgba(255,255,255,.06); }
+.tr-sheet .tr-card-ico { width: 44px; height: 44px; border-radius: 12px; font-size: 26px; color: #fff;
+  background: linear-gradient(160deg, #ff5a4f, #c8221c); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 4px 12px rgba(229,48,42,.28); }
+.tr-sheet .tr-card-text b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.tr-sheet .tr-card-text span { font-size: 13.5px; color: #8e8e93; }
+.tr-sheet .tr-card-badge { padding: 4px 9px; border-radius: 999px; background: rgba(229,48,42,.16); color: #ff8a83; font-size: 12.5px; font-weight: 650; }
+.tr-sheet .tr-chev { color: #48484a; font-size: 24px; margin-left: -2px; }
+.tr-sheet .tr-link { display: block; width: 100%; margin: 26px auto 0; padding: 15px; border-radius: 14px; background: rgba(120,120,128,.18); color: #ff6b62; font: 600 16px/1 inherit; text-align: center; }
+.tr-sheet .tr-link:active { background: rgba(120,120,128,.28); }
+@media (max-height: 700px) { .tr-sheet .tr-head h2 { font-size: 30px; } .tr-hero-num { font-size: 44px; } .tr-section { margin-top: 18px; } .tr-sheet .tr-cards .tr-card { min-height: 64px; } }
+body.training-open .bottom-bar, body.training-open #chatFab, body.training-open #panel { visibility: hidden !important; }
+.tr-sheet .tr-head:has(.tr-back) { flex-wrap: wrap; row-gap: 2px; }
+.tr-sheet .tr-head .tr-back { flex-basis: 100%; margin-left: -6px; font-size: 17px; }
+.tr-sheet .tr-head:has(.tr-back) h2 { font-size: 32px; }
+.tr-sheet .tr-list { margin-top: 4px; border-radius: 18px; background: #151517; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.tr-sheet .tr-list .tr-item { background: none; min-height: 64px; }
+.tr-sheet .tr-list .tr-group { background: none; padding-top: 16px; color: #ff6b62; }
+.tr-sheet .tr-num { background: rgba(229,48,42,.15); color: #ff8a83; }
