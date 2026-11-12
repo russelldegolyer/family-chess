@@ -274,7 +274,7 @@
     }).catch(() => {});
   }
   function renderHub() {
-    hub.replaceChildren();
+    hub.classList.remove('tr-sg-page'); hub.replaceChildren();
     const head = el('div', 'tr-head');
     head.append(el('h2', '', 'Training'));
     const x = btn('', 'tr-x', close); x.setAttribute('aria-label', 'Close training');
@@ -356,7 +356,7 @@
     }
   }
   async function openSaved() {
-    session++; hub.replaceChildren(); hub.append(subHead('Saved games', () => openHub()));
+    session++; hub.classList.remove('tr-sg-page'); hub.replaceChildren(); hub.append(subHead('Saved games', () => openHub()));
     const loading = el('p', 'tr-about-foot', 'Loading…'); hub.append(loading);
     let rows;
     try { rows = await loadSavedRows(); } catch (e) { loading.textContent = 'Could not load saved games. ' + (e?.message || ''); return; }
@@ -381,7 +381,7 @@
     hub.append(box, el('p', 'tr-about-foot', 'A saved game disappears once it’s picked up, unless you turn on Keep.'));
   }
   function openSavedGame(g) {
-    session++; hub.replaceChildren(); hub.append(subHead(savedTitle(g), () => openSaved(), 'Saved games'));
+    session++; hub.classList.remove('tr-sg-page'); hub.replaceChildren(); hub.append(subHead(savedTitle(g), () => openSaved(), 'Saved games'));
     const top = el('div', 'tr-sg-top');
     const board = el('div', 'tr-sg-board'); board.innerHTML = miniBoard(g);
     const info = el('div', 'tr-sg-info');
@@ -424,17 +424,17 @@
     // Keep + delete
     const keepRow = el('label', 'tr-sg-keep');
     const keep = el('input'); keep.type = 'checkbox'; keep.checked = !!g.keep;
-    const kt = el('span', 'tr-card-text'); kt.append(el('b', '', 'Keep this game'), el('span', '', 'On: stays here so you can replay it again and again. Off: removed once it’s picked up.'));
+    const kt = el('span', 'tr-card-text'); kt.append(el('b', '', 'Keep'), el('span', '', g.keep ? 'On: stays to replay any time' : 'Off: removed once picked up'));
     keepRow.append(kt, keep, el('i', 'tr-switch'));
     keep.addEventListener('change', async () => { const c = api(); const { error } = await c.rpc('chess_saved_set_keep', { p_id: g.id, p_keep: keep.checked });
-      if (error) { keep.checked = !keep.checked; say('Could not update: ' + error.message, true); } else g.keep = keep.checked; });
-    const del = btn('Delete saved game', 'tr-sg-delete', async () => {
-      if (!del.classList.contains('arm')) { del.classList.add('arm'); del.textContent = 'Tap again to delete'; setTimeout(() => { if (del.isConnected) { del.classList.remove('arm'); del.textContent = 'Delete saved game'; } }, 2500); return; }
+      if (error) { keep.checked = !keep.checked; say('Could not update: ' + error.message, true); } else { g.keep = keep.checked; kt.lastChild.textContent = keep.checked ? 'On: stays to replay any time' : 'Off: removed once picked up'; } });
+    const del = btn('Delete', 'tr-sg-delete', async () => {
+      if (!del.classList.contains('arm')) { del.classList.add('arm'); del.textContent = 'Tap to confirm'; setTimeout(() => { if (del.isConnected) { del.classList.remove('arm'); del.textContent = 'Delete'; } }, 2500); return; }
       const { error } = await api().from('chess_saved_games').delete().eq('id', g.id);
       if (error) say('Could not delete: ' + error.message, true); else openSaved();
     });
-    hub.append(keepRow, del);
-    hub.scrollTop = 0;
+    const foot = el('div', 'tr-sg-foot'); foot.append(keepRow, del); hub.append(foot);
+    hub.classList.add('tr-sg-page'); hub.scrollTop = 0;
   }
   function resumeHere(g, mode, level, side) {
     if (!window.familyChessSaved) return;
@@ -455,7 +455,7 @@
     } catch (e) { say(e.message || 'Could not send.', true); }
   }
   function openAbout() {
-    hub.replaceChildren();
+    hub.classList.remove('tr-sg-page'); hub.replaceChildren();
     const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
     back.innerHTML = '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Training';
     head.append(back, el('h2', '', 'About'));
@@ -992,7 +992,7 @@
   const LESSONS = ALL_LESSONS.filter((l) => l.id);
   function openAcademy() {
     session++; screen = 'academy'; top.hidden = true; panel.hidden = true; B().onMove(null);
-    hub.replaceChildren();
+    hub.classList.remove('tr-sg-page'); hub.replaceChildren();
     const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
     back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training</span>';
     head.append(back, el('h2', '', 'Endgame Academy'));
@@ -1278,7 +1278,7 @@
   }
   function openChallenges() {
     session++; screen = 'challenges'; top.hidden = true; panel.hidden = true; B().onMove(null);
-    hub.replaceChildren();
+    hub.classList.remove('tr-sg-page'); hub.replaceChildren();
     const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
     back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training</span>';
     head.append(back, el('h2', '', 'Endgame Challenges'));

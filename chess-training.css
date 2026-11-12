@@ -327,3 +327,49 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-sg-keep input:checked + .tr-switch::after { transform: translateX(20px); }
 .tr-sg-delete { display: block; width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 14px; background: rgba(120,120,128,.14); color: #ff6b62; font: 600 15px/1 inherit; cursor: pointer; }
 .tr-sg-delete.arm { background: #ff3b30; color: #fff; }
+/* saved game detail: compact, one screen */
+.tr-sg-page .tr-head { margin: 0 auto 8px; }
+.tr-sg-page .tr-head:has(.tr-back) h2 { font-size: 26px; }
+.tr-sg-page .tr-sg-top { gap: 12px; align-items: center; }
+.tr-sg-page .tr-sg-board { width: min(40vw, 168px); border-radius: 10px; }
+.tr-sg-page .tr-sg-info { gap: 5px; }
+.tr-sg-page .tr-sg-move { padding: 5px 10px; font-size: 14px; }
+.tr-sg-page .tr-sg-turn { font-size: 14px; margin-top: 2px; }
+.tr-sg-page .tr-sg-meta { font-size: 11.5px; }
+.tr-sg-page .tr-sg-actions { margin-top: 12px; }
+.tr-sg-page .tr-sg-primary { min-height: 48px; font-size: 16.5px; font-weight: 700; }
+.tr-sg-page .tr-sg-note { min-height: 0; margin: 6px 2px 0; }
+.tr-sg-page .tr-sg-note:empty { display: none; }
+.tr-sg-page .tr-section { margin: 14px auto 6px; }
+.tr-sg-page .tr-sg-item { padding: 9px 12px; gap: 6px 8px; }
+.tr-sg-page .tr-sg-item-label { font-size: 12px; }
+.tr-sg-page .tr-sg-seg button { min-height: 34px; font-size: 13.5px; }
+.tr-sg-page .tr-sg-go { min-height: 34px; padding: 0 12px; font-size: 13.5px; }
+.tr-sg-page .tr-sg-go.wide { min-height: 38px; }
+.tr-sg-page .tr-sg-pick { min-height: 34px; font-size: 14px; -webkit-appearance: none; appearance: none; padding-right: 26px;
+  background: #232327 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238e8e93' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center; }
+.tr-sg-foot { display: flex; gap: 8px; margin-top: 10px; }
+.tr-sg-page .tr-sg-keep { flex: 1; margin: 0; padding: 9px 12px; border-radius: 14px; }
+.tr-sg-page .tr-sg-keep .tr-card-text b { font-size: 15px; }
+.tr-sg-page .tr-sg-keep .tr-card-text span { font-size: 11.5px; }
+.tr-sg-page .tr-switch { width: 44px; height: 26px; }
+.tr-sg-page .tr-switch::after { width: 22px; height: 22px; }
+.tr-sg-page .tr-sg-keep input:checked + .tr-switch::after { transform: translateX(18px); }
+.tr-sg-page .tr-sg-delete { width: auto; flex: none; margin: 0; padding: 0 16px; border-radius: 14px; font-size: 14px; }
+@media (max-height: 720px) {
+  .tr-sg-page .tr-head:has(.tr-back) h2 { font-size: 22px; }
+  .tr-sg-page .tr-sg-board { width: 128px; }
+  .tr-sg-page .tr-sg-info { gap: 3px; }
+  .tr-sg-page .tr-sg-move { padding: 3px 9px; font-size: 13px; }
+  .tr-sg-page .tr-sg-label, .tr-sg-page .tr-sg-meta { display: none; }
+  .tr-sg-page .tr-sg-actions { margin-top: 8px; }
+  .tr-sg-page .tr-sg-primary { min-height: 44px; }
+  .tr-sg-page .tr-section { margin: 10px auto 5px; }
+  .tr-sg-page .tr-sg-item { padding: 7px 10px; }
+  .tr-sg-page .tr-sg-item-label { display: none; }
+  .tr-sg-page .tr-sg-item { flex-wrap: nowrap; }
+  .tr-sg-page .tr-sg-seg.lv { flex: 1 1 0; min-width: 0; gap: 4px; }
+  .tr-sg-page .tr-sg-seg.lv button { padding: 0; }
+  .tr-sg-page .tr-sg-foot { margin-top: 8px; }
+  .tr-sg-page .tr-sg-keep { padding: 7px 12px; }
+}
