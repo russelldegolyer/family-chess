@@ -997,6 +997,8 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
 .pg-ticks span.on { color: var(--ink); }
 body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregame #banner, body.pregame #chessClockHud, body.pregame #chatFab, body.pregame .brand, body.pregame #toast { opacity: 0 !important; pointer-events: none !important; }
 .bottom-bar, .plate, #status, #chatFab, #chessClockHud { transition: opacity 0.45s ease; }
+#homeVeil { position: fixed; inset: 0; z-index: 400; background: #000; opacity: 0; pointer-events: none; transition: opacity .42s cubic-bezier(.4,0,.2,1); }
+#homeVeil.on { opacity: 1; pointer-events: auto; transition-duration: .26s; }
 /* ---- Landing page: depth, glass cards, brand red ---- */
 .pregame::before { content: ''; position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(90% 46% at 50% 47%, rgba(229,48,42,.07), transparent 70%),
@@ -5317,11 +5319,20 @@ function rematch(swap) {
 
 /* New: back to the opening screen (side-on board, swipe to pick a side, difficulty slider).
    With moves on the board it asks first, so a game is never thrown away by a stray tap. */
+/* Home: dip to black, reset the board and camera unseen, then fade the opening screen in. */
 function goHome() {
   closeMenu();
-  endPracticeGame();
-  resetLocalGame('local', 1);
-  openPregame();
+  let veil = $('homeVeil');
+  if (!veil) { veil = document.createElement('div'); veil.id = 'homeVeil'; document.body.append(veil); }
+  if (veil.classList.contains('on')) return;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  veil.classList.add('on');
+  setTimeout(() => {
+    endPracticeGame();
+    resetLocalGame('local', 1);
+    openPregame();
+    requestAnimationFrame(() => requestAnimationFrame(() => veil.classList.remove('on')));
+  }, reduce ? 0 : 260);
 }
 function newGame() {
   if (PG.on) return;

@@ -24,6 +24,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 **Improved**
 - The **New** button is now **Home**: it takes you straight back to the opening screen (asks first mid-game).
+- Going home fades smoothly through black into the opening screen instead of snapping.
 - Tapping **Your friend code** always shows it (loads it if it hadn’t appeared yet), then copies it.
 - Watching a game shows one clear "Watching · A vs B — Leave" bar; Leave goes straight to the start screen.
 - In online games the New button reads **Leave**.
