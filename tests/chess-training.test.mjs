@@ -28,3 +28,17 @@ test('live clock changes shift total-time clocks by the difference and keep paus
  assert.match(sql,/alter table public\.chess_profiles add column if not exists last_seen_at/);
  assert.doesNotMatch(sql,/(table|function|on) public\.(?!chess_)/);
 });
+
+test('exact endgame tables ship with the app and match their builder',()=>{
+ for(const t of ['kqk','krk','kpk']){const b=readFileSync(new URL('../endgame-'+t+'.bin',import.meta.url));assert.equal(b.length,524288);}
+ const kpk=readFileSync(new URL('../endgame-kpk.bin',import.meta.url));
+ const v=(wk,bk,p,stm)=>kpk[((wk*64+bk)*64+p)*2+stm];
+ const sq=s=>(+s[1]-1)*8+'abcdefgh'.indexOf(s[0]);
+ assert.ok(v(sq('e6'),sq('e8'),sq('e5'),0)<254,'K on 6th in front of pawn wins');
+ assert.equal(v(sq('e4'),sq('e7'),sq('e5'),0),255,'Ke4/Pe5 vs Ke7, White to move: draw (Black keeps the opposition)');
+});
+test('Academy starts with fundamentals and every "only move" claim is exact',()=>{
+ assert.match(tr,/\{ group: 'Fundamentals' \}[\s\S]*id: 'l1'[\s\S]*id: 'l2'[\s\S]*id: 'f3', title: 'The opposition'[\s\S]*id: 'f4', title: 'The square rule'[\s\S]*id: 'f5', title: 'Key squares'/);
+ assert.match(tr,/function runKeep/);
+ assert.match(tr,/a winning move that is much slower than the best is "inefficient", never "wrong"/);
+});

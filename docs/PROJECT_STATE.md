@@ -42,10 +42,10 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Players, presence, challenges, push | `chess-social.js`, `chess-sw.js` | |
 | Chat | `chess-chat.js` (+ `renderChat`/`sendChat` delegates in `index.html`) | |
 | Sign-in | `auth-gate.js`, `auth.css`, `config.js` | |
-| Training (puzzles, Endgame Academy, Endgame Challenges) | `chess-training.js` / `.css`; board bridge `window.familyChessBoard` + `TRAIN`/`START_FEN` (`G.mode === 'train'`) in `index.html`; dev puzzles `chess-puzzles-dev.json`; loader `tools/import-lichess-puzzles.py` | lightbulb beside the colour wheel; saves and restores the current game; progress in localStorage + `chess_training_progress` |
+| Training (puzzles, Endgame Academy, Endgame Challenges) | `chess-training.js` / `.css`; board bridge `window.familyChessBoard` + `TRAIN`/`START_FEN` (`G.mode === 'train'`) in `index.html`; dev puzzles `chess-puzzles-dev.json`; loader `tools/import-lichess-puzzles.py`; exact endgame tables `endgame-k{q,r,p}k.bin` built by `tools/build-endgame-tables.mjs` (verified against the Lichess tablebase) | lightbulb beside the colour wheel; saves and restores the current game; progress in localStorage + `chess_training_progress` |
 | Live clock change | `ChessClock.changeLocalMode` (practice), `applyClockChange` in `index.html`, `familyChessChangeClock` → RPC `chess_change_clock` (online) | total→total shifts both clocks by the difference |
 | Last online | `chess-social.js` (`lastOnline`, `touchLastSeen` heartbeat → RPC `chess_touch_last_seen`) | falls back to "Offline" if the column is missing |
-| Tests | `tests/*.test.mjs` | regex checks on source + VM clock/AI/colour tests; all 37 pass |
+| Tests | `tests/*.test.mjs` | regex checks on source + VM clock/AI/colour tests; all 39 pass |
 
 ## Feature Registry
 **Implemented and verified** (checked in a browser or by tests during 2026-11 sessions)
@@ -83,7 +83,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 
 ## Known Issues
 - Pending migration `database/chess-training-clock-presence-2026-11-11.sql` (NOT applied): online clock changes, Last online heartbeat, puzzle DB and training sync need it; until then puzzles use the dev subset and progress stays on the device.
-- Endgame truth uses the Lichess tablebase API when reachable (live site); in the artifact it falls back to the engine.
+- Endgame truth: built-in exact tables for K+Q/K+R/K+P vs K (offline); Lichess tablebase API for other ≤7-piece endings when reachable; otherwise the engine (two bishops, bishop+knight, multi-pawn).
 - Supabase advisor: leaked-password protection is off (Russell chose to leave it); League Lab functions flagged as executable by signed-in users (not Chess's to change).
 - Opening-screen swipe smoothness only checked in a slow headless browser; confirm on phone.
 

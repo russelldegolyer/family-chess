@@ -21,8 +21,8 @@
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
 <script defer src="./chess-social.js?v=12"></script>
-<link rel="stylesheet" href="./chess-training.css?v=3">
-<script defer src="./chess-training.js?v=3"></script>
+<link rel="stylesheet" href="./chess-training.css?v=4">
+<script defer src="./chess-training.js?v=5"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -7267,6 +7267,7 @@ function trainExit() {
 window.familyChessBoard = Object.freeze({
   enter: trainEnter, setup: trainSetup, play: trainPlay, takeBack: trainTakeBack, exit: trainExit,
   prevFen: () => positionFrom(G.moves.slice(0, -1)).chess.fen(),
+  over: () => (G.status === 'over' ? (G.reason || 'over') : null),
   fen: () => G.pos.chess.fen(), turn: () => G.pos.chess.turn(), moves: () => G.moves.slice(),
   chess: () => new Chess(G.pos.chess.fen()), active: () => G.mode === 'train',
   onMove(fn) { TRAIN.onMove = fn; }, userMove(uci) { if (G.mode === 'train' && canAct()) playMove(uci); }, busy(v) { TRAIN.busy = !!v; },

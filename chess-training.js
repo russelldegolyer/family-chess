@@ -92,11 +92,50 @@
       return await r.json();
     } catch { tbOk = false; return null; } /* blocked or offline: use the engine from now on */
   }
+  /* exact built-in tables (tools/build-endgame-tables.mjs): K+Q, K+R, K+P (White) vs K — perfect play offline */
+  const TABLES = {}; let tablesP = null;
+  function loadTables() {
+    if (!tablesP) tablesP = Promise.all(['q', 'r', 'p'].map(async (t) => {
+      try { const r = await fetch('endgame-k' + t + 'k.bin?v=1'); if (r.ok) TABLES[t] = new Uint8Array(await r.arrayBuffer()); } catch { /* fall back to tablebase/engine */ }
+    }));
+    return tablesP;
+  }
+  const sqI = (sq) => (Number(sq[1]) - 1) * 8 + FILES.indexOf(sq[0]);
+  /* plies to mate for the side to move from an exact table, or null when the position is not covered */
+  function probe(fen) {
+    const parts = fen.split(' '), rows = parts[0].split('/'); const pcs = [];
+    rows.forEach((row, ri) => { let f = 0; for (const ch of row) { if (/\d/.test(ch)) f += +ch; else { pcs.push([ch, (7 - ri) * 8 + f]); f++; } } });
+    const wk = pcs.find((x) => x[0] === 'K'), bk = pcs.find((x) => x[0] === 'k'); if (!wk || !bk) return null;
+    const rest = pcs.filter((x) => x[0] !== 'K' && x[0] !== 'k');
+    if (!rest.length || (rest.length === 1 && /[BNbn]/.test(rest[0][0]))) return { r: 'draw', src: 'rules' };
+    if (rest.length !== 1 || !/[QRP]/.test(rest[0][0])) return null;
+    const T = TABLES[rest[0][0].toLowerCase()]; if (!T) return null;
+    const stm = parts[1] === 'w' ? 0 : 1, v = T[((wk[1] * 64 + bk[1]) * 64 + rest[0][1]) * 2 + stm];
+    if (v === 254) return null;
+    if (v === 255) return { r: 'draw', plies: null, src: 'table' };
+    return { r: stm === 0 ? 'win' : 'loss', plies: v, src: 'table' };
+  }
+  /* best move by the exact table: the winner mates fastest, the loser lasts longest or grabs a draw */
+  function tableBest(fen) {
+    const C = B().Chess, c = new C(fen); const here = probe(fen); if (!here || here.src !== 'table') return null;
+    let best = null, bestKey = -Infinity;
+    for (const m of c.moves({ verbose: true })) {
+      c.move(m); const mate = c.isCheckmate(); const j = mate ? { r: 'loss', plies: 0 } : (c.isStalemate() || c.isInsufficientMaterial()) ? { r: 'draw' } : probe(c.fen()); c.undo();
+      if (!j) continue;
+      /* key from the mover's point of view: opponent loses fast > draw > opponent wins slowly */
+      let key = j.r === 'loss' ? 1000 - j.plies : j.r === 'draw' ? 0 : -1000 + (j.plies || 0);
+      if (j.r === 'draw' && here.r === 'draw') { c.move(m); const n = keepers(c.fen()).length; c.undo(); key -= n / 100; }
+      if (key > bestKey) { bestKey = key; best = uciOf(m); }
+    }
+    return best;
+  }
   /* outcome for the side to move: 'win' | 'draw' | 'loss', plus a comparable distance when known */
   async function judge(fen) {
     const C = B().Chess, c = new C(fen);
-    if (c.isCheckmate()) return { r: 'loss', mate: 0, src: 'rules' };
+    if (c.isCheckmate()) return { r: 'loss', mate: 0, plies: 0, src: 'rules' };
     if (c.isStalemate() || c.isInsufficientMaterial() || c.isDraw()) return { r: 'draw', src: 'rules' };
+    await loadTables();
+    const t = probe(fen); if (t) return t;
     const tb = await tablebase(fen);
     if (tb && tb.category) {
       const cat = tb.category;
@@ -109,6 +148,8 @@
     return { r, score: sc, mate: Math.abs(sc) > MATE - 500 ? MATE - Math.abs(sc) : null, best: e?.move || null, src: 'engine' };
   }
   async function bestMove(fen) {
+    await loadTables();
+    const tm = tableBest(fen); if (tm) return tm;
     const tb = await tablebase(fen);
     if (tb?.moves?.length) return tb.moves[0].uci;
     const e = await engine(fen, 5, 900);
@@ -508,16 +549,24 @@
     const out = { kind: 'ok', text: '', fenAfter, missedMate: mates.length && !c.isCheckmate() ? mates.map(uciOf) : null };
     if (c.isCheckmate()) return { ...out, kind: 'mate', text: 'Checkmate!' };
     if (c.isStalemate()) return { ...out, kind: 'stalemate', text: 'Stalemate — the king has no legal move but is not in check, so it is a draw. ' + (m.piece === 'q' ? 'Leave the king a square, or bring your king closer before the final check.' : 'Always leave the king one square until you can give mate.') };
-    if (c.isDraw() || c.isInsufficientMaterial()) return { ...out, kind: 'draw', text: 'That position is a draw.' };
+    if (c.isDraw() || c.isInsufficientMaterial()) return goal === 'hold' ? { ...out, kind: 'held', text: 'The pawn is gone — draw secured!' } : { ...out, kind: 'draw', text: 'That position is a draw.' };
+    const pawnEnding = /p/i.test(fenBefore.split(' ')[0].replace(/[kK]/g, '')) && probe(fenBefore)?.src === 'table';
     if (goal === 'hold') {
       const j = await judge(fenAfter); /* computer (attacker) to move */
-      if (j.r === 'win') return { ...out, kind: 'lost', text: 'That lets the computer win. Keep your king in front of the pawn and take the opposition.' };
-      return { ...out, kind: 'good', text: 'Good defence. The draw holds.' };
+      if (j.r === 'win') return { ...out, kind: 'lost', text: pawnEnding ? explainPawn(fenBefore, uci, fenAfter, false) : 'That lets the computer win. Keep your king in front of the pawn and take the opposition.' };
+      return { ...out, kind: 'good', text: pawnEnding ? explainPawn(fenBefore, uci, fenAfter, true) : 'Good defence. The draw holds.' };
     }
+    const jb = probe(fenBefore);
     const j = await judge(fenAfter); /* defender to move: 'loss' means you are still winning */
     if (j.r !== 'loss') {
+      if (pawnEnding) return { ...out, kind: 'lost', text: explainPawn(fenBefore, uci, fenAfter, false) };
       const why = hangs(new C(fenBefore), m, me) ? 'Your ' + PIECE[m.piece] + ' can simply be taken.' : 'This throws away the win.';
       return { ...out, kind: 'lost', text: why + ' Take it back and keep your pieces protected.' };
+    }
+    if (pawnEnding && goal !== 'mate') return { ...out, kind: 'good', text: m.promotion ? 'Promoted!' : explainPawn(fenBefore, uci, fenAfter, true) };
+    /* exact distance: a winning move that is much slower than the best is "inefficient", never "wrong" */
+    if (jb && jb.src === 'table' && j.src === 'table' && jb.plies != null && j.plies != null && j.plies > jb.plies - 1 + 6 && !out.missedMate) {
+      return { ...out, kind: 'inefficient', text: 'Still winning, but slower: mate in ' + Math.ceil(j.plies / 2) + ' now (it was ' + Math.ceil(jb.plies / 2) + '). ' + (box(fenAfter, def).area >= bxBefore ? 'Keep the box shrinking.' : 'Bring your king closer.') };
     }
     const bxAfter = box(fenAfter, def).area;
     if (out.missedMate) return { ...out, kind: 'inefficient', text: 'Still winning, but you had checkmate with ' + sanOf(fenBefore, out.missedMate[0]) + '.' };
@@ -530,13 +579,88 @@
   const PIECE = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
   function sanOf(fen, uci) { try { const c = new (B().Chess)(fen); return c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || 'q' }).san; } catch { return uci; } }
   async function suggest(fen, kind) {
-    if (kind === 'teacher') { const tb = await tablebase(fen); if (tb?.moves?.length) return tb.moves[0].uci; return teacherMove(fen); }
+    if (kind === 'teacher') {
+      /* teach the box method; the exact table vetoes any box move that would spoil the win */
+      await loadTables();
+      const t = teacherMove(fen);
+      const here = probe(fen);
+      if (t && here?.src === 'table') {
+        /* accept the box move only if it still makes progress (distance to mate never grows): no endless shuffling */
+        const c = new (B().Chess)(fen); c.move({ from: t.slice(0, 2), to: t.slice(2, 4), promotion: t[4] || 'q' });
+        const j = c.isCheckmate() ? { r: 'loss', plies: 0 } : probe(c.fen());
+        if (j && j.r === 'loss' && j.plies <= here.plies) return t;
+        return tableBest(fen);
+      }
+      if (t) return t;
+      const tb = await tablebase(fen); if (tb?.moves?.length) return tb.moves[0].uci; return null;
+    }
     return bestMove(fen);
   }
 
   /* ------------------------------------------------------------------ Endgame Academy */
-  const LESSONS = [
-    { id: 'l1', title: 'Understanding checkmate',
+  /* ------------------------------------------------------------------ pawn-ending teaching (exact tables) */
+  const fileOf = (sq) => FILES.indexOf(sq[0]), rankOf = (sq) => Number(sq[1]);
+  function kpkPieces(fen) { const c = new (B().Chess)(fen); const b = c.board().flat().filter(Boolean); return { c, wk: b.find((x) => x.type === 'k' && x.color === 'w')?.square, bk: b.find((x) => x.type === 'k' && x.color === 'b')?.square, p: b.find((x) => x.type === 'p')?.square }; }
+  const inOpposition = (a, b) => (fileOf(a) === fileOf(b) && Math.abs(rankOf(a) - rankOf(b)) === 2) || (rankOf(a) === rankOf(b) && Math.abs(fileOf(a) - fileOf(b)) === 2);
+  /* key squares of a white pawn (not a rook pawn): two ranks ahead on ranks 2-4, one rank ahead from the 5th */
+  function keySquares(p) {
+    const f = fileOf(p), r = rankOf(p), kr = r >= 5 ? Math.min(8, r + 1) : r + 2; const out = [];
+    for (const df of [-1, 0, 1]) { const ff = f + df; if (ff >= 0 && ff < 8) out.push(FILES[ff] + kr); if (r >= 5 && ff >= 0 && ff < 8 && r + 2 <= 8) out.push(FILES[ff] + (r + 2)); }
+    return out;
+  }
+  /* the pawn's square: can the black king (to move or not) catch the pawn without help? */
+  function insideSquare(p, bk, blackToMove) {
+    let steps = 8 - rankOf(p); if (rankOf(p) === 2) steps--;
+    const kd = Math.max(Math.abs(fileOf(bk) - fileOf(p)), 8 - rankOf(bk));
+    return kd - (blackToMove ? 1 : 0) <= steps;
+  }
+  /* why a move in a K+P ending threw the result away (or why it was right), from the actual position */
+  function explainPawn(fenBefore, uci, fenAfter, good) {
+    const before = kpkPieces(fenBefore), after = kpkPieces(fenAfter);
+    if (!after.p) return good ? 'Good.' : 'The pawn is lost — a lone king cannot win.';
+    const mover = before.c.turn();
+    if (mover === 'w') {
+      if (good) {
+        if (uci.slice(0, 2) === before.p) return !insideSquare(after.p, after.bk, true) ? 'Correct — the black king is outside the square: the pawn runs home alone.' : 'Correct — the pawn advances with the king\'s support.';
+        if (inOpposition(after.wk, after.bk)) return 'Correct — you took the opposition. Black\'s king must give way.';
+        if (keySquares(after.p).includes(after.wk)) return 'Correct — your king stands on a key square. The pawn will queen.';
+        return 'Correct — the only winning move. Your king heads for the key squares.';
+      }
+      if (uci.slice(0, 2) === before.p) return insideSquare(after.p, after.bk, true) ? 'The black king is inside the pawn\'s square and catches it. Bring your king first.' : 'The pawn ran ahead of its king — Black blocks it in front and the draw is certain.';
+      const c = new (B().Chess)(fenAfter);
+      for (const m of c.moves({ verbose: true })) { c.move(m); const pk = kpkPieces(c.fen()); const j = probe(c.fen()); c.undo(); if (j && j.r === 'draw' && pk.wk && inOpposition(pk.wk, pk.bk) && m.piece === 'k') return 'This hands Black the opposition (' + m.san + '). Facing your king with you to move, Black blocks the way forward.'; }
+      return 'Your king does not reach the key squares (' + keySquares(before.p).join(', ') + ') in time. That is a draw.';
+    }
+    /* the player defends with Black */
+    if (good) return inOpposition(after.wk, after.bk) ? 'Correct — you hold the opposition.' : 'Correct — your king stays in front of the pawn.';
+    return 'That lets the white king reach a key square (' + keySquares(after.p).join(', ') + '). Keep your king in front of the pawn and take the opposition when the kings face each other.';
+  }
+  /* random positions from an exact table: type q/r/p, wanted result for the side to move */
+  function genTable(type, { stm = 'w', want = 'win', minPlies = 0, maxPlies = 99, minLegal = 4, test } = {}) {
+    const C = B().Chess;
+    for (let i = 0; i < 6000; i++) {
+      const wk = pick(SQS), bk = pick(SQS), ps = pick(SQS); if (new Set([wk, bk, ps]).size < 3 || dist(wk, bk) < 2) continue;
+      if (type === 'p' && (rankOf(ps) === 1 || rankOf(ps) === 8 || fileOf(ps) === 0 || fileOf(ps) === 7)) continue;
+      const c = new C(); c.clear(); c.put({ type: 'k', color: 'w' }, wk); c.put({ type: 'k', color: 'b' }, bk); c.put({ type, color: 'w' }, ps);
+      const fen = c.fen().replace(/ [wb] .*$/, ' ' + stm + ' - - 0 1');
+      const j = probe(fen); if (!j || j.r !== want) continue;
+      if (want !== 'draw' && (j.plies < minPlies || j.plies > maxPlies)) continue;
+      let x; try { x = new C(fen); } catch { continue; } if (x.isGameOver() || x.moves().length < minLegal) continue;
+      if (test && !test(x, fen)) continue;
+      return fen;
+    }
+    return null;
+  }
+  /* how many moves keep the result for the side to move (used to find positions that need thought) */
+  function keepers(fen) {
+    const C = B().Chess, c = new C(fen), here = probe(fen); if (!here) return [];
+    return c.moves({ verbose: true }).filter((m) => { c.move(m); const j = c.isCheckmate() ? { r: 'loss' } : probe(c.fen()); c.undo(); return j && (here.r === 'win' ? j.r === 'loss' : here.r === 'draw' ? j.r !== 'win' : true); });
+  }
+
+  /* ------------------------------------------------------------------ Endgame Academy */
+  const ALL_LESSONS = [
+    { group: 'Fundamentals' },
+    { id: 'l1', title: 'Check, mate and stalemate',
       intro: ['Check: the king is attacked. Checkmate: it is attacked and has no legal move. Stalemate: it is NOT attacked but has no legal move — that is a draw.', 'A king may only step to squares that are empty (or hold an enemy piece) and are not attacked.'],
       demo: { fen: '6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1', steps: [
         { say: 'The black king sits behind its own pawns. Its flight squares f7, g7 and h7 are blocked.', rings: ['f7', 'g7', 'h7'] },
@@ -553,6 +677,54 @@
         { fen: '8/8/2k5/8/8/8/8/4K1Q1 w - - 0 1', task: 'Use the queen to cut the king off. Shrink the box.', type: 'shrink' }],
       harder: { fen: '8/8/8/4k3/8/8/8/4K2R w - - 0 1', task: 'Shrink the box twice in a row.', type: 'shrink', count: 2 },
       mastery: { fen: '8/8/8/3k4/8/8/8/2Q1K3 w - - 0 1', task: 'Drive the king to the edge of the board.', goal: 'edge', kind: 'teacher' } },
+    { id: 'f3', title: 'The opposition',
+      intro: ['When the two kings face each other with ONE square between them, they are in opposition. Neither may step forward.', 'The side that does NOT have to move holds the opposition — the other king must give way. In pawn endings this single tempo decides win or draw.'],
+      demo: { fen: '8/5k2/8/8/4K1P1/8/8/8 w - - 0 1', auto: 'table', plies: 14, say: 'Watch the white king take the opposition, then outflank — the pawn only moves when its path is safe.' },
+      guided: [
+        { fen: '8/5k2/8/8/4K1P1/8/8/8 w - - 0 1', task: 'Take the opposition. Only one move wins.', type: 'keep' },
+        { fen: '8/6k1/8/8/5PK1/8/8/8 w - - 0 1', task: 'Find the only winning move.', type: 'keep' },
+        { fen: '8/8/5k2/8/4K3/6P1/8/8 w - - 0 1', task: 'Distant opposition: only one king move wins.', type: 'keep' },
+      ],
+      harder: { fen: '8/8/8/2k5/8/8/2K1P3/8 w - - 0 1', task: 'Opposition from far away — find the only winning move.', type: 'keep' },
+      mastery: { table: 'p', minPlies: 22, task: 'Win the pawn ending against perfect defence.', goal: 'promote', kind: 'engine' } },
+    { id: 'f4', title: 'The square rule',
+      intro: ['Draw a square from the pawn to its queening rank. If the defending king can step into that square, it catches the pawn. If not, the pawn runs home alone.', 'A pawn on its starting square may move two — count the square from where it lands. And it matters whose move it is.'],
+      demo: { fen: '8/8/8/3P4/k7/8/8/6K1 w - - 0 1', steps: [
+        { say: 'The d5-pawn\'s square: d5–d8–a8–a5. The king on a4 is just outside it.', tint: ['a5', 'b5', 'c5', 'd5', 'a6', 'b6', 'c6', 'd6', 'a7', 'b7', 'c7', 'd7', 'a8', 'b8', 'c8', 'd8'] },
+        { move: 'd5d6', say: 'd6! The square shrinks to d6–d8–b8–b6. The king cannot step into it.', tint: ['b6', 'c6', 'd6', 'b7', 'c7', 'd7', 'b8', 'c8', 'd8'] },
+        { move: 'a4b5', say: 'Black runs, but always one step behind.' },
+        { move: 'd6d7', say: 'd7 — and the pawn queens next move. No help from the white king needed.' },
+      ] },
+      guided: [
+        { fen: '8/8/8/4P3/1k6/8/8/6K1 w - - 0 1', task: 'Can the king be outrun? Only one move wins.', type: 'keep' },
+        { fen: '8/K7/8/8/8/k7/6P1/8 w - - 0 1', task: 'Your king is far away. Find the only winning move.', type: 'keep' },
+        { fen: '8/8/8/1P3k2/8/8/4K3/8 w - - 0 1', task: 'Count the square — only one move wins.', type: 'keep' },
+      ],
+      harder: { fen: '8/8/5P2/2k5/8/8/2K5/8 w - - 0 1', task: 'One move wins. Everything else lets the king in.', type: 'keep' },
+      mastery: { table: 'p', minPlies: 14, test: (c, f) => { const k = kpkPieces(f); return !insideSquare(k.p, k.bk, false) && dist(k.wk, k.p) > 3; }, task: 'Race the pawn home.', goal: 'promote', kind: 'engine' } },
+    { id: 'f5', title: 'Key squares',
+      intro: ['Every pawn has key squares: if your king reaches one, the pawn queens no matter whose move it is.', 'For a pawn on ranks 2–4 they are the three squares two ranks in front of it. From the 5th rank on, the squares one and two ranks in front. Race your king there — the pawn can wait.'],
+      demo: { fen: '8/3k4/8/8/4PK2/8/8/8 w - - 0 1', auto: 'table', plies: 14, rings: ['d6', 'e6', 'f6'], say: 'Pawn on e4: its key squares are d6, e6 and f6. The king races for them first.' },
+      guided: [
+        { fen: '8/3k4/8/8/4PK2/8/8/8 w - - 0 1', task: 'Head for the key squares. Only one move wins.', type: 'keep' },
+        { fen: '8/8/k7/3P4/1K6/8/8/8 w - - 0 1', task: 'Only one king move reaches the key squares in time.', type: 'keep' },
+        { fen: '7k/8/8/8/4P3/6K1/8/8 w - - 0 1', task: 'Find the only winning move.', type: 'keep' },
+      ],
+      harder: { fen: '1k6/8/8/8/8/2P2K2/8/8 w - - 0 1', task: 'Key squares of a c3-pawn: b5, c5, d5. Only one move wins.', type: 'keep' },
+      mastery: { table: 'p', minPlies: 26, task: 'Win from a fresh position — key squares first, pawn second.', goal: 'promote', kind: 'engine' } },
+    { group: 'Basic checkmates' },
+    { id: 'l4', title: 'King and queen vs king',
+      intro: ['The box method: put the queen a knight\'s jump from the king and follow it, shrinking the box each move.', 'When the king is on the edge, STOP shrinking — bring your king next to it, then mate. A queen move that leaves no squares but no check is stalemate.'],
+      demo: { fen: '8/8/8/4k3/8/8/8/1Q2K3 w - - 0 1', auto: 'teacher', plies: 30, say: 'The queen shadows the king; the white king walks up; mate on the edge.' },
+      guided: [{ fen: '8/8/8/2k5/8/8/8/4K2Q w - - 0 1', task: 'Shrink the box with the queen.', type: 'shrink' }],
+      harder: { fen: 'k7/8/1K6/8/8/8/7Q/8 w - - 0 1', task: 'Mate in one — one wrong queen move is stalemate.', type: 'mate1' },
+      mastery: { gen: ['q'], task: 'Checkmate with king and queen.', goal: 'mate', kind: 'teacher' } },
+    { id: 'l5', title: 'King and rook vs king',
+      intro: ['The rook cuts the board; the kings face each other (opposition). When the kings are in opposition, a rook check drives the king back one rank.', 'If the defending king attacks your rook, move the rook to the far side along the same line — never give up the cut.'],
+      demo: { fen: '8/8/8/4k3/8/8/8/R3K3 w - - 0 1', auto: 'teacher', plies: 40, say: 'Cut, approach with the king, check in opposition, repeat.' },
+      guided: [{ fen: '8/8/8/8/4k3/8/8/R3K3 w - - 0 1', task: 'Cut the king off with the rook.', type: 'shrink' }],
+      harder: { fen: '4k3/8/4K3/8/8/8/8/7R w - - 0 1', task: 'The kings are in opposition. Mate in one.', type: 'mate1' },
+      mastery: { gen: ['r'], task: 'Checkmate with king and rook.', goal: 'mate', kind: 'teacher' } },
     { id: 'l3', title: 'Two-rook ladder',
       intro: ['Two rooks mate without help from the king. One rook guards a rank, the other checks on the next rank — like climbing a ladder.', 'If the king comes close to a rook, move that rook to the far side of the board and continue.'],
       demo: { fen: '8/8/8/3k4/8/8/8/R3K2R w - - 0 1', steps: [
@@ -568,20 +740,29 @@
         { move: 'a6a8', say: 'Ra8# — the 7th and 8th ranks are both controlled. Checkmate!' },
       ] },
       guided: [{ fen: '8/8/8/8/3k4/8/R7/1R2K3 w - - 0 1', task: 'Take the next rung: cut the king off a rank higher.', type: 'shrink' }],
-      harder: { fen: '3k4/8/1R6/8/8/8/8/R3K3 w - - 0 1', task: 'Checkmate in two moves.', goal: 'mate', limit: 2, kind: 'engine' },
+      harder: { fen: '4k3/R7/8/8/8/8/8/1R2K3 w - - 0 1', task: 'The 7th rank is cut. Deliver mate in one.', type: 'mate1' },
       mastery: { gen: ['r', 'r'], task: 'Mate with two rooks from a new position.', goal: 'mate', kind: 'teacher' } },
-    { id: 'l4', title: 'King and queen vs king',
-      intro: ['The box method: put the queen a knight\'s jump from the king and follow it, shrinking the box each move.', 'When the king is on the edge, STOP shrinking — bring your king next to it, then mate. A queen move that leaves no squares but no check is stalemate.'],
-      demo: { fen: '8/8/8/4k3/8/8/8/1Q2K3 w - - 0 1', auto: 'teacher', plies: 30, say: 'The queen shadows the king; the white king walks up; mate on the edge.' },
-      guided: [{ fen: '8/8/8/2k5/8/8/8/4K2Q w - - 0 1', task: 'Shrink the box with the queen.', type: 'shrink' }],
-      harder: { fen: 'k7/8/1K6/8/8/8/7Q/8 w - - 0 1', task: 'Mate in one — one wrong queen move is stalemate.', type: 'mate1' },
-      mastery: { gen: ['q'], task: 'Checkmate with king and queen.', goal: 'mate', kind: 'teacher' } },
-    { id: 'l5', title: 'King and rook vs king',
-      intro: ['The rook cuts the board; the kings face each other (opposition). When the kings are in opposition, a rook check drives the king back one rank.', 'If the defending king attacks your rook, move the rook to the far side along the same line — never give up the cut.'],
-      demo: { fen: '8/8/8/4k3/8/8/8/R3K3 w - - 0 1', auto: 'teacher', plies: 40, say: 'Cut, approach with the king, check in opposition, repeat.' },
-      guided: [{ fen: '8/8/8/8/4k3/8/8/R3K3 w - - 0 1', task: 'Cut the king off with the rook.', type: 'shrink' }],
-      harder: { fen: '4k3/8/4K3/8/8/8/8/7R w - - 0 1', task: 'The kings are in opposition. Mate in one.', type: 'mate1' },
-      mastery: { gen: ['r'], task: 'Checkmate with king and rook.', goal: 'mate', kind: 'teacher' } },
+    { group: 'Pawn endgames' },
+    { id: 'l8', title: 'Winning king and pawn',
+      intro: ['Put it together: king in front of the pawn, take the opposition, reach a key square, and only then push.', 'A pawn that runs ahead of its king is caught; a king that wanders off the pawn loses it.'],
+      demo: { fen: '4k3/8/4K3/4P3/8/8/8/8 w - - 0 1', auto: 'engine', plies: 10, say: 'King on the 6th in front of the pawn: it always wins.' },
+      guided: [
+        { fen: '8/1k6/8/8/K7/6P1/8/8 w - - 0 1', task: 'Only one move wins. Think opposition.', type: 'keep' },
+        { fen: '8/8/8/8/8/5k2/2P5/4K3 w - - 0 1', task: 'Only one move wins.', type: 'keep' },
+      ],
+      harder: { table: 'p', minPlies: 30, task: 'Win against perfect defence.', goal: 'promote', kind: 'engine' },
+      mastery: { table: 'p', minPlies: 36, task: 'Mastery: a long win against perfect defence.', goal: 'promote', kind: 'engine' } },
+    { id: 'p2', title: 'Defending against the pawn',
+      intro: ['With the lone king, stand IN FRONT of the pawn. When the kings face each other, keep the opposition; when the pawn reaches your back rank\'s neighbour, step straight back.', 'Every endgame of king and pawn against king is either a forced win or a draw — your job is to make no mistake.'],
+      demo: { fen: '4k3/8/4K3/4P3/8/8/8/8 b - - 0 1', auto: 'engine', plies: 6, say: 'When the attacker already owns a key square, nothing helps — so stop it earlier.' },
+      guided: [
+        { fen: '5k2/8/2K5/8/4P3/8/8/8 b - - 0 1', task: 'You are Black. Only one move holds the draw.', type: 'keep', side: 'b' },
+        { fen: '2k5/8/4P3/1K6/8/8/8/8 b - - 0 1', task: 'Only one move draws.', type: 'keep', side: 'b' },
+        { fen: '6k1/3K4/8/8/8/8/5P2/8 b - - 0 1', task: 'Only one move draws.', type: 'keep', side: 'b' },
+      ],
+      harder: { fen: '4k3/8/2P5/5K2/8/8/8/8 b - - 0 1', task: 'Only one move draws — which way does the king go?', type: 'keep', side: 'b' },
+      mastery: { table: 'p', want: 'draw', side: 'b', task: 'Hold the draw for 25 moves against perfect play.', goal: 'hold', kind: 'engine' } },
+    { group: 'Advanced mates' },
     { id: 'l6', title: 'Two bishops',
       intro: ['Side by side, two bishops make an unbreakable wall of diagonals. Push the king to the edge, then into any corner.', 'Your king must help: it covers the squares the bishops cannot.'],
       demo: { fen: '8/8/8/3k4/8/8/8/2B1KB2 w - - 0 1', auto: 'engine', plies: 12, say: 'The bishops work together, the king comes forward.' },
@@ -598,14 +779,9 @@
       guided: [{ fen: 'k7/3N4/1K6/8/8/8/8/5B2 w - - 0 1', task: 'Mate in one. Many moves here are stalemate!', type: 'mate1' }],
       harder: { fen: '1k6/8/1K1N4/8/8/8/8/5B2 w - - 0 1', task: 'Force mate in the light corner.', goal: 'mate', kind: 'engine' },
       mastery: { gen: ['b', 'n'], bk: CORNER, task: 'Mate with bishop and knight.', goal: 'mate', kind: 'engine' } },
-    { id: 'l8', title: 'Pawn endgames',
-      intro: ['Opposition: kings face each other with one square between; the side NOT to move holds it.', 'The square rule: draw a square from the pawn to its promotion rank — if the king can step into it, it catches the pawn. With your king in front of the pawn on the 6th rank, you win.'],
-      demo: { fen: '4k3/8/4K3/4P3/8/8/8/8 w - - 0 1', auto: 'engine', plies: 8, say: 'King in front of the pawn: step aside, push, and the pawn queens.' },
-      guided: [{ fen: '8/8/8/8/8/k7/6P1/6K1 w - - 0 1', task: 'The king is outside the square. Push the pawn to promotion.', goal: 'promote', kind: 'engine' }],
-      harder: { fen: '4k3/8/4K3/4P3/8/8/8/8 w - - 0 1', task: 'Win with opposition: promote the pawn.', goal: 'promote', kind: 'engine' },
-      mastery: { fen: '8/8/8/2k5/8/8/3PK3/8 w - - 0 1', task: 'Bring the king in front and promote.', goal: 'promote', kind: 'engine' } },
   ];
 
+  const LESSONS = ALL_LESSONS.filter((l) => l.id);
   function openAcademy() {
     session++; screen = 'academy'; top.hidden = true; panel.hidden = true; B().onMove(null);
     hub.replaceChildren();
@@ -613,7 +789,10 @@
     back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training</span>';
     head.append(back, el('h2', '', 'Endgame Academy'));
     const list = el('div', 'tr-list');
-    LESSONS.forEach((l, i) => {
+    let n = 0;
+    ALL_LESSONS.forEach((l) => {
+      if (l.group) { list.append(el('div', 'tr-group', l.group)); return; }
+      const i = n++;
       const st = P.lessons[l.id] || {};
       const b = btn('', 'tr-item', () => startLesson(l));
       b.innerHTML = '<span class="tr-num"></span><span class="tr-card-text"><b></b><span></span></span><span class="tr-badge"></span>';
@@ -652,8 +831,8 @@
     const my = ++session; const l = LS.l; stageTop(); B().onMove(null); B().mark({});
     if (LS.stage === 0) {
       const f = l.demo.fen || (l.guided[0] && l.guided[0].fen);
-      B().setup({ fen: f, side: 'w', opponent: 'Defender' }); B().busy(true);
-      tintBox();
+      B().setup({ fen: f, side: lessonSide(l), opponent: 'Defender' }); B().busy(true);
+      if (!isPawnLesson(l)) tintBox(); else B().mark({});
       lessonPanel('The idea', [btn('Show me', 'primary', nextStage, 'play'), btn('Skip ahead', 'quiet', () => { LS.stage = 3; nextStage(); }, 'skip')], l.intro.join('\n\n'));
       return;
     }
@@ -661,20 +840,34 @@
     if (LS.stage === 2) { LS.task = 0; const step = () => { if (LS.task < l.guided.length) { const g = l.guided[LS.task++]; void runTask(g, ++session, step); } else nextStage(); }; return step(); }
     if (LS.stage === 3) return void runTask(l.harder, my, nextStage);
     if (LS.stage === 4) {
-      const m = l.mastery; const fen = m.fen || genEnding(m.gen, { bk: m.bk, minBox: m.gen.length === 1 ? 12 : 8 });
-      return void playEnding({ fen, goal: m.goal, kind: m.kind, task: m.task, mode: 'practice', onDone: (res) => {
+      await loadTables();
+      const m = l.mastery; const fen = masteryFen(m);
+      return void playEnding({ fen, goal: m.goal, kind: m.kind, task: m.task, mode: 'practice', side: m.side || 'w', onDone: (res) => {
         if (res.win) { const st = P.lessons[l.id] || (P.lessons[l.id] = {}); st.mastered = true; st.stage = 5; save(); }
         const msg = lessonPanel(res.win ? 'Lesson mastered! ' + res.summary : res.summary, [btn(res.win ? 'Back to lessons' : 'Try again', 'primary', res.win ? openAcademy : () => runStage()), btn('New position', 'quiet', () => runStage())]);
         msg.classList.add(res.win ? 'good' : 'bad');
       } });
     }
   }
+  const isPawnLesson = (l) => /^(f3|f4|f5|l8|p2)$/.test(l.id);
+  const lessonSide = (l) => (l.id === 'p2' ? 'b' : 'w');
+  function masteryFen(m) {
+    if (m.fen) return m.fen;
+    if (m.table) {
+      const want = m.want || 'win', stm = m.side === 'b' ? 'b' : 'w';
+      /* positions that need thought: few moves keep the result */
+      const fair = (c, f) => { const k = kpkPieces(f); return dist(k.bk, k.p) >= 2 && (!m.test || m.test(c, f)); };
+      for (let k = 0; k < 80; k++) { const f = genTable(m.table, { stm, want, minPlies: m.minPlies || 0, test: fair }); if (!f) continue; const n = keepers(f).length; if (n >= 1 && n <= 2 && new (B().Chess)(f).moves().length - n >= 3) return f; }
+      return genTable(m.table, { stm, want, minPlies: m.minPlies || 0, test: m.test });
+    }
+    return genEnding(m.gen, { bk: m.bk, minBox: m.gen.length === 1 ? 12 : 8 });
+  }
   function tintBox(def = 'b') {
     const bx = box(B().fen(), def); B().mark({ tint: bx.squares });
   }
   async function runDemo(my) {
     const d = LS.l.demo;
-    B().setup({ fen: d.fen, side: 'w', opponent: 'Defender' }); B().busy(true);
+    B().setup({ fen: d.fen, side: lessonSide(LS.l), opponent: 'Defender' }); B().busy(true);
     const msg = lessonPanel('Watch', [btn('Your turn', 'primary', nextStage, 'next'), btn('Replay', 'quiet', () => runStage(), 'retry')], d.say || '');
     await sleep(700); if (my !== session) return;
     if (d.steps) {
@@ -703,15 +896,19 @@
       const bx = box(B().fen(), 'b');
       B().mark({ tint: bx.squares });
       if (after.isCheckmate()) { say(msg, 'Checkmate! ' + (d.say || '')); break; }
-      if (white && d.auto !== 'teacher') { say(msg, sanOf(fen, u) + (after.inCheck() ? ' — check. ' : '. ') + (d.say || '')); B().mark(new C(B().fen()).moves().length && /p/i.test(fen.split(' ')[0].replace(/[^pP]/g, '')) ? {} : { tint: bx.squares }); }
+      if (isPawnLesson(LS.l)) { say(msg, (white ? '' : 'Black: ') + sanOf(fen, u) + (white ? ' — ' + explainPawn(fen, u, B().fen(), true).replace(/^Correct — /, '') : ' — the best defence.')); B().mark(d.rings && white && i < 2 ? { rings: d.rings } : {}); }
+      else if (white && d.auto !== 'teacher') { say(msg, sanOf(fen, u) + (after.inCheck() ? ' — check. ' : '. ') + (d.say || '')); B().mark(new C(B().fen()).moves().length && /p/i.test(fen.split(' ')[0].replace(/[^pP]/g, '')) ? {} : { tint: bx.squares }); }
       else if (white) say(msg, (after.inCheck() ? 'Check. ' : '') + (bx.area < before ? 'Box: ' + before + ' → ' + bx.area + ' squares.' : 'Box ' + bx.area + ' squares — ' + (u.length && new C(fen).get(u.slice(0, 2))?.type === 'k' ? 'the king steps up to help.' : 'keeping the cut.')));
       await sleep(900);
     }
   }
   async function runTask(g, my, done) {
-    B().setup({ fen: g.fen, side: 'w', opponent: 'Defender' }); B().busy(false);
+    await loadTables(); if (my !== session) return;
+    const fen0 = g.fen || masteryFen(g);
+    B().setup({ fen: fen0, side: g.side || 'w', opponent: 'Defender' }); B().busy(false);
+    if (g.type === 'keep') return void runKeep(g, my, done);
     if (g.goal) {
-      return void playEnding({ fen: g.fen, goal: g.goal, kind: g.kind, task: g.task, limit: g.limit, mode: 'guided', onDone: (res) => {
+      return void playEnding({ fen: fen0, goal: g.goal, kind: g.kind, task: g.task, limit: g.limit, side: g.side || 'w', mode: 'guided', onDone: (res) => {
         const msg = lessonPanel(res.summary, [btn(res.win ? 'Continue' : 'Try again', 'primary', res.win ? done : () => runStage())]); msg.classList.add(res.win ? 'good' : 'bad');
       } });
     }
@@ -742,6 +939,35 @@
       }
       say(msg, a.text, a.kind === 'lost' || a.kind === 'stalemate' ? 'bad' : 'warn'); await sleep(1500); if (my !== session) return;
       B().takeBack(1); tintBox(); B().busy(false);
+    });
+  }
+
+  /* one-move exercise judged by the exact table: any move that keeps the result is right (not just the "book" move) */
+  function runKeep(g, my, done) {
+    const side = g.side || 'w';
+    B().mark({});
+    let tries = 0;
+    const msg = lessonPanel(g.task, [btn('Hint', 'hint', () => {
+      const ks = keepers(B().fen()); if (!ks.length) return;
+      tries++;
+      const m = ks[0]; B().mark(tries === 1 ? { lift: m.from } : { lift: m.from, arrows: [[m.from, m.to]] });
+      say(msg, tries === 1 ? 'Move the raised piece.' : 'Play the arrow move.');
+    }, 'hint'), btn('Skip', 'quiet', done, 'skip')]);
+    B().onMove(async (uci) => {
+      if (my !== session) return;
+      B().busy(true);
+      const fenBefore = B().prevFen(), fenAfter = B().fen();
+      const before = probe(fenBefore), j = probe(fenAfter) || (await judge(fenAfter));
+      const ok = before && (before.r === 'win' ? j.r === 'loss' : j.r !== 'win');
+      const text = /p/i.test(fenBefore.split(' ')[0].replace(/[kK]/g, '')) ? explainPawn(fenBefore, uci, fenAfter, ok) : ok ? 'Correct.' : 'That gives away the result.';
+      if (ok) {
+        const alt = keepers(fenBefore).length;
+        say(msg, text + (alt > 1 ? ' (' + alt + ' moves work here.)' : ''), 'good'); B().mark({});
+        await sleep(1700); if (my === session) done(); return;
+      }
+      say(msg, text, 'bad');
+      await sleep(2300); if (my !== session) return;
+      B().takeBack(1); B().busy(false);
     });
   }
 
@@ -776,12 +1002,13 @@
       const perf = win ? Math.max(1, 5 - stats.mistakes.length - stats.stalemates - (stats.missed ? 1 : 0) - (stats.hints ? 1 : 0) - (stats.inefficient > 6 ? 1 : 0)) : 0;
       onDone({ win, perf, stats, summary: parts.join(' · ') + (win ? ' · ' + '★'.repeat(perf) + '☆'.repeat(5 - perf) : '') });
     };
+    const boardOver = () => { const o = B().over(); if (!o || done) return false; finish(goal === 'hold', o === 'checkmate' ? 'Checkmate.' : 'Draw (' + o + ').'); return true; };
     const reply = async () => {
       const f = B().fen(), c = new C(f);
-      if (c.isGameOver()) return;
+      if (boardOver() || c.isGameOver()) return;
       const u = await bestMove(f); if (my !== session || done) return;
       if (!u) return;
-      B().play(u); await sleep(320);
+      B().play(u); await sleep(320); if (boardOver()) return;
       const after = new C(B().fen());
       if (after.isCheckmate()) return finish(false, 'You were checkmated.');
       if (after.isGameOver()) return finish(goal === 'hold', goal === 'hold' ? 'Draw — you held it!' : 'Draw.');
@@ -793,12 +1020,14 @@
     B().onMove(async (uci) => {
       if (my !== session || done) return;
       B().busy(true); stats.moves++;
+      if (B().over() && !['checkmate', 'stalemate'].includes(B().over())) return void boardOver();
       const fenBefore = B().prevFen();
       say(msg, 'Thinking…');
       const a = await assess(fenBefore, uci, goal, side); if (my !== session || done) return;
       stats.log.push({ uci, kind: a.kind });
       if (a.missedMate) stats.missed++;
       if (a.kind === 'mate') return finish(goal !== 'hold', 'Checkmate!');
+      if (a.kind === 'held') return finish(true, a.text);
       if (a.kind === 'stalemate') { stats.stalemates++; if (mode === 'challenge') return finish(false, 'Stalemate — a draw.'); say(msg, a.text, 'bad'); await sleep(1600); if (my !== session) return; B().takeBack(1); showBox(); B().busy(false); return; }
       if (a.kind === 'lost' || a.kind === 'draw') {
         stats.mistakes.push(uci);
@@ -821,16 +1050,25 @@
 
   /* ------------------------------------------------------------------ Endgame Challenges */
   const CHALLENGES = [
-    { id: 'kq', title: 'King and queen mate', task: 'Checkmate with king and queen.', goal: 'mate', kind: 'teacher', gen: () => genEnding(['q'], { minBox: 14 }) },
-    { id: 'kr', title: 'King and rook mate', task: 'Checkmate with king and rook.', goal: 'mate', kind: 'teacher', gen: () => genEnding(['r'], { minBox: 14 }) },
+    { id: 'kq', title: 'King and queen mate', task: 'Checkmate with king and queen.', goal: 'mate', kind: 'teacher', gen: () => genTable('q', { minPlies: 15 }) || genEnding(['q'], { minBox: 14 }) },
+    { id: 'kr', title: 'King and rook mate', task: 'Checkmate with king and rook.', goal: 'mate', kind: 'teacher', gen: () => genTable('r', { minPlies: 25 }) || genEnding(['r'], { minBox: 14 }) },
     { id: 'krr', title: 'Two-rook ladder', task: 'Ladder mate with two rooks.', goal: 'mate', kind: 'teacher', gen: () => genEnding(['r', 'r'], { minBox: 10 }) },
     { id: 'kbb', title: 'Two bishops mate', task: 'Checkmate with two bishops.', goal: 'mate', kind: 'engine', gen: () => genEnding(['b', 'b'], { bk: EDGE, minBox: 6 }) },
     { id: 'kbn', title: 'Bishop and knight mate', task: 'Checkmate with bishop and knight.', goal: 'mate', kind: 'engine', gen: () => genEnding(['b', 'n'], { bk: CORNER }) },
     { id: 'stale', title: 'Stalemate avoidance', task: 'Mate the cornered king — without stalemating it.', goal: 'mate', kind: 'teacher', gen: () => genEnding(['q'], { bk: ['a8', 'h8', 'a1', 'h1'], test: (c, f) => { const k = kingSq(c, 'b'); return dist(k, kingSq(c, 'w')) <= 3 && box(f, 'b').area <= 4; } }) },
-    { id: 'promo', title: 'Pawn promotion', task: 'Promote the pawn safely.', goal: 'promote', kind: 'engine', gen: () => pick(['8/8/8/8/8/k7/6P1/6K1 w - - 0 1', '4k3/8/4K3/4P3/8/8/8/8 w - - 0 1', '8/8/8/8/8/2k5/1P6/1K6 w - - 0 1', '8/5k2/8/8/8/8/2PK4/8 w - - 0 1', '8/8/3k4/8/3KP3/8/8/8 w - - 0 1', '8/1k6/8/1KP5/8/8/8/8 w - - 0 1']) },
-    { id: 'pawns', title: 'Winning pawn endgames', task: 'Win the pawn ending: promote a pawn.', goal: 'promote', kind: 'engine', gen: () => pick(['8/8/8/4k3/8/p7/P3K1P1/8 w - - 0 1', '8/p7/8/6k1/8/8/PP4K1/8 w - - 0 1', '8/8/4k3/8/4KP2/6P1/8/8 w - - 0 1', '8/5p2/5k2/8/5K2/5P2/5P2/8 w - - 0 1', '8/8/8/2k5/8/1PK5/1P6/8 w - - 0 1']) },
-    { id: 'hold', title: 'Hold the draw', task: 'Defend: stop the pawn from promoting (survive 25 moves).', goal: 'hold', kind: 'engine', side: 'b', gen: () => pick(['8/4k3/8/4P3/4K3/8/8/8 w - - 0 1', 'k7/8/8/8/8/8/P7/1K6 w - - 0 1', '4k3/8/8/8/8/4K3/4P3/8 w - - 0 1', '7k/8/8/8/8/8/7P/6K1 w - - 0 1']) },
+    { id: 'promo', title: 'King and pawn: win it', task: 'Promote the pawn — perfect defence, only precise moves win.', goal: 'promote', kind: 'engine', gen: () => hardKPK('w', 'win') },
+    { id: 'pawns', title: 'Winning pawn endgames', task: 'Win the pawn ending: promote a pawn.', goal: 'promote', kind: 'engine', gen: () => pick(['8/8/8/4k3/8/p7/P3K1P1/8 w - - 0 1', '8/5pk1/8/8/8/1P6/5PK1/8 w - - 0 1', '8/8/2k5/p7/P7/2K5/6P1/8 w - - 0 1', '8/8/4k3/8/4KP2/6P1/8/8 w - - 0 1', '8/5p2/5k2/8/5K2/5P2/5P2/8 w - - 0 1', '8/8/8/2k5/8/1PK5/1P6/8 w - - 0 1']) },
+    { id: 'hold', title: 'King and pawn: hold it', task: 'You are Black. Hold the draw for 25 moves.', goal: 'hold', kind: 'engine', side: 'b', gen: () => hardKPK('b', 'draw') },
   ];
+  function hardKPK(stm, want) {
+    const fair = (c, f) => { const k = kpkPieces(f); return dist(k.bk, k.p) >= 2 && dist(k.wk, k.p) <= 4; };
+    for (let k = 0; k < 120; k++) {
+      const f = genTable('p', { stm, want, minPlies: want === 'win' ? 20 : 0, test: fair }); if (!f) continue;
+      const n = keepers(f).length, legal = new (B().Chess)(f).moves().length;
+      if (n >= 1 && n <= 2 && legal - n >= 3) return f;
+    }
+    return genTable('p', { stm, want });
+  }
   function openChallenges() {
     session++; screen = 'challenges'; top.hidden = true; panel.hidden = true; B().onMove(null);
     hub.replaceChildren();
@@ -852,15 +1090,16 @@
     }
     hub.append(head, modes, el('p', 'tr-note', desc), list); hub.hidden = false;
   }
-  function startChallenge(ch) {
+  async function startChallenge(ch) {
     hub.hidden = true; screen = 'challenge';
+    await loadTables();
     setTop(ch.title, el('span', 'tr-chip dim', { guided: 'Guided', practice: 'Practice', challenge: 'Challenge' }[P.settings.mode]));
     const mode = P.settings.mode;
     void playEnding({ fen: ch.gen(), goal: ch.goal, kind: ch.kind, task: ch.task, mode, side: ch.side || 'w', onDone: (res) => {
       const st = P.challenges[ch.id] || (P.challenges[ch.id] = { attempts: 0, wins: 0, best: 0 });
       st.attempts++; if (res.win) { st.wins++; st.best = Math.max(st.best || 0, res.perf); } save();
       panel.replaceChildren();
-      panel.append(el('div', 'tr-result ' + (res.win ? 'good' : 'bad'), res.win ? 'Won' : (/draw/i.test(res.summary) ? 'Draw' : 'Not won')), el('div', 'tr-say', res.summary));
+      panel.append(el('div', 'tr-result ' + (res.win ? 'good' : 'bad'), res.win ? (ch.goal === 'hold' ? 'Draw held' : 'Won') : (/draw/i.test(res.summary) ? 'Draw' : 'Not won')), el('div', 'tr-say', res.summary));
       if (mode === 'challenge' && res.stats.log.length) {
         const rev = el('div', 'tr-review'); rev.append(el('span', 'tr-label', 'Review'));
         res.stats.log.forEach((m, i) => { const tag = { mate: 'mate', good: '✓', ok: '·', inefficient: 'slow', lost: '✗ lost win', stalemate: '✗ stalemate', draw: '✗ draw' }[m.kind] || m.kind; rev.append(el('span', 'tr-rev ' + m.kind, (i + 1) + '. ' + m.uci + ' ' + tag)); });
@@ -882,5 +1121,5 @@
     wheel.after(b);
   }
   mountButton(); document.addEventListener('DOMContentLoaded', mountButton);
-  window.familyChessTraining = { open, close, _test: { genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
+  window.familyChessTraining = { open, close, _test: { suggest, keepers, probe, genTable, loadTables, genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
 })();
