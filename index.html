@@ -1204,6 +1204,25 @@ body.col-open .train-top, body.col-open #accountControl, body.col-open #btnTrain
 
 .card.stack .end-actions { flex-direction: column; align-items: stretch; gap: 8px; }
 .card.stack .end-actions button { width: 100%; margin: 0; }
+
+/* colour swatches open the colour picker (no piece preview for board colours) */
+.picker-card.board-colour .pick-preview { display: none; }
+#collection .custom2d .color-row { background: none; border: 0; cursor: pointer; }
+#collection .custom2d .cswatch { display: block; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25), 0 2px 6px rgba(0,0,0,.4); }
+/* chat header with your clock: keep everything on one line */
+@media (max-width: 460px) {
+  body.clock-in-chat .panel-head .chat-tools .chat-tool:not(.chat-word), body.clock-in-chat .panel-head #btnChatResign, body.clock-in-chat .panel-head #btnChatPause, body.clock-in-chat .panel-head #btnChatSave { width: 26px !important; min-width: 26px !important; padding: 0 !important; }
+  body.clock-in-chat .panel-head .chat-tools .chat-tool.chat-word { padding: 0 4px !important; font-size: 14px !important; }
+  body.clock-in-chat .panel-head .chess-clock-label { display: none; }
+  body.clock-in-chat .panel-head .chess-clock { padding: 0 9px !important; }
+  body.clock-in-chat .panel-head .chess-clock-time { font-size: 17px !important; }
+  body.clock-in-chat .panel-head .chat-clear, body.clock-in-chat .panel-head .sheet-close { width: 30px !important; height: 30px !important; }
+  body.clock-in-chat .panel-head { gap: 4px !important; padding-left: 10px !important; padding-right: 6px !important; }
+}
+/* opponent plate with clock: never runs under the Challenges button */
+body.clock-in-chat #plateTop { max-width: calc(100vw - 186px); box-sizing: border-box; }
+body.clock-in-chat #plateTop .pname { max-width: 26vw; }
+body.clock-in-chat #plateTop .chess-clock { flex: none; }
 </style>
 
 </head>
@@ -3131,8 +3150,8 @@ function updateMarkers() {
   placeSq(MK.lastTo, last && last.to);
   { const rm = resumeMoves(); for (let i = 0; i < 4; i++) placeSq(MK.resume[i], null);
     if (rm) for (const m of rm) { const k = m.color === 'w' ? 0 : 2; placeSq(MK.resume[k], m.from); placeSq(MK.resume[k + 1], m.to); } }
-  MK.lastTo.material.opacity = pending ? 0.20 : 0.28;
-  MK.lastFrom.material.opacity = 0.17;
+  MK.lastTo.material.opacity = pending ? 0.32 : 0.5;
+  MK.lastFrom.material.opacity = 0.3;
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   placeSq(MK.check, kingSq || null);
   const live = selected && canAct();
@@ -3366,8 +3385,8 @@ function applyTheme(t) {
   /* no lights shining down on the board: no glare spots */
   for (const l of rig.children) l.intensity = 0;
   rig.visible = false;
-  MK.lastFrom.material.color.setHex(D.last);
-  MK.lastTo.material.color.setHex(D.last);
+  MK.lastFrom.material.color.setHex(0xffd60a);
+  MK.lastTo.material.color.setHex(0xffd60a);
   MK.check.material.map = CHECK_TEX[THEME]; MK.check.material.needsUpdate = true;
   for (const p of meshes) { p.mesh.geometry = geoFor(p.type); orientMesh(p.mesh, p.type, p.color, p.tgt.x); p.mesh.castShadow = D.shadows; setPieceHighlight(p, !p.dying && !!selected && p.sq === selected); syncBlob(p); }
   requestRender();
@@ -3976,8 +3995,11 @@ function markers2D() {
   const edge = (sq, a) => { const [c, r] = sqCR(sq); return sv('rect', { x: c + 0.05, y: r + 0.05, width: 0.9, height: 0.9, fill: C2.hl + (a * 0.25) + ')', stroke: C2.hl + a + ')', 'stroke-width': 0.035 }, g); };
   // Muted yellow shows the move's two squares without a directional arrow.
   if (last) {
-    cell(last.from, { fill:'rgba(240,206,119,.17)', stroke:'rgba(231,201,128,.33)', 'stroke-width':.035 });
-    cell(last.to, { fill:'rgba(240,206,119,'+(pending?'.21':'.27')+')', stroke:'rgba(231,201,128,.43)', 'stroke-width':.04 });
+    // Stronger last move: warm yellow wash on both squares, a bright frame on the destination.
+    cell(last.from, { fill:'rgba(255,214,10,.30)' });
+    cell(last.to, { fill:'rgba(255,214,10,'+(pending?'.32':'.46')+')' });
+    { const [c, r] = sqCR(last.to); sv('rect', { x: c + 0.04, y: r + 0.04, width: 0.92, height: 0.92, rx: 0.04, fill: 'none', stroke: 'rgba(255,196,0,.95)', 'stroke-width': 0.075 }, g); }
+    { const [c, r] = sqCR(last.from); sv('rect', { x: c + 0.06, y: r + 0.06, width: 0.88, height: 0.88, rx: 0.04, fill: 'none', stroke: 'rgba(255,196,0,.55)', 'stroke-width': 0.04, 'stroke-dasharray': '.12 .08' }, g); }
   }
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   if (kingSq) { const [c, r] = sqCR(kingSq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.5, fill: 'url(#chk2)' }, g); }
@@ -6012,10 +6034,12 @@ function renderCollection() {
   if (PREF2D.style === 'custom') {
     const box = el('div', 'set-group custom2d');
     for (const [key, label] of [['light', 'Light'], ['dark', 'Dark'], ['frame', 'Border'], ['wp', 'White'], ['bp', 'Black']]) {
-      const r = el('label', 'color-row'); const inp = el('input'); inp.type = 'color';
-      inp.value = PREF2D.custom[key] || (key === 'frame' ? C2.frame : '#000000');
-      inp.addEventListener('input', () => { apply2D({ ...PREF2D, custom: { ...PREF2D.custom, [key]: inp.value.toLowerCase() } }); updateBoardChip(); });
-      const t = el('span'); t.textContent = label; r.append(inp, t); box.append(r);
+      const r = el('button', 'color-row'); r.type = 'button';
+      const dot = el('i', 'cswatch'); dot.style.background = PREF2D.custom[key] || (key === 'frame' ? C2.frame : '#000000');
+      const t = el('span'); t.textContent = label; r.append(dot, t); box.append(r);
+      r.addEventListener('click', () => openColorPicker(label + ' colour', rgbHex(getComputedStyle(dot).backgroundColor),
+        (hex) => { apply2D({ ...PREF2D, custom: { ...PREF2D.custom, [key]: hex.toLowerCase() } }); updateBoardChip(); dot.style.background = hex; renderCollection(); })
+        || document.querySelectorAll('.picker-card').forEach((c) => c.classList.add('board-colour')));
     }
     root.append(box);
   }
@@ -6028,6 +6052,8 @@ function renderCollection() {
     if (eq.themeId === b.id) g3.lastChild.classList.add('chosen');
   }
 }
+
+function rgbHex(rgb) { const m = String(rgb).match(/\d+/g); if (!m) return '#000000'; return '#' + m.slice(0, 3).map((v) => (+v).toString(16).padStart(2, '0')).join(''); }
 function dialog(title, paras, actions) {
   const ov = el('div', 'overlay top'), card = el('div', 'card'); card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true');
   const h = el('h2'); h.textContent = title; card.append(h);
