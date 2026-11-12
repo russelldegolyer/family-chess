@@ -236,3 +236,8 @@ end $$;
 --   if c.game_id is not null and c.kind='saved' then
 --     update chess_games set status='finished', end_reason='replaced', updated_at=now() where id=c.game_id and status='waiting';
 --   end if; return null;
+
+-- Follow-up migration chess_saved_games_per_player_overwrite (same day): saving is per player.
+-- chess_save_online_game(p_game_id uuid, p_replace uuid default null) now writes ONE row for the caller only;
+-- chess_save_local_game(..., p_replace uuid default null). p_replace deletes the caller's earlier save first
+-- (the client asks "Overwrite last save" or "Save as new" when the same game was already saved).

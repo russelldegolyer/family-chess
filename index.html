@@ -1194,6 +1194,13 @@ body.col-open .train-top, body.col-open #accountControl, body.col-open #btnTrain
 #collection .custom2d input[type=color] { width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: none; overflow: hidden; cursor: pointer; }
 #collection .custom2d input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
 #collection .custom2d input[type=color]::-webkit-color-swatch { border: 2px solid rgba(255,255,255,.25); border-radius: 50%; }
+
+/* bookmark fills once this position is saved; empties again after the next move */
+#btnSave.is-saved svg path, #btnChatSave.is-saved svg path { fill: currentColor; }
+#btnSave.is-saved, #btnChatSave.is-saved { color: #64d2ff; }
+
+.card.stack .end-actions { flex-direction: column; align-items: stretch; gap: 8px; }
+.card.stack .end-actions button { width: 100%; margin: 0; }
 </style>
 
 </head>
@@ -5252,30 +5259,48 @@ function sansFor(moves, actions) {
   return out;
 }
 let saving = false;
+const lastSave = {};   // game key -> id of this player's most recent save of it
+function saveKey() { return G.onlineProvider === 'supabase' && G.gid ? 'g:' + G.gid : 'k:' + (G.key || ''); }
 async function saveCurrentGame() {
   if (saving || G.status !== 'active' || !G.moves.length || G.mode === 'train') return;
   const api = window.chessSupabase;
   let uid = null;
   try { uid = (await api?.auth.getSession())?.data?.session?.user?.id || null; } catch { uid = null; }
   if (!api || !uid) { toast('Sign in to save games.'); return; }
+  if (!(G.onlineProvider === 'supabase' && G.gid) && (G.clockActions || []).length) { toast('Games with pawn-for-time changes can’t be saved yet.'); return; }
+  const key = saveKey();
+  let prev = lastSave[key] || null;
+  if (!prev && G.onlineProvider === 'supabase' && G.gid) {
+    try { const { data } = await api.from('chess_saved_games').select('id').eq('source_game_id', G.gid).order('created_at', { ascending: false }).limit(1); prev = data?.[0]?.id || null; } catch { prev = null; }
+  }
+  if (prev) {
+    const d = dialog('Save this game again?', ['You already saved this game. Replace that save with this position, or keep both?'],
+      [['Overwrite last save', 'gold', () => void doSave(api, key, prev)], ['Save as new', 'quiet', () => void doSave(api, key, null)], ['Cancel', 'quiet', null]]);
+    d.card.classList.add('stack');
+    return;
+  }
+  await doSave(api, key, null);
+}
+async function doSave(api, key, replace) {
+  if (saving) return;
   saving = true;
   try {
+    let id;
     if (G.onlineProvider === 'supabase' && G.gid) {
-      const { error } = await api.rpc('chess_save_online_game', { p_game_id: G.gid });
-      if (error) throw error;
-      const opp = G.names?.[other(mySeat || 'w')] || 'your opponent';
-      toast('Saved for you and ' + opp + '. Pick it up anytime in Challenges → Saved games.', 3800);
+      const { data, error } = await api.rpc('chess_save_online_game', { p_game_id: G.gid, p_replace: replace });
+      if (error) throw error; id = data;
     } else {
-      if ((G.clockActions || []).length) { toast('Games with pawn-for-time changes can’t be saved yet.'); return; }
       const human = G.mode === 'cpu' ? cpu.human : localView;
       const you = cleanName(store.get('sg.name', '')) || 'You';
       const names = G.mode === 'cpu' ? (human === 'w' ? [you, 'Computer'] : ['Computer', you]) : ['White', 'Black'];
-      const { error } = await api.rpc('chess_save_local_game', {
+      const { data, error } = await api.rpc('chess_save_local_game', {
         p_source: G.mode === 'cpu' ? 'computer' : 'local', p_moves: G.moves, p_sans: sansFor(G.moves, []),
-        p_fen: G.pos.chess.fen(), p_side: human, p_level: cpu.level, p_white: names[0], p_black: names[1] });
-      if (error) throw error;
-      toast('Game saved. Find it in Challenges → Saved games.', 3200);
+        p_fen: G.pos.chess.fen(), p_side: human, p_level: cpu.level, p_white: names[0], p_black: names[1], p_replace: replace });
+      if (error) throw error; id = data;
     }
+    lastSave[key] = id; G.savedPly = G.moves.length; G.savedKey = key;
+    toast((replace ? 'Save updated.' : 'Game saved.') + ' Find it in Challenges → Saved games.', 3200);
+    updateResignBtn();
   } catch (e) { toast('Could not save: ' + (e?.message || 'try again.')); }
   finally { saving = false; }
 }
@@ -5553,6 +5578,8 @@ function updateResignBtn() {
   $('btnChatResign').hidden = !playing;
   const canSave = G.status === 'active' && G.moves.length > 0 && G.mode !== 'train';
   $('btnSave').hidden = !canSave; $('btnChatSave').hidden = !canSave;
+  const savedNow = canSave && G.savedKey === saveKey() && G.savedPly === G.moves.length;
+  for (const id of ['btnSave', 'btnChatSave']) { $(id).classList.toggle('is-saved', savedNow); $(id).setAttribute('aria-label', savedNow ? 'Saved' : 'Save game'); }
 }
 $('exitFocus').addEventListener('click', () => setFocus(false));
 function setSheet(open) {
