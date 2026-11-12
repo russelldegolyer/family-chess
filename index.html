@@ -1072,6 +1072,22 @@ body.compact .bottom-bar .mine .view2d-btn { height: 40px !important; min-height
 #endCard .ec-tile { background: #2c2c30 !important; color: var(--ink) !important; border: 0 !important; font-size: 15px !important; white-space: nowrap; padding: 0 10px !important; }
 #endCard .ec-links { display: flex; justify-content: center; gap: 28px; padding-top: 2px; }
 #endCard .ec-links .btn { min-height: 40px; background: none !important; border: 0 !important; box-shadow: none !important; color: var(--ink-2) !important; font: 600 15px/1 var(--body) !important; padding: 0 6px; }
+
+/* review on a phone: the clocks step aside so the board can grow, and the lesson fits without scrolling */
+body.reviewing #chessClockHud { display: none !important; }
+@media (max-width: 899px) {
+  body.compact .panel.reviewing .hist .sub, body.compact .panel.reviewing .review-engine-note { display: none; }
+  body.compact .panel.reviewing .hist { padding: 8px 12px 6px; }
+  body.compact .panel.reviewing .review-summary { padding: 9px 12px; margin: 0 0 6px; }
+  body.compact .panel.reviewing .review-detail { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  body.compact .panel.reviewing .review-analysis-head { flex-wrap: nowrap; margin: 2px 0 6px; overflow: hidden; }
+  body.compact .panel.reviewing .review-analysis-head > span:first-child { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.compact .panel.reviewing .review-side-count { flex: none; white-space: nowrap; }
+  body.compact .panel.reviewing .review-mode { margin: 4px 0 4px; }
+  body.compact .panel.reviewing .review-mode .btn { min-height: 30px; font-size: 13px; }
+  body.compact .panel.reviewing .review-move-toggle { min-height: 30px; margin: 2px 0 2px; padding: 5px 10px; }
+  body.compact.chat2d:not(.landscape) .panel.reviewing { height: clamp(270px, 40dvh, 360px); }
+}
 </style>
 
 </head>
@@ -3874,7 +3890,8 @@ function layout2D() {
   let top = split ? Math.max(72, Math.ceil(topCard?.bottom || 90) + 6)
     : compact ? Math.max(84, Math.ceil(topCard?.bottom || 80) + 8) : 44;
   // Timed games reserve a row for both clocks above the 2D board.
-  if(compact && document.body.classList.contains('clock-timed')){
+  const clocksShown = document.body.classList.contains('clock-timed') && !review;
+  if(compact && clocksShown){
     const clockBottom = document.querySelector('#chessClockHud .clock-top')?.getBoundingClientRect().bottom || 100;
     top = Math.max(top, Math.ceil(clockBottom)+7);
   }
@@ -3891,7 +3908,7 @@ function layout2D() {
   // changes during the animation; offsetHeight does not. Reserve its FINAL
   // space even before the opening transition finishes.
   const panelHeight = split ? ($('panel')?.offsetHeight || Math.min(400, H * .4)) : 0;
-  const bottom = split ? panelHeight + (document.body.classList.contains('clock-timed')?61:10) : compact ? 80 : 64;
+  const bottom = split ? panelHeight + (clocksShown?61:10) : compact ? 80 : 64;
   const freeHeight = Math.max(40, H - top - bottom);
   const s = Math.max(3, Math.min((W - left - right) / 10.04, freeHeight / 11.72));
   const w = s * 10.04, height = s * 11.72;
@@ -4656,7 +4673,7 @@ function renderHistory() {
   const oldViewScroll = view.scrollTop;
   const oldMoveScroll = view.querySelector('.review-move-scroll')?.scrollTop || 0;
   const dock = $('reviewDock');
-  $('panel').classList.toggle('reviewing', !!review);
+  $('panel').classList.toggle('reviewing', !!review); document.body.classList.toggle('reviewing', !!review);
   dock.hidden = !review;
   document.querySelector('#panel .chat-title').textContent = review ? 'Review' : 'Chat';
   const frag = document.createDocumentFragment();
@@ -4707,7 +4724,7 @@ function renderHistory() {
       engineHead = el('div', 'review-analysis-head');
       const line = el('span');
       line.textContent = engineState.error || (engineState.complete
-        ? 'Engine review complete · both players'
+        ? 'Engine review ✓'
         : 'Checking both sides · ' + engineState.done + '/' + engineState.total + ' moves');
       engineHead.append(line);
       const counts = analyzer.counts();
@@ -4894,7 +4911,7 @@ function openHistory(on = !historyOpen) {
   else {
     stopReviewPlayback(false);
     if (review) endReview();
-    $('panel').classList.remove('reviewing');
+    $('panel').classList.remove('reviewing'); document.body.classList.remove('reviewing');
     $('reviewDock').hidden = true;
     $('reviewDock').replaceChildren();
     document.querySelector('#panel .chat-title').textContent = 'Chat';
