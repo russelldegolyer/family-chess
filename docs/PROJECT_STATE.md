@@ -29,7 +29,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | --- | --- | --- |
 | Game state, moves, undo | `index.html` (`G`, `applyMove`, `playMove`, `undo`, `resetLocalGame`) | practice + online share one board |
 | Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu` | UI shows numbers only; engine branches on `level === 4/5` for the two extreme styles; each has its own opening book (`BOOK`: 4 = Gukesh repertoire, 5 = Magnus repertoire) and both avoid draws |
-| 3D board/pieces/themes | `index.html` `THEMES`, `#masterSrc` (`sdfMesh` surface nets + vertex snapping; knight/bishop/queen heads are SDF), `applyTheme`, `fitCamera` | themes: unnamed (Default), matte, cats, royal, northern, infernal |
+| 3D board/pieces/themes | `index.html` `THEMES`, `#masterSrc` (`sdfMesh` surface nets + vertex snapping; knight/bishop/queen heads are SDF), `applyTheme`, `fitCamera` | themes: unnamed (Default), cats (Wooden); retired ids alias to Default |
 | 2D board | `index.html` `draw2D`, `applyView`, `PREF2D` | |
 | Side chooser (start screen) | `index.html` `PG`, `openPregame`, `closePregame`, `pgStep`, `goHome`, `newGame` | swipe or tap White/Black + difficulty slider |
 | Piece colours | `index.html` `myColor`, `setMyColor`, `sideColors` (`BLACK_PIECES`), `openQuickColors`; sync in `chess-online.js` (`piece_color`) | one colour per account, paints White only |
@@ -73,6 +73,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 **Removed** (don't restore)
 - Computer/"practice opponent" colour — code removed 2026-11-11; DB column `chess_profiles.practice_opponent_color` is left in place, unused.
 - Old New-game sheet (Two Players / Play Computer / starting side) and the "Preferred starting position" setting — removed 2026-11-11.
+- 3D boards Red & Black, Navy Blue & Silver, Northern Lights, Volcano (and their Aurora/Lava settings) — removed 2026-11-11.
 - The pre-Supabase in-page live layer (seats, shared doc, archive, Claude feedback) — removed 2026-11-10.
 
 ## Requirements vs implementation (discrepancies)
