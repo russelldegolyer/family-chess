@@ -54,3 +54,18 @@
 .cgEye{display:grid;place-items:center;width:36px;height:36px;padding:0!important}
 
 .cgSocialAction.sent,.cgSocialAction.sent:disabled{background:#30d158;color:#04210d;opacity:1;font-variant-numeric:tabular-nums}
+/* friends */
+.cgPlayersHead { display: flex; align-items: center; gap: 8px; }
+.cgPlayersHead > span { flex: 1; }
+.cgEditFriends { border: 0; background: none; color: #0a84ff; font: 600 13px/1 inherit; padding: 4px 2px; cursor: pointer; }
+.cgSocialAction.cgRemove { background: rgba(255,59,48,.16); color: #ff6961; }
+.cgFriendReqs { margin-top: 8px; }
+.cgReqRow .cgSocialMeta { color: #ffd60a; }
+.cgFriendAdd { display: flex; gap: 8px; margin-top: 10px; align-items: stretch; }
+.cgMyCode { flex: none; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 12px; border: 0; border-radius: 14px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); color: #f2f2f7; text-align: left; cursor: pointer; }
+.cgMyCode small { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #8e8e93; }
+.cgMyCode b { font: 700 17px/1 ui-monospace, Menlo, monospace; letter-spacing: .08em; }
+.cgAddForm { flex: 1; min-width: 0; display: flex; gap: 6px; padding: 5px; border-radius: 14px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.cgAddForm input { flex: 1; min-width: 0; border: 0; background: none; color: #f2f2f7; font: 600 16px ui-monospace, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; padding: 0 8px; outline: none; }
+.cgAddForm input::placeholder { font-family: -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: 0; text-transform: none; color: #6e6e73; font-weight: 500; }
+.cgAddForm button { flex: none; border: 0; border-radius: 10px; padding: 0 14px; background: #0a84ff; color: #fff; font: 650 14px/1 inherit; cursor: pointer; }

@@ -549,8 +549,13 @@
     const sendGo = btn('Send', 'tr-sg-go', () => { const t = pick.value; if (!t) { say('Choose who to send it to.', true); return; } void sendSaved(g, t, side, pick.selectedOptions[0].textContent, say); });
     sendRow.append(el('span', 'tr-sg-item-label', 'Send to a player'), pick, sendGo); list.append(sendRow);
     hub.append(list);
-    void (async () => { const c = api(); if (!c) return; const { data } = await c.from('chess_profiles').select('id,display_name').neq('id', uid).order('display_name');
-      for (const p of data || []) pick.add(new Option(p.display_name || 'Player', p.id)); if (g.opponent_id) pick.value = g.opponent_id; })();
+    void (async () => { const c = api(); if (!c) return;
+      // Friends only: games can only be sent to people you're friends with.
+      const { data: fr } = await c.from('chess_friendships').select('user_a,user_b').eq('status', 'accepted');
+      const ids = (fr || []).map((f) => (f.user_a === uid ? f.user_b : f.user_a));
+      if (!ids.length) { pick.options[0].textContent = 'Add a friend first'; return; }
+      const { data } = await c.from('chess_profiles').select('id,display_name').in('id', ids).order('display_name');
+      for (const p of data || []) pick.add(new Option(p.display_name || 'Player', p.id)); if (g.opponent_id && ids.includes(g.opponent_id)) pick.value = g.opponent_id; })();
     // Keep + delete
     const keepRow = el('label', 'tr-sg-keep');
     const keep = el('input'); keep.type = 'checkbox'; keep.checked = !!g.keep;

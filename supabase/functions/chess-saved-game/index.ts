@@ -44,6 +44,9 @@ Deno.serve(async (req) => {
     const side = body.side === 'w' || body.side === 'b' ? body.side : s.owner_side;
     const { data: target } = await db.from('chess_profiles').select('id').eq('id', target_id).maybeSingle();
     if (!target) return reply(404, { error: 'Player not found.' });
+    const { data: fr } = await db.from('chess_friendships').select('id').eq('user_a', me < target_id ? me : target_id)
+      .eq('user_b', me < target_id ? target_id : me).eq('status', 'accepted').maybeSingle();
+    if (!fr) return reply(403, { error: 'You can only send games to friends.' });
 
     // Re-play the saved game from the start. Pawn-for-time changes are applied after their ply.
     const moves: string[] = Array.isArray(s.moves) ? s.moves : [];

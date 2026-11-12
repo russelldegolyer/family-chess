@@ -14,6 +14,18 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Added**
+- **Friends**: everyone has a friend code; add friends by code, accept or decline requests, remove friends (Edit).
+  Only friends show in the list, can see you online, can invite you or send you games, and can watch your games.
+  People who had already played together start as friends.
+- Custom 2D board colours open the colour wheel.
+
+**Improved**
+- Opponent's last move is much easier to see (yellow squares, gold frame on 2D; brighter in 3D).
+- Chat header and opponent name plate stay on one line with clocks showing.
+
 ## 2026-11-12 — Create game, per-player saves, saved clocks (deployed 1:46 PM)
 
 **Added**

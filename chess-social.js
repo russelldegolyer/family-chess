@@ -8,8 +8,13 @@
  const VAPID_PUBLIC_KEY='BBJfBdOHnTHFbKTs2KEqCyr_aCKMOM0l3IxpJYtaIimFJzJMswcLwD90K1_IVH7WrUDbLM5miTcs8K74vuXobTA';
  mount.innerHTML=`
  <section class="cgSocialSection">
-  <div class="cgSection cgPlayersHead"><span>Players</span><small id="cgOnlineCount" class="cgSocialMeta">Checking…</small></div>
+  <div class="cgSection cgPlayersHead"><span>Friends</span><small id="cgOnlineCount" class="cgSocialMeta">Checking…</small><button id="cgEditFriends" class="cgEditFriends" type="button">Edit</button></div>
   <div id="cgPlayerList" class="cgSocialList"><div class="cgSocialEmpty">Loading players…</div></div>
+  <div id="cgFriendReqs" class="cgSocialList cgFriendReqs" hidden></div>
+  <div class="cgFriendAdd">
+   <button id="cgMyCode" class="cgMyCode" type="button" aria-label="Copy your friend code"><small>Your friend code</small><b id="cgMyCodeText">······</b></button>
+   <form id="cgAddForm" class="cgAddForm" autocomplete="off"><input id="cgAddCode" maxlength="8" placeholder="Friend's code" aria-label="Friend's code" autocapitalize="characters" spellcheck="false"><button type="submit">Add</button></form>
+  </div>
   <div id="cgChallengeStatus" class="cgSocialNotice" role="status" aria-live="polite"></div>
  </section>`;
  /* notification set-up lives in Settings, out of the way of choosing an opponent */
@@ -35,6 +40,7 @@
  const $=id=>document.getElementById(id);
  let user=null,presence=null,challengeChannel=null,poll=null,ticker=null;
  let profiles=[],activeGames=[],challenges=[],onlineIds=new Set(),openAlertId=null;
+ let friendships=[],friendIds=new Set(),myCode='',editFriends=false;
  let openedGameIds=new Set(),requesting=false,loading=false;
  /* Last online: the server heartbeat (chess_profiles.last_seen_at) plus the last time this device saw them online */
  let hasLastSeen=true,heartbeat=null,touchOk=true;const seenOnline={};
@@ -94,11 +100,11 @@
  function renderPlayers(){
   const list=$('cgPlayerList');if(!user)return;
   list.replaceChildren();
-  const others=profiles.filter(p=>p.id!==user.id);
+  const others=profiles.filter(p=>p.id!==user.id&&friendIds.has(p.id));
   others.sort((a,b)=>Number(online(b.id))-Number(online(a.id))||a.display_name.localeCompare(b.display_name));
   const on=others.filter(p=>online(p.id)).length;
   $('cgOnlineCount').textContent=on?on+' online':'';
-  if(!others.length){empty(list,'No other family accounts yet. Invite someone to create an account.');return;}
+  if(!others.length){empty(list,'No friends yet. Share your friend code below, or add someone else’s.');return;}
   for(const p of others){
    const game=activeGames.find(g=>g.white_player_id===p.id||g.black_player_id===p.id);
    const row=node('div','cgSocialRow');
@@ -124,10 +130,46 @@
    const challengeBtn=node('button','cgSocialAction'+(live?' sent':''),live?'Invited '+shown(Math.ceil((until-Date.now())/1000),pend?.kind)+'s':'Invite');
    challengeBtn.type='button';challengeBtn.disabled=live;
    challengeBtn.addEventListener('click',()=>{void sendChallenge(p.id);});
-   row.append(challengeBtn);
+   if(editFriends){const rm=node('button','cgSocialAction cgRemove','Remove');rm.type='button';
+     rm.addEventListener('click',()=>{if(rm.dataset.arm){void friendAct('chess_friend_remove',{p_other:p.id},p.display_name+' removed.');}else{rm.dataset.arm='1';rm.textContent='Sure?';setTimeout(()=>{if(rm.isConnected){delete rm.dataset.arm;rm.textContent='Remove';}},2500);}});
+     row.append(rm);}
+   else row.append(challengeBtn);
    list.append(row);
   }
  }
+ /* ---------- friends: requests, add by code, remove ---------- */
+ function renderFriendReqs(){
+  const box=$('cgFriendReqs');if(!box||!user)return;box.replaceChildren();
+  const pend=friendships.filter(f=>f.status==='pending');
+  box.hidden=!pend.length;
+  for(const f of pend){
+   const other=f.user_a===user.id?f.user_b:f.user_a,incomingReq=f.requested_by!==user.id;
+   const nm=profiles.find(p=>p.id===other)?.display_name||'A player';
+   const row=node('div','cgSocialRow cgReqRow');
+   row.append(node('span','cgSocialAvatar',avatar(nm)));
+   const id=node('div','cgSocialIdentity');id.append(node('span','cgSocialName',nm),node('span','cgSocialMeta',incomingReq?'Wants to be friends':'Friend request sent'));row.append(id);
+   if(incomingReq){
+    const no=node('button','cgSocialAction alt','Decline');no.type='button';no.addEventListener('click',()=>void friendAct('chess_friend_respond',{p_id:f.id,p_accept:false},'Request declined.'));
+    const yes=node('button','cgSocialAction','Accept');yes.type='button';yes.addEventListener('click',()=>void friendAct('chess_friend_respond',{p_id:f.id,p_accept:true},'You and '+nm+' are now friends.'));
+    row.append(no,yes);
+   }else{const c=node('button','cgSocialAction alt','Cancel');c.type='button';c.addEventListener('click',()=>void friendAct('chess_friend_remove',{p_other:other},'Request canceled.'));row.append(c);}
+   box.append(row);
+  }
+ }
+ async function friendAct(fn,args,ok){
+  try{const {data,error}=await api.rpc(fn,args);if(error)throw error;message(typeof ok==='function'?ok(data):ok);}
+  catch(e){message(e?.message||'That didn’t work. Try again.');}
+  await refreshData();
+ }
+ $('cgEditFriends').addEventListener('click',()=>{editFriends=!editFriends;$('cgEditFriends').textContent=editFriends?'Done':'Edit';renderPlayers();});
+ $('cgAddForm').addEventListener('submit',(e)=>{e.preventDefault();
+  const code=$('cgAddCode').value.replace(/[^a-z0-9]/gi,'').toUpperCase();
+  if(code.length!==6){message('Friend codes are 6 letters and numbers, like ABC-123.');return;}
+  $('cgAddCode').value='';
+  void friendAct('chess_friend_request',{p_code:code},(r)=>r==='accepted'?'You’re now friends.':r==='already'?'You’re already friends.':r==='pending'?'Request already sent. Waiting for them to accept.':'Friend request sent.');
+ });
+ $('cgMyCode').addEventListener('click',()=>{if(!myCode)return;const t=myCode.slice(0,3)+'-'+myCode.slice(3);
+  Promise.resolve(navigator.clipboard?.writeText(t)).then(()=>message('Friend code '+t+' copied. Send it to someone you want to play.')).catch(()=>message('Your friend code is '+t+'.'));});
  async function watch(id){
   try {
    if(!window.familyChessOpenMatch)throw new Error('Chess board still loading. Try again.');
@@ -217,19 +259,24 @@
   if(!user||loading)return;
   loading=true;const uid=user.id;
   try{
-   const [pr,gm,ch]=await Promise.all([
+   const [pr,gm,ch,fr]=await Promise.all([
     api.from('chess_profiles').select(hasLastSeen?'id,display_name,last_seen_at':'id,display_name').order('display_name'),
     api.from('chess_games').select('id,white_player_id,black_player_id,updated_at,status')
       .eq('status','active').not('black_player_id','is',null).order('updated_at',{ascending:false}).limit(30),
     api.from('chess_challenges')
       .select('id,challenger_id,target_id,status,created_at,expires_at,game_id,kind,responded_at')
       .or('challenger_id.eq.'+uid+',target_id.eq.'+uid)
-      .order('created_at',{ascending:false}).limit(30)
+      .order('created_at',{ascending:false}).limit(30),
+    api.from('chess_friendships').select('id,user_a,user_b,requested_by,status,created_at')
    ]);
    if(user?.id!==uid)return;
    if(pr.error&&hasLastSeen&&/last_seen_at/.test(pr.error.message||'')){hasLastSeen=false;loading=false;return refreshData({offerLobby});}
    if(pr.error||gm.error||ch.error)throw(pr.error||gm.error||ch.error);
    profiles=pr.data||[];activeGames=gm.data||[];challenges=ch.data||[];
+   friendships=fr.error?[]:(fr.data||[]);
+   friendIds=new Set(friendships.filter(f=>f.status==='accepted').map(f=>f.user_a===uid?f.user_b:f.user_a));
+   if(!myCode)void Promise.resolve(api.rpc('chess_my_friend_code')).then(r=>{if(r?.data){myCode=r.data;$('cgMyCodeText').textContent=r.data.slice(0,3)+'-'+r.data.slice(3);}}).catch(()=>{});
+   renderFriendReqs();
    renderPlayers();renderAlert();tick();
    if(deepLink&&!incoming()){
     const linked=challenges.find(c=>c.id===deepLink&&c.target_id===uid);

@@ -1,0 +1,11 @@
+-- Chess: friends. Applied 2026-11-12 as migration chess_friends (+ follow-up SQL the same day).
+-- * chess_profiles.friend_code (6 chars, unique; set on insert by chess_profiles_friend_code_trg).
+-- * chess_friendships(user_a<user_b, requested_by, status pending|accepted); readable by the two people.
+-- * chess_are_friends(a,b); RPCs chess_my_friend_code, chess_friend_request(code), chess_friend_respond(id,accept),
+--   chess_friend_remove(other).
+-- * Backfill: everyone who had played a game together became friends.
+-- * RLS: chess_profiles readable by self, anyone with a friendship row (any status) or an opponent in your own game;
+--   chess_games / chess_moves / chess_clock_actions / chess_spectator_messages: spectators must be friends of a player.
+-- * chess_send_challenge and chess_send_invite_to_player raise 'You can only invite friends' for non-friends;
+--   chess-saved-game Edge Function v4 refuses non-friends. Invite links still let anyone with the link join.
+-- Full statements: see migration chess_friends in the Supabase migration history.
