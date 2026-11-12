@@ -170,7 +170,10 @@
    if(st==='sent'&&r?.target)void Promise.resolve(api.functions.invoke('chess-notify-challenge',{body:{action:'friend_request',target_id:r.target}})).catch(()=>{});
    return st==='accepted'?'You’re now friends.':st==='already'?'You’re already friends.':st==='pending'?'Request already sent. Waiting for them to accept.':'Friend request sent. They’ll get a notification.';});
  });
- $('cgMyCode').addEventListener('click',()=>{if(!myCode)return;const t=myCode.slice(0,3)+'-'+myCode.slice(3);
+ const showCode=(c)=>{myCode=c;$('cgMyCodeText').textContent=c.slice(0,3)+'-'+c.slice(3);};
+ $('cgMyCode').addEventListener('click',async()=>{if(!myCode){$('cgMyCodeText').textContent='Loading…';
+  try{const r=await api.rpc('chess_my_friend_code');if(r?.data)showCode(r.data);else throw 0;}catch{$('cgMyCodeText').textContent='Tap to retry';message('Couldn’t load your friend code. Check your connection and tap again.');return;}}
+  const t=myCode.slice(0,3)+'-'+myCode.slice(3);
   Promise.resolve(navigator.clipboard?.writeText(t)).then(()=>message('Friend code '+t+' copied. Send it to someone you want to play.')).catch(()=>message('Your friend code is '+t+'.'));});
  async function watch(id){
   try {

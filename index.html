@@ -22,7 +22,7 @@
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
-<script defer src="./chess-social.js?v=17"></script>
+<script defer src="./chess-social.js?v=18"></script>
 <link rel="stylesheet" href="./chess-training.css?v=16">
 <link rel="stylesheet" href="./chess-stats.css?v=1">
 <script defer src="./chess-stats.js?v=1"></script>
@@ -1331,7 +1331,7 @@ body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
       <button class="icon-btn round" id="btnMenu" type="button" aria-label="Game options" aria-haspopup="menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg></button>
     </div>
     <div class="controls" role="group" aria-label="Game controls">
-      <button class="ctl" id="btnNew" type="button" aria-label="New game"><span class="ctl-word">New</span></button>
+      <button class="ctl" id="btnNew" type="button" aria-label="Home"><span class="ctl-word">Home</span></button>
       <button class="ctl" id="btnUndo" type="button" aria-label="Undo" aria-keyshortcuts="Control+Z Meta+Z" disabled><span class="ctl-word">Undo</span></button>
       <button class="ctl" id="btnResign" type="button" aria-label="Resign" title="Resign" hidden><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Resign</span></button>
       <button class="ctl save-btn" id="btnSave" type="button" aria-label="Save game" title="Save game" hidden><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg></button>
@@ -1371,7 +1371,7 @@ body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
       <button class="chip" id="btnFocus" type="button" hidden>Focus</button><span class="chat-title">Chat</span>
       <span class="head-gap"></span>
       <span class="chat-tools" role="group" aria-label="Game controls">
-      <button class="chat-tool chat-word" id="btnChatNew" type="button" aria-label="New game" title="New game">New</button>
+      <button class="chat-tool chat-word" id="btnChatNew" type="button" aria-label="Home" title="Home">Home</button>
       <button class="chat-tool chat-word" id="btnChatUndo" type="button" aria-label="Undo" title="Undo" disabled>Undo</button>
       <button class="chat-tool chat-resign" id="btnChatResign" type="button"
         aria-label="Resign game" title="Resign game" hidden>
@@ -5329,9 +5329,9 @@ function newGame() {
   const playing = G.moves.length > 0 && G.status === 'active';
   if (!playing) { goHome(); return; }
   const online = G.onlineProvider === 'supabase';
-  dialog(online ? 'Leave this match?' : 'Start a new game?',
+  dialog(online ? 'Leave this match?' : 'Go back home?',
     [online ? 'You can come back to it from Play online.' : 'This game will end and you’ll go back to the start screen.'],
-    [['Keep playing', 'quiet', null], [online ? 'Leave match' : 'New game', 'gold', goHome]]);
+    [['Keep playing', 'quiet', null], [online ? 'Leave match' : 'Go home', 'gold', goHome]]);
 }
 
 /* ------------------------------------------------------------------ saved games
@@ -5680,7 +5680,7 @@ function updateResignBtn() {
   $('btnChatResign').hidden = !playing;
   // Online games and spectating say "Leave" so the way back to the start screen is obvious.
   const onlineNow = G.onlineProvider === 'supabase', watching = onlineNow && !mySeat;
-  const word = onlineNow ? 'Leave' : 'New';
+  const word = onlineNow ? 'Leave' : 'Home';
   if ($('btnNew').firstChild?.textContent !== word) { $('btnNew').firstChild.textContent = word; $('btnChatNew').textContent = word; }
   $('btnNew').setAttribute('aria-label', onlineNow ? 'Leave match' : 'New game');
   $('watchBar').hidden = !watching || !!review;
