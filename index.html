@@ -21,10 +21,10 @@
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
 <script defer src="./chess-social.js?v=12"></script>
-<link rel="stylesheet" href="./chess-training.css?v=5">
+<link rel="stylesheet" href="./chess-training.css?v=6">
 <link rel="stylesheet" href="./chess-stats.css?v=1">
 <script defer src="./chess-stats.js?v=1"></script>
-<script defer src="./chess-training.js?v=6"></script>
+<script defer src="./chess-training.js?v=7"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -1033,11 +1033,15 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
 /* 2D/3D switch: the special button, far right next to the chat button */
 .bottom-bar .view2d-btn { width: 44px !important; min-width: 44px !important; padding: 0 !important; border-radius: 999px !important; background: linear-gradient(145deg, #e5302a, #b81f1a) !important; color: #fff !important; box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset !important; }
 body.compact .bottom-bar .mine { overflow: visible !important; }
-body.compact .bottom-bar .mine #btnMenu { visibility: hidden; pointer-events: none; } /* sits under the chat button on phones (it always did) */
+body.compact .bottom-bar .mine #btnMenu { display: none !important; } /* never had room on phones; its items live in Settings */
+/* phones: one even row — equal gaps, equal icon buttons, the red 2D switch last */
+body.compact .bottom-bar, body.compact .bottom-bar .mine, body.compact .bottom-bar .controls { gap: 5px !important; }
+body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause, body.compact .bottom-bar .mine .icon-btn.round { width: 36px !important; min-width: 36px !important; }
+body.compact .bottom-bar .controls #btnNew, body.compact .bottom-bar .controls #btnUndo { width: auto !important; min-width: 0 !important; padding: 0 4px !important; }
+body.compact .bottom-bar .mine .view2d-btn { width: 48px !important; min-width: 48px !important; }
+@media (max-width: 385px) { body.compact .bottom-bar, body.compact .bottom-bar .mine, body.compact .bottom-bar .controls { gap: 3px !important; } body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause, body.compact .bottom-bar .mine .icon-btn.round { width: 33px !important; min-width: 33px !important; } body.compact .bottom-bar .mine .view2d-btn { width: 46px !important; min-width: 46px !important; } }
 .bottom-bar .view2d-btn span { display: inline !important; font: 800 14px/1 var(--body) !important; letter-spacing: .02em; }
 body.compact .bottom-bar .mine .view2d-btn { height: 40px !important; min-height: 40px !important; margin-left: 0; }
-body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause, body.compact .bottom-bar .mine .icon-btn.round { width: 32px !important; min-width: 32px !important; }
-@media (max-width: 385px) { body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause, body.compact .bottom-bar .mine .icon-btn.round { width: 29px !important; min-width: 29px !important; } body.compact .bottom-bar .mine .view2d-btn { width: 42px !important; min-width: 42px !important; } }
 /* chat header: everything on one line, collapse arrow at the far right */
 .panel-head { flex-wrap: nowrap !important; }
 .panel-head .chat-title { flex: none; }

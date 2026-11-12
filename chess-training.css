@@ -4,10 +4,6 @@
 .tr-root[hidden] { display: none; }
 .tr-root > * { pointer-events: auto; }
 
-/* toolbar lightbulb: same footprint as the colour wheel */
-.train-btn { color: #f2f2f7; }
-.train-btn svg { display: block; }
-.train-btn.active { color: var(--tr-red); box-shadow: inset 0 0 0 1.5px var(--tr-red); background: var(--tr-red-soft) !important; }
 
 /* hub sheet */
 .tr-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: min(88vh, 760px); overflow-y: auto; overscroll-behavior: contain;
@@ -78,18 +74,14 @@ body.training #chessClockHud, body.training .status, body.training #plateTop, bo
 body.training .controls #btnNew, body.training .controls #btnUndo, body.training .controls #btnResign, body.training .controls #btnPause, body.training .chat-tools { display: none !important; }
 body.training #endCard, body.training-open #accountControl, body.training-open #pregame { display: none !important; }
 
-/* phones: make room for the lightbulb beside the colour wheel without anything sliding under the chat button */
-body.compact .bottom-bar, body.compact .bottom-bar .mine, body.compact .bottom-bar .controls { gap: 2px !important; }
-body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause,
-body.compact .bottom-bar .mine .icon-btn.round { width: 34px !important; min-width: 34px !important; }
-body.compact .bottom-bar .controls #btnNew, body.compact .bottom-bar .controls #btnUndo { width: auto !important; min-width: 0 !important; padding: 0 7px !important; }
-body.compact .bottom-bar .controls #btnNew, body.compact .bottom-bar .controls #btnUndo { padding: 0 6px !important; }
-body.compact .bottom-bar .controls #btnNew .ctl-word, body.compact .bottom-bar .controls #btnUndo .ctl-word { font-size: 13.5px !important; }
-@media (max-width: 385px) {
-  body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause,
-  body.compact .bottom-bar .mine .icon-btn.round { width: 31px !important; min-width: 31px !important; }
-}
-
+/* Challenges: a permanent pill at the top right, beside the profile button */
+.train-top { position: fixed; z-index: 89; top: max(19px, calc(env(safe-area-inset-top, 0px) + 7px)); right: max(74px, calc(env(safe-area-inset-right, 0px) + 62px));
+  height: 40px; padding: 0 16px; border: 1px solid rgba(229,48,42,.55); border-radius: 999px; background: rgba(22,22,25,.92);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: #ff7a72; font: 700 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: .01em; cursor: pointer; box-shadow: 0 5px 18px rgba(0,0,0,.5); }
+.train-top:active { filter: brightness(1.2); }
+@media (min-width: 900px) { .train-top { top: 64px; right: 10px; } }
+body.training-open .train-top { display: none; }
 /* ---- panel v2: one clean card under the board ---- */
 .tr-panel { gap: 10px; padding-top: 14px; background: linear-gradient(180deg, rgba(24,24,27,.97), rgba(12,12,14,.98)); border-top: 1px solid rgba(255,255,255,.07); border-radius: 22px 22px 0 0; }
 .tr-panel::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 56px; height: 2px; border-radius: 2px; background: var(--tr-red); opacity: .85; }

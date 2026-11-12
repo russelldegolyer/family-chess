@@ -239,7 +239,6 @@
   function open() {
     if (!B()) return;
     root.hidden = false; document.body.classList.add('training-open');
-    $btn()?.classList.add('active');
     B().enter();
     void loadProfile().then(() => { if (screen === 'hub') renderHub(); });
     openHub();
@@ -248,10 +247,8 @@
     session++; screen = null;
     hub.hidden = true; top.hidden = true; panel.hidden = true; root.hidden = true;
     document.body.classList.remove('training-open');
-    $btn()?.classList.remove('active');
     B()?.exit();
   }
-  const $btn = () => document.getElementById('btnTrain');
 
   function openHub() {
     session++; screen = 'hub';
@@ -1115,14 +1112,12 @@
 
   /* ------------------------------------------------------------------ toolbar button */
   function mountButton() {
-    if (document.getElementById('btnTrain')) return;
-    const wheel = document.getElementById('btnSettings'); if (!wheel) return;
+    if (document.getElementById('btnTrain') || !document.body) return;
     const b = document.createElement('button');
-    b.className = 'icon-btn round train-btn'; b.id = 'btnTrain'; b.type = 'button';
-    b.setAttribute('aria-label', 'Training'); b.title = 'Training';
-    b.innerHTML = '<svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    b.className = 'train-top'; b.id = 'btnTrain'; b.type = 'button'; b.textContent = 'Challenges';
+    b.setAttribute('aria-label', 'Challenges: puzzles, endgame lessons and challenges');
     b.addEventListener('click', () => (root.hidden ? open() : close()));
-    wheel.after(b);
+    document.body.append(b);
   }
   mountButton(); document.addEventListener('DOMContentLoaded', mountButton);
   window.familyChessTraining = { open, close, _test: { suggest, keepers, probe, genTable, loadTables, genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
