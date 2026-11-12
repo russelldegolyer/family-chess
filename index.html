@@ -1082,6 +1082,24 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
 .pawn-pick-bar{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);padding:9px 10px 9px 14px;border-radius:14px;background:rgba(28,28,30,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#f2f2f7;font:600 13px/1.25 -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)}
 .pawn-pick-bar button{flex:none;border:0;border-radius:9px;padding:7px 11px;background:#3a3a3c;color:#f2f2f7;font:600 13px/1 -apple-system,sans-serif}
 .pawn-pick-bar button[hidden]{display:none}
+
+/* 2D/3D switch: the special button, far right next to the chat button */
+.bottom-bar .view2d-btn { width: 44px !important; min-width: 44px !important; padding: 0 !important; border-radius: 999px !important; background: linear-gradient(145deg, #e5302a, #b81f1a) !important; color: #fff !important; box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset !important; }
+body.compact .bottom-bar .mine { overflow: visible !important; }
+body.compact .bottom-bar .mine #btnMenu { visibility: hidden; pointer-events: none; } /* sits under the chat button on phones (it always did) */
+.bottom-bar .view2d-btn span { display: inline !important; font: 800 14px/1 var(--body) !important; letter-spacing: .02em; }
+body.compact .bottom-bar .mine .view2d-btn { height: 40px !important; min-height: 40px !important; margin-left: 0; }
+body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause, body.compact .bottom-bar .mine .icon-btn.round { width: 32px !important; min-width: 32px !important; }
+@media (max-width: 385px) { body.compact .bottom-bar .controls .ctl.icon-only, body.compact .bottom-bar .controls #btnResign, body.compact .bottom-bar .controls #btnPause, body.compact .bottom-bar .mine .icon-btn.round { width: 29px !important; min-width: 29px !important; } body.compact .bottom-bar .mine .view2d-btn { width: 42px !important; min-width: 42px !important; } }
+/* chat header: everything on one line, collapse arrow at the far right */
+.panel-head { flex-wrap: nowrap !important; }
+.panel-head .chat-title { flex: none; }
+.panel-head .chat-tools { gap: 0; min-width: 0; }
+.panel-head .chat-tool { min-width: 32px; padding: 0 4px; }
+.panel-head .chat-tool.chat-word { font-size: 15px; padding: 0 5px; }
+.panel-head .chat-tools + .chat-clear { margin-left: 0; }
+.panel-head .sheet-close { order: 99; margin-left: 2px; flex: none; }
+.set-pick { border: 0; background: var(--fill-2, #2c2c2e); color: inherit; font: 600 14px/1 var(--body); padding: 9px 14px; border-radius: 10px; cursor: pointer; white-space: pre; }
 </style>
 
 </head>
@@ -1125,6 +1143,7 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
       </div>
       <button class="board-chip" id="btnCollection" type="button" aria-label="Choose your board" title="Choose your board"><img id="chipImg" alt=""><span class="chip-text"><span class="chip-name" id="chipName">Board</span><span class="chip-rec" id="chipRec"></span></span></button>
       <button class="icon-btn round color-wheel-btn" id="btnSettings" type="button" aria-label="Piece colours" title="Piece colours"><span class="cw-dot" aria-hidden="true"></span></button>
+      <button class="ctl icon-only view2d-btn" id="btnView2d" type="button" aria-label="Switch to 2D view" title="2D view"><span>2D</span></button>
       <button class="icon-btn round" id="btnMenu" type="button" aria-label="Game options" aria-haspopup="menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg></button>
     </div>
     <div class="controls" role="group" aria-label="Game controls">
@@ -1133,7 +1152,6 @@ body.pregame .bottom-bar, body.pregame .plate, body.pregame #status, body.pregam
       <button class="ctl" id="btnResign" type="button" aria-label="Resign" title="Resign" hidden><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Resign</span></button>
       <button class="ctl game-pause" id="btnPause" type="button" aria-label="Pause game" title="Pause game" hidden><svg class="pause-symbol" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><g class="pause-bars"><rect x="6" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/><rect x="14" y="4.5" width="4" height="15" rx="1.3" fill="currentColor"/></g><path class="resume-triangle" d="M8 5.1a1 1 0 0 1 1.55-.85l10 6.9a1.05 1.05 0 0 1 0 1.7l-10 6.9A1 1 0 0 1 8 18.9Z" fill="currentColor"/></svg><span class="pause-label">Pause</span></button>
       <button class="ctl icon-only" id="btnView" type="button" aria-label="Reset camera" title="Reset camera"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button class="ctl icon-only" id="btnView2d" type="button" aria-label="Switch to 2D view" title="2D view"><span>2D</span></button>
     </div>
   </div>
 
@@ -5993,6 +6011,7 @@ function openSettings() {
     row('Moving pieces', seg([['preview', 'Two taps'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), 'Moving pieces'));
     row('2D pieces', seg([['classic', 'Pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v }), '2D pieces'));
     row('Show last move', toggle(showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }, "Show opponent's last move"));
+    { const b = el('button', 'set-pick'); b.type = 'button'; b.textContent = (BOARD[THEME]?.name || 'Default') + '  ›'; b.addEventListener('click', () => { d.close(); $('btnCollection').click(); }); row('Board', b); }
     row('Sound', toggle(Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) { Sound.ensure(); Sound.play('move'); } }, 'Sound'));
   }
   render();
