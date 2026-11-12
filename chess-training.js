@@ -267,6 +267,11 @@
     top.hidden = true; panel.hidden = true;
     B().onMove(null); mark({});
     renderHub(); hub.hidden = false;
+    void loadSavedRows().then(() => {
+      if (screen !== 'hub') return;
+      const b = [...hub.querySelectorAll('.tr-card')].find((c) => c.textContent.includes('Saved games'))?.querySelector('.tr-card-badge');
+      if (b) b.textContent = savedCount ? String(savedCount) : '';
+    }).catch(() => {});
   }
   function renderHub() {
     hub.replaceChildren();
@@ -297,8 +302,7 @@
     card('Unlimited Puzzles', 'Tactics by rating, with hints', '♞', pz.solved ? pz.solved + ' solved' : '', () => openPuzzles());
     card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
     card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
-    const nSaved = window.familyChessSaved?.list().length || 0;
-    card('Saved games', 'Pick up a game where you left it', '★', nSaved ? String(nSaved) : '', () => openSaved());
+    card('Saved games', 'Pick up a game where you left it', '★', savedCount ? String(savedCount) : '', () => openSaved());
     hub.append(head, hero, mini, el('div', 'tr-section', 'Practice'), cards);
     const info = el('div', 'tr-cards tr-about-row');
     const ab = btn('', 'tr-card', () => openAbout());
@@ -306,35 +310,150 @@
     info.append(ab); hub.append(info);
     const back = btn('Back to the game', 'tr-link', close); hub.append(back);
   }
-  function openSaved() {
-    hub.replaceChildren();
-    const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
-    back.innerHTML = '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Training';
-    head.append(back, el('h2', '', 'Saved games'));
-    hub.append(head);
-    const S = window.familyChessSaved, list = S ? S.list() : [];
-    if (!list.length) {
+  /* ------------------------------------------------------------------ saved games */
+  let savedCount = 0, savedRows = [];
+  const BACK = '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const TRASH = '<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const subHead = (title, backTo, backLabel) => {
+    const head = el('div', 'tr-head'); const back = btn('', 'tr-back', backTo);
+    back.innerHTML = BACK + (backLabel || 'Training'); head.append(back, el('h2', '', title)); return head;
+  };
+  async function loadSavedRows() {
+    const c = api(); if (!c || uid === 'local') return null;
+    const { data, error } = await c.from('chess_saved_games')
+      .select('id,group_id,source,owner_side,opponent_id,white_name,black_name,moves,sans,actions,fen,level,keep,created_at')
+      .order('created_at', { ascending: false }).limit(60);
+    if (error) throw error;
+    savedRows = data || []; savedCount = savedRows.length; return savedRows;
+  }
+  const oppName = (g) => (g.owner_side === 'w' ? g.black_name : g.white_name) || 'your opponent';
+  const savedTitle = (g) => g.source === 'online' ? 'vs ' + oppName(g) : g.source === 'computer' ? 'vs Computer · Level ' + (g.level || 2) : 'Two players';
+  const sideName = (s) => (s === 'b' ? 'Black' : 'White');
+  const turnOf = (g) => ((g.fen || '').split(' ')[1] === 'b' ? 'b' : 'w');
+  const whenOf = (g) => { const d = new Date(g.created_at); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
+  function lastTwo(g) {
+    const n = g.moves.length, out = [];
+    for (let i = Math.max(0, n - 2); i < n; i++) out.push({ uci: g.moves[i], san: (g.sans || [])[i] || g.moves[i], color: i % 2 === 0 ? 'w' : 'b' });
+    // A pawn-for-time change can shift whose move a ply was; trust the position for the last mover.
+    if (out.length) { const last = out[out.length - 1]; const mover = turnOf(g) === 'w' ? 'b' : 'w'; if (last.color !== mover) out.forEach((m) => { m.color = m.color === 'w' ? 'b' : 'w'; }); }
+    return out;
+  }
+  const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+  function miniBoard(g) {
+    const flip = g.owner_side === 'b', rows = (g.fen || '').split(' ')[0].split('/');
+    const mark = {}; for (const m of lastTwo(g)) { mark[m.uci.slice(0, 2)] = m.color + 'f'; mark[m.uci.slice(2, 4)] = m.color + 't'; }
+    let svg = '<svg viewBox="0 0 8 8" aria-hidden="true">';
+    for (let r = 0; r < 8; r++) { let f = 0; for (const ch of rows[r] || '') {
+      if (/\d/.test(ch)) { for (let k = 0; k < +ch; k++) { svg += sqSvg(r, f, null); f++; } continue; }
+      svg += sqSvg(r, f, ch); f++; } }
+    return svg + '</svg>';
+    function sqSvg(r, f, pc) {
+      const x = flip ? 7 - f : f, y = flip ? 7 - r : r, sq = 'abcdefgh'[f] + (8 - r), light = (r + f) % 2 === 0;
+      let out = '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + (light ? '#ebecd0' : '#739552') + '"/>';
+      const m = mark[sq]; if (m) out += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + (m[0] === 'w' ? '#64d2ff' : '#ff9f0a') + '" opacity="' + (m[1] === 't' ? 0.6 : 0.35) + '"/>';
+      if (pc) { const w = pc === pc.toUpperCase(); out += '<text x="' + (x + 0.5) + '" y="' + (y + 0.8) + '" text-anchor="middle" font-size="0.86" fill="' + (w ? '#fff' : '#111') + '" stroke="' + (w ? '#222' : '#000') + '" stroke-width="0.03">' + GLYPH[pc.toLowerCase()] + '</text>'; }
+      return out;
+    }
+  }
+  async function openSaved() {
+    session++; hub.replaceChildren(); hub.append(subHead('Saved games', () => openHub()));
+    const loading = el('p', 'tr-about-foot', 'Loading…'); hub.append(loading);
+    let rows;
+    try { rows = await loadSavedRows(); } catch (e) { loading.textContent = 'Could not load saved games. ' + (e?.message || ''); return; }
+    loading.remove();
+    if (rows === null) { const e = el('div', 'tr-saved-empty'); e.append(el('b', '', 'Sign in to use saved games'), el('p', '', 'Saved games live in your account so you can pick them up on any device.')); hub.append(e); return; }
+    if (!rows.length) {
       const e = el('div', 'tr-saved-empty');
-      e.append(el('b', '', 'No saved games yet'), el('p', '', 'During a game, tap the bookmark button next to resign. The game is saved here so you can finish it later.'));
+      e.append(el('b', '', 'No saved games yet'), el('p', '', 'During any game, tap the bookmark next to resign. Games against family are saved for both of you.'));
       hub.append(e); return;
     }
     const box = el('div', 'tr-saved');
-    for (const g of list) {
+    for (const g of rows) {
       const row = el('div', 'tr-saved-row');
-      const go = btn('', 'tr-saved-go', () => { close(); setTimeout(() => S.load(g.id), 60); });
-      const ply = g.moves.length, turn = (g.fen || '').split(' ')[1] === 'b' ? 'Black' : 'White';
-      const who = g.mode === 'cpu' ? 'vs Computer · Level ' + g.level : g.online ? 'vs ' + g.opp : 'Two players';
-      const d = new Date(g.at), when = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-      const side = el('span', 'tr-saved-side ' + (g.human === 'b' ? 'b' : 'w'));
-      const txt = el('span', 'tr-card-text'); txt.append(el('b', '', who), el('span', '', 'Move ' + (Math.floor(ply / 2) + 1) + ' · ' + turn + ' to move · ' + when));
-      go.append(side, txt, el('span', 'tr-chev', '›'));
-      const del = btn('', 'tr-saved-del', () => { if (del.classList.contains('arm')) { S.remove(g.id); openSaved(); } else { del.classList.add('arm'); del.textContent = 'Delete'; setTimeout(() => { if (del.isConnected) { del.classList.remove('arm'); del.innerHTML = TRASH; } }, 2500); } });
-      del.innerHTML = TRASH; del.setAttribute('aria-label', 'Delete saved game');
-      row.append(go, del); box.append(row);
+      const go = btn('', 'tr-saved-go', () => openSavedGame(g));
+      const txt = el('span', 'tr-card-text');
+      const title = el('b', '', savedTitle(g)); if (g.keep) title.append(el('em', 'tr-keep-star', '★'));
+      txt.append(title, el('span', '', 'Move ' + (Math.floor(g.moves.length / 2) + 1) + ' · ' + sideName(turnOf(g)) + ' to move · ' + whenOf(g)));
+      const thumb = el('span', 'tr-saved-thumb'); thumb.innerHTML = miniBoard(g);
+      go.append(thumb, txt, el('span', 'tr-chev', '›'));
+      row.append(go); box.append(row);
     }
-    hub.append(box, el('p', 'tr-about-foot', 'Saved on this device. Computer games resume at the same level and side.'));
+    hub.append(box, el('p', 'tr-about-foot', 'A saved game disappears once it’s picked up, unless you turn on Keep.'));
   }
-  const TRASH = '<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function openSavedGame(g) {
+    session++; hub.replaceChildren(); hub.append(subHead(savedTitle(g), () => openSaved(), 'Saved games'));
+    const top = el('div', 'tr-sg-top');
+    const board = el('div', 'tr-sg-board'); board.innerHTML = miniBoard(g);
+    const info = el('div', 'tr-sg-info');
+    info.append(el('span', 'tr-sg-label', 'Last moves'));
+    for (const m of lastTwo(g)) { const c = el('span', 'tr-sg-move ' + m.color); c.append(el('i'), document.createTextNode(sideName(m.color) + ' · ' + m.san)); info.append(c); }
+    info.append(el('span', 'tr-sg-turn', sideName(turnOf(g)) + ' to move'), el('span', 'tr-sg-meta', 'You were ' + sideName(g.owner_side) + ' · saved ' + whenOf(g)));
+    top.append(board, info); hub.append(top);
+    const note = el('p', 'tr-sg-note'); const say = (t, bad) => { note.textContent = t; note.classList.toggle('bad', !!bad); };
+    // Primary: pick it straight back up the way it was being played.
+    const actions = el('div', 'tr-sg-actions');
+    if (g.source === 'online' && g.opponent_id) actions.append(btn('Invite ' + oppName(g), 'tr-sg-primary', () => void sendSaved(g, g.opponent_id, g.owner_side, oppName(g), say)));
+    else if (g.source === 'computer') actions.append(btn('Continue', 'tr-sg-primary', () => resumeHere(g, 'cpu', g.level || 2, g.owner_side)));
+    else actions.append(btn('Continue on this screen', 'tr-sg-primary', () => resumeHere(g, 'local', 2, g.owner_side)));
+    hub.append(actions, note);
+    // Other ways to play this position.
+    hub.append(el('div', 'tr-section', 'Play it another way'));
+    const list = el('div', 'tr-sg-list');
+    let side = g.owner_side, level = g.level || 2;
+    const sideSeg = el('div', 'tr-sg-seg');
+    const paintSide = () => [...sideSeg.children].forEach((b) => b.classList.toggle('on', b.dataset.v === side));
+    for (const v of ['w', 'b']) { const b = btn('Play ' + sideName(v), '', () => { side = v; paintSide(); }); b.dataset.v = v; sideSeg.append(b); }
+    paintSide();
+    const sideRow = el('div', 'tr-sg-item'); sideRow.append(el('span', 'tr-sg-item-label', 'Your side'), sideSeg); list.append(sideRow);
+    const cpuRow = el('div', 'tr-sg-item');
+    const lvSeg = el('div', 'tr-sg-seg lv');
+    const paintLv = () => [...lvSeg.children].forEach((b) => b.classList.toggle('on', +b.dataset.v === level));
+    for (let v = 1; v <= 5; v++) { const b = btn(String(v), '', () => { level = v; paintLv(); }); b.dataset.v = v; lvSeg.append(b); }
+    paintLv();
+    const cpuGo = btn('Play vs computer', 'tr-sg-go', () => resumeHere(g, 'cpu', level, side));
+    cpuRow.append(el('span', 'tr-sg-item-label', 'Computer level'), lvSeg, cpuGo); list.append(cpuRow);
+    const localRow = el('div', 'tr-sg-item');
+    localRow.append(btn('Two players on this screen', 'tr-sg-go wide', () => resumeHere(g, 'local', 2, side))); list.append(localRow);
+    const sendRow = el('div', 'tr-sg-item');
+    const pick = el('select', 'tr-sg-pick'); pick.append(new Option('Choose a player…', ''));
+    const sendGo = btn('Send', 'tr-sg-go', () => { const t = pick.value; if (!t) { say('Choose who to send it to.', true); return; } void sendSaved(g, t, side, pick.selectedOptions[0].textContent, say); });
+    sendRow.append(el('span', 'tr-sg-item-label', 'Send to a player'), pick, sendGo); list.append(sendRow);
+    hub.append(list);
+    void (async () => { const c = api(); if (!c) return; const { data } = await c.from('chess_profiles').select('id,display_name').neq('id', uid).order('display_name');
+      for (const p of data || []) pick.add(new Option(p.display_name || 'Player', p.id)); if (g.opponent_id) pick.value = g.opponent_id; })();
+    // Keep + delete
+    const keepRow = el('label', 'tr-sg-keep');
+    const keep = el('input'); keep.type = 'checkbox'; keep.checked = !!g.keep;
+    const kt = el('span', 'tr-card-text'); kt.append(el('b', '', 'Keep this game'), el('span', '', 'On: stays here so you can replay it again and again. Off: removed once it’s picked up.'));
+    keepRow.append(kt, keep, el('i', 'tr-switch'));
+    keep.addEventListener('change', async () => { const c = api(); const { error } = await c.rpc('chess_saved_set_keep', { p_id: g.id, p_keep: keep.checked });
+      if (error) { keep.checked = !keep.checked; say('Could not update: ' + error.message, true); } else g.keep = keep.checked; });
+    const del = btn('Delete saved game', 'tr-sg-delete', async () => {
+      if (!del.classList.contains('arm')) { del.classList.add('arm'); del.textContent = 'Tap again to delete'; setTimeout(() => { if (del.isConnected) { del.classList.remove('arm'); del.textContent = 'Delete saved game'; } }, 2500); return; }
+      const { error } = await api().from('chess_saved_games').delete().eq('id', g.id);
+      if (error) say('Could not delete: ' + error.message, true); else openSaved();
+    });
+    hub.append(keepRow, del);
+    hub.scrollTop = 0;
+  }
+  function resumeHere(g, mode, level, side) {
+    if (!window.familyChessSaved) return;
+    close();
+    setTimeout(() => { window.familyChessSaved.load(g, { mode, level, side }); }, 60);
+    if (!g.keep) void Promise.resolve(api()?.rpc('chess_saved_consume', { p_id: g.id })).catch(() => {});
+  }
+  async function sendSaved(g, target, side, name, say) {
+    const c = api(); if (!c) return;
+    say('Sending…');
+    try {
+      const { data, error } = await c.functions.invoke('chess-saved-game', { body: { saved_id: g.id, target_id: target, side } });
+      if (error || !data?.ok) throw new Error(data?.error || (error && (await error.context?.json?.().catch(() => null))?.error) || error?.message || 'Could not send.');
+      void c.functions.invoke('chess-notify-challenge', { body: { challenge_id: data.challenge_id } }).catch(() => {});
+      close();
+      await window.familyChessOpenMatch?.(data.game_id, 'play');
+      window.familyChessToast?.('Invite sent to ' + name + '. They have 10 minutes to accept.');
+    } catch (e) { say(e.message || 'Could not send.', true); }
+  }
   function openAbout() {
     hub.replaceChildren();
     const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());

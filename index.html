@@ -16,15 +16,15 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=10"></script>
-<script defer src="./chess-online.js?v=15"></script>
+<script defer src="./chess-online.js?v=16"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
-<script defer src="./chess-social.js?v=12"></script>
-<link rel="stylesheet" href="./chess-training.css?v=11">
+<script defer src="./chess-social.js?v=13"></script>
+<link rel="stylesheet" href="./chess-training.css?v=12">
 <link rel="stylesheet" href="./chess-stats.css?v=1">
 <script defer src="./chess-stats.js?v=1"></script>
-<script defer src="./chess-training.js?v=12"></script>
+<script defer src="./chess-training.js?v=13"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -1153,6 +1153,18 @@ body.compact:not(.landscape) .bottom-bar .controls > * { order: 1; }
 body.compact:not(.landscape) .bottom-bar .mine > * { order: 2; }
 @media (max-width: 385px) { body.compact:not(.landscape) .bottom-bar .controls #btnSave, body.compact:not(.landscape) .bottom-bar .controls #btnResign, body.compact:not(.landscape) .bottom-bar .controls #btnPause, body.compact:not(.landscape) .bottom-bar .controls .ctl.icon-only { width: 27px !important; min-width: 27px !important; } body.compact:not(.landscape) .bottom-bar .controls .ctl:has(.ctl-word) { padding-left: 3px !important; padding-right: 3px !important; } }
 @media (max-width: 400px) { body.compact .panel-head .chat-tools .chat-tool:not(.chat-word), body.compact .panel-head #btnChatResign, body.compact .panel-head #btnChatPause, body.compact .panel-head #btnChatSave { width: 27px !important; min-width: 27px !important; padding: 0 !important; } body.compact .panel-head .chat-tools .chat-tool.chat-word { padding: 0 5px !important; font-size: 14.5px !important; } body.compact .panel-head .chat-tools { gap: 0 !important; } body.compact .panel-head .chat-title { font-size: 16px !important; } }
+
+/* resumed saved game: who played what last */
+.resume-banner { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(92px + env(safe-area-inset-bottom, 0px)); width: min(92vw, 420px); box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 11px 14px 12px; border-radius: 16px; pointer-events: none;
+  background: rgba(22,22,26,.94); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 12px 30px rgba(0,0,0,.5); color: #f2f2f7; font: 14px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.resume-banner[hidden] { display: none; }
+.resume-banner > b { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #a1a1a6; }
+.resume-banner .rb-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.resume-banner .rb-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px; background: rgba(255,255,255,.07); font-weight: 600; font-size: 14.5px; }
+.resume-banner .rb-chip i { width: 10px; height: 10px; border-radius: 50%; }
+.resume-banner .rb-turn { font-size: 13px; color: #d1d1d6; }
+body.chat2d .resume-banner, body.pregame .resume-banner, body.training-open .resume-banner { display: none; }
 </style>
 
 </head>
@@ -1210,6 +1222,7 @@ body.compact:not(.landscape) .bottom-bar .mine > * { order: 2; }
   </div>
 
   <div class="status" id="status" role="status" aria-live="polite"></div>
+  <div class="resume-banner" id="resumeBanner" hidden></div>
   <p class="sr" id="lostSummary" aria-live="polite"></p>
 
   <div class="banner" id="banner" role="status" hidden>
@@ -2906,6 +2919,7 @@ const ringMat = basic({ color: 0xe9c27c, opacity: 0.9 });
 const ringShadowMat = basic({ color: 0x120c08, opacity: 0.5 });
 const dotGeo = new THREE.PlaneGeometry(0.2, 0.2), ringGeo = new THREE.RingGeometry(0.43, 0.465, 64), ringShadowGeo = new THREE.RingGeometry(0.465, 0.49, 64);
 for (let i = 0; i < 28; i++) MK.dots.push(flatMesh(dotGeo, dotMat, 0.006));
+MK.resume = [0xffffff,0xffffff,0,0].map((_, i) => flatMesh(sqGeo, basic({ color: i < 2 ? 0x64d2ff : 0xff9f0a, opacity: i % 2 ? 0.5 : 0.3 }), 0.0049));
 MK.zone = []; const zoneMat = basic({ color: 0xff3b30, opacity: 0.38 }), zoneGeo = new THREE.PlaneGeometry(0.94, 0.94);
 for (let i = 0; i < 64; i++) MK.zone.push(flatMesh(zoneGeo, zoneMat, 0.0047));
 for (let i = 0; i < 12; i++) MK.rings.push([flatMesh(ringGeo, ringMat, 0.006), flatMesh(ringShadowGeo, ringShadowMat, 0.0058)]);
@@ -3076,6 +3090,8 @@ function updateMarkers() {
   const last = shownLastMove(pos);
   placeSq(MK.lastFrom, last && last.from);
   placeSq(MK.lastTo, last && last.to);
+  { const rm = resumeMoves(); for (let i = 0; i < 4; i++) placeSq(MK.resume[i], null);
+    if (rm) for (const m of rm) { const k = m.color === 'w' ? 0 : 2; placeSq(MK.resume[k], m.from); placeSq(MK.resume[k + 1], m.to); } }
   MK.lastTo.material.opacity = pending ? 0.20 : 0.28;
   MK.lastFrom.material.opacity = 0.17;
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
@@ -3214,7 +3230,7 @@ function updateBanner() {
 let cpuIntro = '';
 function updateAll() {
   updateResignBtn();updatePauseControls();applySideColors();updateMarkers();updatePlates();
-  updateBanner();renderHistory();updateChatEnabled();
+  updateBanner();renderHistory();updateChatEnabled();renderResumeBanner();
   if(window.ChessClock){
     const clock=window.ChessClock.snapshot();
     const actor=G.mode==='cpu'?cpu.human:
@@ -3965,6 +3981,17 @@ function markers2D() {
       sv('polygon', { points: head, fill: color }, b2.top);
     }
   }
+  { const rm = resumeMoves(); if (rm) for (const m of rm) {
+      const color = RESUME_COL[m.color];
+      cell(m.from, { fill: color, opacity: 0.22 }); cell(m.to, { fill: color, opacity: 0.38 });
+      const [c1, r1] = sqCR(m.from), [c2, r2] = sqCR(m.to), dx = c2 - c1, dy = r2 - r1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+      const x0 = c1 + 0.5 + ux * 0.22, y0 = r1 + 0.5 + uy * 0.22, x2 = c2 + 0.5 - ux * 0.38, y2 = r2 + 0.5 - uy * 0.38;
+      const head = [[x2 + ux * 0.4, y2 + uy * 0.4], [x2 - uy * 0.3, y2 + ux * 0.3], [x2 + uy * 0.3, y2 - ux * 0.3]].map((p) => p.join(',')).join(' ');
+      sv('line', { x1: x0, y1: y0, x2, y2, stroke: 'rgba(0,0,0,.55)', 'stroke-width': 0.26, 'stroke-linecap': 'round' }, b2.top);
+      sv('polygon', { points: head, fill: 'rgba(0,0,0,.55)', stroke: 'rgba(0,0,0,.55)', 'stroke-width': 0.1, 'stroke-linejoin': 'round' }, b2.top);
+      sv('line', { x1: x0, y1: y0, x2, y2, stroke: color, 'stroke-width': 0.15, 'stroke-linecap': 'round' }, b2.top);
+      sv('polygon', { points: head, fill: color }, b2.top);
+    } }
   if (pawnPick) for (const sq of pawnPick.squares) { const [c, r] = sqCR(sq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.45, fill: 'none', stroke: '#ff453a', 'stroke-width': 0.08 }, g); }
 }
 function layout2D() {
@@ -5115,7 +5142,7 @@ function resetLocalGame(mode, n) {
   if (!$('promoDialog').hidden) { promoCtx = null; hide($('promoDialog')); }
   Object.assign(G, { mode, gid: null, key: 'k' + Date.now().toString(36) + rid(4), board: null, chooser: null, n, moves: [], pos: positionFrom([]), status: 'active', result: null, reason: null, drawOffer: null, turnAt: Date.now(), startedAt: Date.now(), endedAt: null, feedback: null, seats: { w: 'local', b: 'local' }, names: { w: '', b: '' } });
   G.version++;
-  G.clockActions=[];
+  G.clockActions=[]; G.resumePlies=0;
   if(mode==='cpu'||mode==='local')
     window.ChessClock?.startLocal(window.ChessClock.getPreference(), (expiredSide)=>{
       if(G.mode!==mode||G.status!=='active')return;
@@ -5179,40 +5206,97 @@ function newGame() {
 }
 
 /* ------------------------------------------------------------------ saved games
-   Save keeps a snapshot of the moves on this device (practice data never goes to Supabase).
-   A saved computer game resumes against the computer at the same level and side; anything
-   else resumes as a two-player game on this screen. Listed under Training → Saved games. */
-const SAVED_KEY = 'sg.saved';
-const savedList = () => { const v = store.get(SAVED_KEY, []); return Array.isArray(v) ? v : []; };
-function saveCurrentGame() {
-  if (G.status !== 'active' || !G.moves.length || G.mode === 'train') return;
-  const online = G.onlineProvider === 'supabase';
-  const opp = G.mode === 'cpu' ? 'Computer' : online ? (cleanName(G.names?.[other(mySeat || 'w')] || '') || 'Family match') : 'Two players';
-  const entry = { id: 's' + Date.now().toString(36) + rid(3), at: Date.now(), mode: G.mode === 'cpu' ? 'cpu' : 'local', online,
-    level: cpu.level, human: G.mode === 'cpu' ? cpu.human : (mySeat || localView), opp, moves: G.moves.slice(), fen: G.pos.chess.fen() };
-  const list = savedList().filter((g) => !(g.moves.join() === entry.moves.join() && g.mode === entry.mode));
-  list.unshift(entry); store.set(SAVED_KEY, list.slice(0, 40));
-  toast('Game saved. Find it in Challenges → Saved games.', 3200);
+   Save stores the game in the player's account (chess_saved_games). An online game is saved for both
+   players by the server. Saved games are listed and resumed from Training → Saved games. */
+function sansFor(moves, actions) {
+  const out = [];
+  for (let i = 0; i < moves.length; i++) {
+    const p = positionFrom(moves, i, actions);
+    try { out.push(new Chess(p.chess.fen()).move({ from: moves[i].slice(0, 2), to: moves[i].slice(2, 4), promotion: moves[i][4] || undefined }).san); }
+    catch { out.push(moves[i]); }
+  }
+  return out;
 }
-function loadSavedGame(id) {
-  const g = savedList().find((x) => x.id === id); if (!g) return false;
+let saving = false;
+async function saveCurrentGame() {
+  if (saving || G.status !== 'active' || !G.moves.length || G.mode === 'train') return;
+  const api = window.chessSupabase;
+  let uid = null;
+  try { uid = (await api?.auth.getSession())?.data?.session?.user?.id || null; } catch { uid = null; }
+  if (!api || !uid) { toast('Sign in to save games.'); return; }
+  saving = true;
+  try {
+    if (G.onlineProvider === 'supabase' && G.gid) {
+      const { error } = await api.rpc('chess_save_online_game', { p_game_id: G.gid });
+      if (error) throw error;
+      const opp = G.names?.[other(mySeat || 'w')] || 'your opponent';
+      toast('Saved for you and ' + opp + '. Pick it up anytime in Challenges → Saved games.', 3800);
+    } else {
+      if ((G.clockActions || []).length) { toast('Games with pawn-for-time changes can’t be saved yet.'); return; }
+      const human = G.mode === 'cpu' ? cpu.human : localView;
+      const you = cleanName(store.get('sg.name', '')) || 'You';
+      const names = G.mode === 'cpu' ? (human === 'w' ? [you, 'Computer'] : ['Computer', you]) : ['White', 'Black'];
+      const { error } = await api.rpc('chess_save_local_game', {
+        p_source: G.mode === 'cpu' ? 'computer' : 'local', p_moves: G.moves, p_sans: sansFor(G.moves, []),
+        p_fen: G.pos.chess.fen(), p_side: human, p_level: cpu.level, p_white: names[0], p_black: names[1] });
+      if (error) throw error;
+      toast('Game saved. Find it in Challenges → Saved games.', 3200);
+    }
+  } catch (e) { toast('Could not save: ' + (e?.message || 'try again.')); }
+  finally { saving = false; }
+}
+/* Resume a saved row on this device: against the computer (mode 'cpu') or two players here ('local'). */
+function loadSavedGame(row, { mode = 'cpu', level = 2, side = 'w' } = {}) {
+  if (!row || !Array.isArray(row.moves) || !row.moves.length) return false;
+  const actions = (Array.isArray(row.actions) ? row.actions : []).map((x, i) => ({ ...x, id: i + 1 }));
   if (PG.on) closePregame(null);
   endPracticeGame();
-  if (g.mode === 'cpu') { cpu.level = g.level || cpu.level; cpu.human = g.human === 'b' ? 'b' : 'w'; }
-  else { localView = g.human === 'b' ? 'b' : 'w'; }
-  resetLocalGame(g.mode, 1);
-  G.moves = g.moves.slice(); G.pos = positionFrom(G.moves); G.version++;
-  const end = endInfo(G.pos.chess, G.pos.last);
-  if (end) Object.assign(G, { status: 'over', result: end.result, reason: end.reason });
-  syncBoard(G.pos, { animate: false }); updateAll();
-  toast('Saved game loaded. ' + SIDE[G.pos.chess.turn()] + ' to move.', 2600);
-  if (G.mode === 'cpu' && G.status === 'active' && G.pos.chess.turn() !== cpu.human) setTimeout(requestComputer, 500);
+  if (mode === 'cpu') { cpu.level = clamp(Number(level) || 2, 1, 5); cpu.human = side === 'b' ? 'b' : 'w'; store.set('sg.level', cpu.level); }
+  else localView = side === 'b' ? 'b' : 'w';
+  resetLocalGame(mode, 1);
+  G.moves = row.moves.slice(); G.clockActions = actions; G.pos = positionFrom(G.moves, G.moves.length, actions); G.version++;
+  G.resumePlies = G.moves.length;
+  const want = wantedSide(); if (want !== viewSide) { viewSide = want; requestRender(); }
+  syncBoard(G.pos, { animate: false }); updateAll(); fitCamera(true);
+  if (G.mode === 'cpu' && G.pos.chess.turn() !== cpu.human) setTimeout(requestComputer, 900);
   return true;
 }
-function deleteSavedGame(id) { store.set(SAVED_KEY, savedList().filter((g) => g.id !== id)); }
-window.familyChessSaved = Object.freeze({ list: savedList, load: loadSavedGame, remove: deleteSavedGame });
-$('btnSave').addEventListener('click', saveCurrentGame);
-$('btnChatSave').addEventListener('click', saveCurrentGame);
+/* The last move of each player stays marked (2D arrows / 3D squares) with a banner until the next move. */
+function resumeMoves() {
+  if (!G.resumePlies || G.moves.length !== G.resumePlies || review || G.mode === 'train') return null;
+  const out = [];
+  for (let i = Math.max(0, G.moves.length - 2); i < G.moves.length; i++) {
+    const p = positionFrom(G.moves, i, G.clockActions || []), u = G.moves[i];
+    let san = u, color = p.chess.turn();
+    try { san = new Chess(p.chess.fen()).move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] || undefined }).san; } catch { /* keep uci */ }
+    out.push({ from: u.slice(0, 2), to: u.slice(2, 4), san, color });
+  }
+  return out;
+}
+const RESUME_COL = { w: '#64d2ff', b: '#ff9f0a' };
+function renderResumeBanner() {
+  const el = $('resumeBanner'); if (!el) return;
+  const rm = resumeMoves();
+  if (!rm || !rm.length) { el.hidden = true; return; }
+  el.replaceChildren();
+  const head = document.createElement('b'); head.textContent = 'Picking up where you left off'; el.append(head);
+  const row = document.createElement('div'); row.className = 'rb-row';
+  for (const m of rm) {
+    const chip = document.createElement('span'); chip.className = 'rb-chip ' + m.color;
+    const dot = document.createElement('i'); dot.style.background = RESUME_COL[m.color];
+    chip.append(dot, document.createTextNode((m.color === 'w' ? 'White' : 'Black') + ' played ' + m.san));
+    row.append(chip);
+  }
+  el.append(row);
+  const turn = document.createElement('span'); turn.className = 'rb-turn';
+  turn.textContent = (G.pos.chess.turn() === 'w' ? 'White' : 'Black') + ' to move' + (G.status === 'waiting' ? ' · waiting for your opponent to join' : '');
+  el.append(turn);
+  el.hidden = false;
+}
+window.familyChessSaved = Object.freeze({ load: loadSavedGame });
+window.familyChessToast = (m, ms) => toast(m, ms || 3600);
+$('btnSave').addEventListener('click', () => void saveCurrentGame());
+$('btnChatSave').addEventListener('click', () => void saveCurrentGame());
 $('btnNew').addEventListener('click', newGame);
 $('btnChatNew').addEventListener('click', newGame);
 $('btnChatUndo').addEventListener('click', undo);
@@ -6377,6 +6461,7 @@ window.familyChessNative = {
     G.drawOffer = null; G.startedAt = new Date(game.created_at || Date.now()).getTime();
     G.turnAt = new Date(game.updated_at || Date.now()).getTime();
     G.moves = moves.slice(); G.clockActions=actions.slice(); G.pos = pos;
+    G.resumePlies = Number(game.resumed_plies) || 0;
     mySeat = watching ? null : white === userId ? 'w' : 'b';
     window.ChessClock?.showOnline(game,pos.chess.turn(),
       watching?null:window.familyChessClaimTimeout);

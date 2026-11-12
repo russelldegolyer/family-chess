@@ -137,8 +137,9 @@
  }
  function renderOutgoing(){
   const mine=challenges.filter(c=>c.challenger_id===user?.id&&c.status==='pending'&&remaining(c)>0)[0];
-  if(mine)message('Waiting for '+nameFor(mine.target_id)+' · '+remaining(mine)+'s remaining. They can accept or decline.');
+  if(mine)message('Waiting for '+nameFor(mine.target_id)+' · '+left(mine)+' remaining. They can accept or decline.');
  }
+ function left(c){const r=remaining(c);return r>=90?Math.floor(r/60)+':'+String(r%60).padStart(2,'0'):r+' seconds';}
  function incoming(){
   const available=challenges.filter(c=>c.target_id===user?.id&&c.status==='pending'&&remaining(c)>0);
   return available.find(c=>c.id===deepLink)||available[0]||null;
@@ -150,15 +151,15 @@
    return;
   }
   openAlertId=c.id;alert.hidden=false;
-  $('cgAlertFrom').textContent=nameFor(c.challenger_id)+' wants to play a game of chess.';
-  $('cgAlertCountdown').textContent=remaining(c)+' seconds remaining';
+  $('cgAlertFrom').textContent=nameFor(c.challenger_id)+(c.kind==='saved'?' wants to continue your saved game. You pick up right where you left off.':' wants to play a game of chess.');
+  $('cgAlertCountdown').textContent=left(c)+' remaining';
  }
  function tick(){
   if(!user)return;
   if(openAlertId){
    const c=challenges.find(x=>x.id===openAlertId);
    if(!c||remaining(c)<=0){alert.hidden=true;openAlertId=null;message('Challenge expired.');}
-   else $('cgAlertCountdown').textContent=remaining(c)+' seconds remaining';
+   else $('cgAlertCountdown').textContent=left(c)+' remaining';
   }
   renderOutgoing();
  }
@@ -214,7 +215,7 @@
     api.from('chess_games').select('id,white_player_id,black_player_id,updated_at,status')
       .eq('status','active').not('black_player_id','is',null).order('updated_at',{ascending:false}).limit(30),
     api.from('chess_challenges')
-      .select('id,challenger_id,target_id,status,created_at,expires_at,game_id')
+      .select('id,challenger_id,target_id,status,created_at,expires_at,game_id,kind,responded_at')
       .or('challenger_id.eq.'+uid+',target_id.eq.'+uid)
       .order('created_at',{ascending:false}).limit(30)
    ]);
@@ -230,7 +231,7 @@
    }
    // Accepting on another device also opens the challenger's board automatically.
    const accepted=challenges.find(c=>c.challenger_id===uid&&c.status==='accepted'&&c.game_id
-     &&Date.now()-Date.parse(c.created_at)<120000&&!openedGameIds.has(c.game_id));
+     &&Date.now()-Date.parse(c.responded_at||c.created_at)<120000&&!openedGameIds.has(c.game_id));
    if(accepted&&accepted.game_id&&currentMatch()!==accepted.game_id){
     openedGameIds.add(accepted.game_id);
     try{await window.familyChessOpenMatch(accepted.game_id,'play');lobby.hidden=true;

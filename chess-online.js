@@ -359,7 +359,7 @@
     const id=matchId, uid=player.id, epoch=syncToken;
     try {
       const {data:g,error:gameError}=await api.from('chess_games')
-        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_white_ms,clock_black_ms,clock_turn_started_at,clock_state,clock_penalty_side,clock_paused_by')
+        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_white_ms,clock_black_ms,clock_turn_started_at,clock_state,clock_penalty_side,clock_paused_by,resumed_plies')
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) {

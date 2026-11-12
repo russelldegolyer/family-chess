@@ -287,3 +287,43 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-saved-empty { padding: 28px 22px; border-radius: 18px; background: #151517; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); text-align: center; }
 .tr-saved-empty b { display: block; font-size: 17px; margin-bottom: 6px; }
 .tr-saved-empty p { margin: 0; color: #a1a1a6; font-size: 14px; line-height: 1.45; }
+/* saved games v2: list thumbnails + detail page */
+.tr-saved-thumb { flex: none; width: 46px; height: 46px; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.1); }
+.tr-saved-thumb svg, .tr-sg-board svg { display: block; width: 100%; height: 100%; font-family: "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", sans-serif; }
+.tr-saved-row + .tr-saved-row::before { left: 76px; }
+.tr-saved-go { padding-right: 14px; }
+.tr-keep-star { margin-left: 6px; font-style: normal; color: #ffd60a; font-size: 14px; }
+.tr-sg-top { display: flex; gap: 14px; align-items: stretch; }
+.tr-sg-board { flex: none; width: min(46vw, 210px); aspect-ratio: 1; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 10px 26px rgba(0,0,0,.45); }
+.tr-sg-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; justify-content: center; }
+.tr-sg-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8e8e93; }
+.tr-sg-move { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 6px 11px; border-radius: 999px; background: rgba(255,255,255,.07); font-weight: 650; font-size: 15px; }
+.tr-sg-move i { width: 10px; height: 10px; border-radius: 50%; }
+.tr-sg-move.w i { background: #64d2ff; } .tr-sg-move.b i { background: #ff9f0a; }
+.tr-sg-turn { font-size: 15px; font-weight: 650; margin-top: 4px; }
+.tr-sg-meta { font-size: 12.5px; color: #8e8e93; }
+.tr-sg-actions { margin-top: 16px; }
+.tr-sg-primary { width: 100%; min-height: 52px; border: 0; border-radius: 14px; color: #fff; font: 650 17px/1 inherit; cursor: pointer;
+  background: linear-gradient(160deg, #ff5a4f, #c8221c); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 6px 18px rgba(229,48,42,.3); }
+.tr-sg-note { min-height: 18px; margin: 8px 2px 0; text-align: center; font-size: 13.5px; color: #a1a1a6; }
+.tr-sg-note.bad { color: #ff6b62; }
+.tr-sg-list { display: flex; flex-direction: column; border-radius: 18px; background: #151517; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); overflow: hidden; }
+.tr-sg-item { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 12px 14px; }
+.tr-sg-item + .tr-sg-item { box-shadow: inset 0 1px 0 rgba(255,255,255,.07); }
+.tr-sg-item-label { flex: 1 1 100%; font-size: 13px; color: #8e8e93; }
+.tr-sg-seg { display: flex; gap: 6px; flex: 1; }
+.tr-sg-seg button { flex: 1; min-height: 36px; border: 0; border-radius: 10px; background: #232327; color: #e5e5ea; font: 600 14px/1 inherit; cursor: pointer; }
+.tr-sg-seg button.on { background: linear-gradient(160deg, #ff5a4f, #c8221c); color: #fff; }
+.tr-sg-seg.lv button { min-width: 0; }
+.tr-sg-go { flex: none; min-height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: rgba(229,48,42,.16); color: #ff8a83; font: 650 14px/1 inherit; cursor: pointer; }
+.tr-sg-go.wide { flex: 1; min-height: 42px; }
+.tr-sg-pick { flex: 1; min-width: 0; min-height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: #232327; color: #f2f2f7; font: 15px inherit; }
+.tr-sg-keep { position: relative; display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 13px 14px; border-radius: 18px; background: #151517; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); cursor: pointer; }
+.tr-sg-keep .tr-card-text b { font-size: 16px; } .tr-sg-keep .tr-card-text span { font-size: 13px; color: #8e8e93; }
+.tr-sg-keep input { position: absolute; opacity: 0; pointer-events: none; }
+.tr-switch { flex: none; position: relative; width: 50px; height: 30px; border-radius: 999px; background: #39393d; transition: background .2s; }
+.tr-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.3); transition: transform .2s; }
+.tr-sg-keep input:checked + .tr-switch { background: #30d158; }
+.tr-sg-keep input:checked + .tr-switch::after { transform: translateX(20px); }
+.tr-sg-delete { display: block; width: 100%; margin-top: 14px; padding: 14px; border: 0; border-radius: 14px; background: rgba(120,120,128,.14); color: #ff6b62; font: 600 15px/1 inherit; cursor: pointer; }
+.tr-sg-delete.arm { background: #ff3b30; color: #fff; }

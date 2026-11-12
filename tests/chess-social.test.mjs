@@ -51,7 +51,7 @@ test('offline push is opt-in, encrypted, service-role-only and expiry-limited',(
  assert.match(sw,/notificationclick/);
  assert.match(sw,/self\.clients\.openWindow/);
  assert.match(edge,/client\.auth\.getUser\(token\)/);
- assert.match(edge,/c\.challenger_id!==user\.id/);
+ assert.match(edge,/(c|challenge)\.challenger_id!==user\.id/);
  assert.match(edge,/\.is\("push_sent_at",null\)/);
  assert.match(edge,/admin\.rpc\("chess_vapid_config"\)/);
  assert.match(edge,/webpush\.sendNotification/);
