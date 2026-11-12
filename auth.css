@@ -98,3 +98,23 @@
 @media (min-width: 900px) and (max-width: 1050px) {
   .auth-account .auth-practice { display: none; }
 }
+
+/* Phones: the account button is an "Online" pill styled like Challenges, sitting to its right. */
+@media(max-width:899px){
+ .auth-account{
+   top:max(19px,calc(env(safe-area-inset-top,0px) + 7px))!important;
+   width:auto;max-width:none;min-width:0;height:40px;max-height:none;min-height:0;
+   padding:0;border:0;border-radius:999px;background:transparent;box-shadow:none;
+   -webkit-backdrop-filter:none;backdrop-filter:none
+ }
+ .auth-account-toggle{
+   display:inline-flex;align-items:center;justify-content:center;
+   width:84px;height:40px;padding:0 16px;box-sizing:border-box;
+   border:1px solid rgba(229,48,42,.55);border-radius:999px;background:rgba(22,22,25,.92);
+   -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#ff7a72;
+   font:700 14px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.01em;
+   box-shadow:0 5px 18px rgba(0,0,0,.5)
+ }
+ .auth-account-toggle:active{filter:brightness(1.2)}
+}
+@media(max-width:899px) and (hover:none){ .auth-account-toggle:focus{outline:none;box-shadow:0 5px 18px rgba(0,0,0,.5)} }

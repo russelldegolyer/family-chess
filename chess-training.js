@@ -349,9 +349,12 @@
     return svg + '</svg>';
     function sqSvg(r, f, pc) {
       const x = flip ? 7 - f : f, y = flip ? 7 - r : r, sq = 'abcdefgh'[f] + (8 - r), light = (r + f) % 2 === 0;
-      let out = '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + (light ? '#ebecd0' : '#739552') + '"/>';
+      const bc = window.familyChessBoardColors?.() || { light: '#ebecd0', dark: '#739552' };
+      let out = '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + (light ? bc.light : bc.dark) + '"/>';
       const m = mark[sq]; if (m) out += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + (m[0] === 'w' ? '#64d2ff' : '#ff9f0a') + '" opacity="' + (m[1] === 't' ? 0.6 : 0.35) + '"/>';
-      if (pc) { const w = pc === pc.toUpperCase(); out += '<text x="' + (x + 0.5) + '" y="' + (y + 0.8) + '" text-anchor="middle" font-size="0.86" fill="' + (w ? '#fff' : '#111') + '" stroke="' + (w ? '#222' : '#000') + '" stroke-width="0.03">' + GLYPH[pc.toLowerCase()] + '</text>'; }
+      if (pc) { const src = window.familyChessPieceImg?.(pc);
+        if (src) out += '<image href="' + src.replace(/"/g, '&quot;') + '" x="' + x + '" y="' + y + '" width="1" height="1"/>';
+        else { const w = pc === pc.toUpperCase(); out += '<text x="' + (x + 0.5) + '" y="' + (y + 0.8) + '" text-anchor="middle" font-size="0.86" fill="' + (w ? '#fff' : '#111') + '">' + GLYPH[pc.toLowerCase()] + '</text>'; } }
       return out;
     }
   }
@@ -392,12 +395,16 @@
     const pal = el('div', 'tr-ed-pal');
     const note = el('p', 'tr-ed-note');
     const say = (t, bad) => { note.textContent = t || ''; note.classList.toggle('bad', !!bad); };
-    const glyph = (p) => { const span = el('span', 'tr-ed-pc ' + (p === p.toUpperCase() ? 'w' : 'b'), GLYPH[p.toLowerCase()]); return span; };
+    const glyph = (p) => { const src = window.familyChessPieceImg?.(p);
+      if (src) { const im = el('img', 'tr-ed-img'); im.src = src; im.alt = ''; im.draggable = false; return im; }
+      return el('span', 'tr-ed-pc ' + (p === p.toUpperCase() ? 'w' : 'b'), GLYPH[p.toLowerCase()]); };
+    const bc = window.familyChessBoardColors?.();
     function draw() {
-      boardEl.replaceChildren();
+      boardEl.replaceChildren(); if (bc?.frame) boardEl.style.boxShadow = '0 0 0 4px ' + bc.frame + ', 0 10px 26px rgba(0,0,0,.5)';
       for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
         const file = 'abcdefgh'[flip ? 7 - f : f], rank = flip ? r + 1 : 8 - r, sq = file + rank;
         const cell = el('button', 'tr-ed-sq ' + ((f + r) % 2 ? 'd' : 'l') + (from === sq ? ' from' : ''));
+        if (bc) cell.style.backgroundColor = (f + r) % 2 ? bc.dark : bc.light;
         cell.type = 'button'; cell.setAttribute('aria-label', sq);
         if (board[sq]) cell.append(glyph(board[sq]));
         if (f === 0) cell.append(el('i', 'tr-ed-rk', String(rank)));

@@ -22,6 +22,9 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 **Improved**
 - Watching a game shows one clear "Watching · A vs B — Leave" bar; Leave goes straight to the start screen.
 - In online games the New button reads **Leave**.
+- Saved games and Create game use the real board and pieces (your chosen 2D board colours).
+- The top-right profile circle is now an **Online** button, styled like Challenges.
+- No white flash while the app loads, in light or dark mode.
 
 ## 2026-11-12 — Friends, colour wheel, last move (deployed 4:16 PM)
 
