@@ -20,7 +20,7 @@
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=4">
-<script defer src="./chess-social.js?v=13"></script>
+<script defer src="./chess-social.js?v=14"></script>
 <link rel="stylesheet" href="./chess-training.css?v=12">
 <link rel="stylesheet" href="./chess-stats.css?v=1">
 <script defer src="./chess-stats.js?v=1"></script>
@@ -5116,12 +5116,17 @@ function resign() {
     if (pending) cancelPreview(false);
     Promise.resolve(window.familyChessResign?.(id) ??
       Promise.reject(new Error('Online resignation is unavailable. Reload the app.')))
+      .then((r) => { if (r === 'deleted') toast('Game ended in the first 3 moves. It was removed and doesn’t count.', 4200); })
       .catch(e => toast(e?.message || 'Could not resign this game. Try again.', 4200))
       .finally(() => { G.onlineBusy = false; updateAll(); });
     return;
   }
   const side = G.mode === 'local' ? G.pos.chess.turn() : G.mode === 'cpu' ? cpu.human : mySeat;
   if (!side || G.status !== 'active') return;
+  if (earlyResign() && (G.mode === 'cpu' || G.mode === 'local')) {
+    if (pending) cancelPreview(false);
+    goHome(); toast('Game ended in the first 3 moves. It doesn’t count.', 3600); return;
+  }
   if (pending) cancelPreview(false);
   finishGame({ status: 'over', result: side === 'w' ? '0-1' : '1-0', reason: 'resignation', drawOffer: null, endedAt: Date.now() });
 }
@@ -5353,6 +5358,21 @@ function recordCpuResult() {
     store.set('chess.cpuGames', log.slice(-80));
   } catch { /* storage full or blocked: the counts above still count */ }
 }
+/* One-time cleanup: computer games resigned in the first 3 moves never count. */
+(() => {
+  if (store.get('chess.cpuEarlyScrub', false)) return;
+  const log = store.get('chess.cpuGames', []), rec = store.get('chess.cpuRecord', null);
+  const early = (Array.isArray(log) ? log : []).filter((g) => g.reason === 'resignation' && Array.isArray(g.fens) && g.fens.length - 1 <= 6);
+  if (early.length && rec) {
+    for (const g of early) {
+      if (rec[g.result] > 0) rec[g.result]--;
+      const lv = rec.levels?.[g.level]; if (lv && lv[g.result] > 0) lv[g.result]--;
+    }
+    store.set('chess.cpuRecord', rec);
+    store.set('chess.cpuGames', log.filter((g) => !early.includes(g)));
+  }
+  store.set('chess.cpuEarlyScrub', true);
+})();
 window.familyChessCpuGames = () => store.get('chess.cpuGames', []);
 window.familyChessCpuRecord = () => store.get('chess.cpuRecord', { w: 0, l: 0, d: 0 });
 function maybeShowEndCard() {
@@ -5462,8 +5482,16 @@ function plateColor(side) {
 }
 $('plateTop').addEventListener('click', () => plateColor(other(viewSide)));
 $('plateBottom').addEventListener('click', () => plateColor(viewSide));
+/* Resigning in the first 3 moves (6 half-moves or fewer) removes the game: it never counts in stats. */
+const EARLY_PLIES = 6;
+const earlyResign = () => G.moves.length <= EARLY_PLIES;
 function askToResign() {
   if(G.status !== 'active' || (G.onlineProvider === 'supabase' && !mySeat))return;
+  if (earlyResign()) {
+    dialog('End this game?', ['It’s still in the first 3 moves, so the game will be removed and won’t count as a win or loss.'],
+      [['Keep playing','quiet',null],['End game','gold',()=>resign()]]);
+    return;
+  }
   dialog('Resign this game?', ['Your opponent will be given the win. This cannot be undone.'],
     [['Keep playing','quiet',null],['Resign','gold',()=>resign()]]);
 }

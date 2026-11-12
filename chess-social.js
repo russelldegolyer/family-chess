@@ -116,8 +116,12 @@
      watchBtn.addEventListener('click',()=>{void watch(game.id);});
      row.append(watchBtn);
    }
-   const until=sentUntil[p.id]||0,live=until>Date.now();
-   const challengeBtn=node('button','cgSocialAction'+(live?' sent':''),live?'Invited '+Math.ceil((until-Date.now())/1000)+'s':'Invite');
+   // The badge follows the real invitation: it clears the moment it is accepted, declined or expires.
+   const last=challenges.find(c=>c.challenger_id===user.id&&c.target_id===p.id);
+   if(last&&last.status!=='pending'&&sentUntil[p.id]&&Date.parse(last.created_at)>=(sentUntil[p.id]-75000))delete sentUntil[p.id];
+   const pend=last&&last.status==='pending'&&remaining(last)>0?last:null;
+   const until=pend?Date.parse(pend.expires_at):(sentUntil[p.id]||0),live=until>Date.now();
+   const challengeBtn=node('button','cgSocialAction'+(live?' sent':''),live?'Invited '+shown(Math.ceil((until-Date.now())/1000),pend?.kind)+'s':'Invite');
    challengeBtn.type='button';challengeBtn.disabled=live;
    challengeBtn.addEventListener('click',()=>{void sendChallenge(p.id);});
    row.append(challengeBtn);
@@ -139,7 +143,9 @@
   const mine=challenges.filter(c=>c.challenger_id===user?.id&&c.status==='pending'&&remaining(c)>0)[0];
   if(mine)message('Waiting for '+nameFor(mine.target_id)+' · '+left(mine)+' remaining. They can accept or decline.');
  }
- function left(c){const r=remaining(c);return r>=90?Math.floor(r/60)+':'+String(r%60).padStart(2,'0'):r+' seconds';}
+ // Play invites stay open 70 s but show 60 s (the extra 10 s covers notification delay).
+ function shown(r,kind){return kind==='saved'?r:Math.max(1,Math.min(60,r-10));}
+ function left(c){const r=shown(remaining(c),c.kind);return r>=90?Math.floor(r/60)+':'+String(r%60).padStart(2,'0'):r+' seconds';}
  function incoming(){
   const available=challenges.filter(c=>c.target_id===user?.id&&c.status==='pending'&&remaining(c)>0);
   return available.find(c=>c.id===deepLink)||available[0]||null;
@@ -162,6 +168,7 @@
    else $('cgAlertCountdown').textContent=left(c)+' remaining';
   }
   renderOutgoing();
+  if(challenges.some(c=>c.challenger_id===user.id&&c.status==='pending'))renderPlayers();
  }
  async function answer(accept){
   if(requesting)return;const c=incoming();if(!c)return;
@@ -191,7 +198,7 @@
    const {data:id,error}=await api.rpc('chess_send_challenge',{p_target:targetId});
    if(error)throw error;
    message('Invite sent to '+nameFor(targetId)+'. They have 60 seconds to respond.');
-   sentUntil[targetId]=Date.now()+60000;tickSent();
+   sentUntil[targetId]=Date.now()+70000;tickSent();
    await refreshData();
    // Always request push, even if Presence still shows the target as online.
    // A backgrounded iPhone can retain a stale green presence indicator.
