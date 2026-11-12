@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-12 | 14+ |
+| 2026-11-12 | 17 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
 | 2026-11-09 | 130 |
@@ -14,7 +14,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## 2026-11-12 — Create game, per-player saves, saved clocks
+## 2026-11-12 — Create game, per-player saves, saved clocks (deployed 1:46 PM)
 
 **Added**
 - **Create game** (Challenges → Saved games): set up any position (place, move and erase pieces, side to move),
