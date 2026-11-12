@@ -1165,6 +1165,35 @@ body.compact:not(.landscape) .bottom-bar .mine > * { order: 2; }
 .resume-banner .rb-chip i { width: 10px; height: 10px; border-radius: 50%; }
 .resume-banner .rb-turn { font-size: 13px; color: #d1d1d6; }
 body.chat2d .resume-banner, body.pregame .resume-banner, body.training-open .resume-banner { display: none; }
+
+/* board picker: 2D + 3D on one screen */
+body.col-open .train-top, body.col-open #accountControl, body.col-open #btnTrain { visibility: hidden !important; }
+#collection .col-shell { box-sizing: border-box; max-width: 640px; margin: 0 auto; padding: calc(10px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+#collection .col-top { padding: 8px 0 6px; }
+#collection .col-top h2 { font: 800 32px/1 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; letter-spacing: -.025em; }
+#collection #colClose { width: 34px; height: 34px; border-radius: 50%; background: rgba(120,120,128,.24); border: 0; color: #d1d1d6; }
+#collection .pick-sec { margin: 16px 0 8px; }
+#collection .pick-sec h3 { font: 650 12.5px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .08em; color: #8e8e93; }
+#collection .col-grid { gap: 10px; }
+#collection .col-grid.g2d { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#collection .col-grid.g3d { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#collection .tile { border-radius: 16px; border: 0; background: #1a1b20; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); transition: transform .12s, box-shadow .15s; }
+#collection .tile:active { transform: scale(.97); }
+#collection .g2d .tile { padding: 8px 8px 0; height: auto !important; aspect-ratio: auto !important; min-height: 0 !important; }
+#collection .g2d .tile img { flex: none; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 9px; }
+#collection .g2d .tile-name { position: static; padding: 7px 2px 9px; background: none; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 600 12.5px/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e5e5ea; }
+#collection .g3d .tile { aspect-ratio: 16 / 11; }
+#collection .g3d .tile-name { padding: 22px 12px 10px; font: 650 16px/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: linear-gradient(transparent, rgba(0,0,0,.78)); }
+#collection .g3d .tile-sub { bottom: 11px; right: 10px; font-size: 11px; color: #c7c7cc; }
+#collection .tile.chosen { box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); }
+#collection .tile.equipped { box-shadow: inset 0 0 0 2.5px #0a84ff, 0 6px 18px rgba(10,132,255,.25); }
+#collection .tile .eq { top: 7px; right: 7px; padding: 3px 7px; border-radius: 999px; background: #0a84ff; color: #fff; font: 700 10px/1.2 -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: .02em; }
+#collection .g2d .tile .eq { top: 5px; right: 5px; padding: 2px 6px; font-size: 9px; }
+#collection .custom2d { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; padding: 10px; }
+#collection .custom2d .color-row { display: flex; flex-direction: column; align-items: center; gap: 5px; margin: 0; padding: 0; border: 0; font: 600 11.5px/1 -apple-system, BlinkMacSystemFont, sans-serif; color: #c7c7cc; }
+#collection .custom2d input[type=color] { width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: none; overflow: hidden; cursor: pointer; }
+#collection .custom2d input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+#collection .custom2d input[type=color]::-webkit-color-swatch { border: 2px solid rgba(255,255,255,.25); border-radius: 50%; }
 </style>
 
 </head>
@@ -5908,12 +5937,12 @@ function boardArt(themeId, W = 320, H = 200) {
 /* ---------------- Boards menu (3D boards, and the 2D boards picker) ---------------- */
 const colState = { filter: 'all', sort: 'default', detail: null, flat: false };
 function openCollection(themeId, flat = false) {
-  closeMenu();
+  closeMenu(); document.body.classList.add('col-open');
   colState.detail = themeId || null; colState.flat = flat;
   show($('collection'));
   renderCollection();
 }
-function closeCollection() { hide($('collection')); $('btnCollection').focus(); }
+function closeCollection() { document.body.classList.remove('col-open'); hide($('collection')); $('btnCollection').focus(); }
 const STYLE2D_NAME = { green: 'Classic Green', bw: 'Black & White', wood: 'Classic Wood', custom: 'Custom Colours' };
 function style2DArt(style, W = 160, H = 100) {
   const k = '2d-' + style + W + (style === 'custom' ? JSON.stringify(PREF2D.custom) : ''); if (artCache.has(k)) return artCache.get(k);
@@ -5927,31 +5956,35 @@ function style2DArt(style, W = 160, H = 100) {
 function renderCollection() {
   if (!PROG.ready) return;
   const root = $('colBody'); root.replaceChildren();
-  $('colTitle').textContent = colState.flat ? '2D boards' : 'Boards';
+  $('colTitle').textContent = 'Boards';
   const eq = equippedInstance();
   const sec = (title, note) => { const h = el('div', 'pick-sec'); const t = el('h3'); t.textContent = title; h.append(t); if (note) { const n = el('p', 'set-note'); n.textContent = note; h.append(n); } root.append(h); const g = el('div', 'col-grid'); root.append(g); return g; };
   const tile = (grid, img, name, sub, on, fn) => { const b = el('button', 'tile' + (on ? ' equipped' : '')); b.type = 'button'; const im = el('img'); im.alt = ''; im.src = img; b.append(im); const cap = el('span', 'tile-name'); cap.textContent = name; b.append(cap); if (sub) { const sb = el('span', 'tile-sub'); sb.textContent = sub; b.append(sb); } if (on) { const e2 = el('span', 'eq'); e2.textContent = 'Playing'; b.append(e2); } b.addEventListener('click', fn); grid.append(b); };
-  if (colState.flat) {
-    /* the flat boards have their own picker, opened from the 2D view; custom colours are set right here */
-    const g2 = sec('', '');
-    for (const st of ['green', 'bw', 'wood', 'custom']) tile(g2, style2DArt(st), STYLE2D_NAME[st], '', PREF2D.style === st, () => { apply2D({ ...PREF2D, style: st }); updateBoardChip(); if (st === 'custom') renderCollection(); else closeCollection(); });
-    if (PREF2D.style === 'custom') {
-      const box = el('div', 'set-group custom2d'); const h = el('div', 'opt-label'); h.textContent = 'Custom colours'; box.append(h);
-      for (const [key, label] of [['light', 'Light squares'], ['dark', 'Dark squares'], ['frame', 'Border'], ['wp', 'White pieces'], ['bp', 'Black pieces']]) {
-        const r = el('label', 'color-row'); const t = el('span'); t.textContent = label; const inp = el('input'); inp.type = 'color';
-        inp.value = PREF2D.custom[key] || (key === 'frame' ? C2.frame : '#000000');
-        inp.addEventListener('input', () => { apply2D({ ...PREF2D, custom: { ...PREF2D.custom, [key]: inp.value.toLowerCase() } }); updateBoardChip(); });
-        r.append(t, inp); box.append(r);
-      }
-      root.append(box);
+  /* 2D and 3D side by side: one tap picks the board and switches to that view. */
+  const g2 = sec('2D boards');
+  g2.classList.add('g2d');
+  for (const st of ['green', 'bw', 'wood', 'custom']) {
+    const on = PREF2D.style === st;
+    tile(g2, style2DArt(st, 120, 120), { green: 'Green', bw: 'B & W', wood: 'Wood', custom: 'Custom' }[st], '', on && VIEW === '2d', () => { apply2D({ ...PREF2D, style: st }); if (VIEW !== '2d') applyView('2d'); updateBoardChip(); if (st === 'custom') renderCollection(); else closeCollection(); });
+    if (on) g2.lastChild.classList.add('chosen');
+  }
+  if (PREF2D.style === 'custom') {
+    const box = el('div', 'set-group custom2d');
+    for (const [key, label] of [['light', 'Light'], ['dark', 'Dark'], ['frame', 'Border'], ['wp', 'White'], ['bp', 'Black']]) {
+      const r = el('label', 'color-row'); const inp = el('input'); inp.type = 'color';
+      inp.value = PREF2D.custom[key] || (key === 'frame' ? C2.frame : '#000000');
+      inp.addEventListener('input', () => { apply2D({ ...PREF2D, custom: { ...PREF2D.custom, [key]: inp.value.toLowerCase() } }); updateBoardChip(); });
+      const t = el('span'); t.textContent = label; r.append(inp, t); box.append(r);
     }
-    return;
+    root.append(box);
   }
   const g3 = sec('3D boards');
+  g3.classList.add('g3d');
   for (const b of enabledBoards()) {
     const inst = b.id === 'unnamed' ? instanceOf('starter-' + myId()) : myBoards().find((x) => x.themeId === b.id);
     const rec = inst && (inst.wins || inst.losses || inst.draws) ? `${inst.wins || 0}W · ${inst.losses || 0}L · ${inst.draws || 0}D` : '';
     tile(g3, boardArt(b.id), b.name, rec, VIEW === '3d' && eq.themeId === b.id, async () => { pickedBoard = b.id; if (inst) await equip(inst.instanceId); presentTheme(); applyView('3d'); closeCollection(); updateBoardChip(); });
+    if (eq.themeId === b.id) g3.lastChild.classList.add('chosen');
   }
 }
 function dialog(title, paras, actions) {
