@@ -286,7 +286,48 @@
     card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
     card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
     hub.append(head, hero, mini, el('div', 'tr-section', 'Practice'), cards);
+    const info = el('div', 'tr-cards tr-about-row');
+    const ab = btn('', 'tr-card', () => openAbout());
+    ab.innerHTML = '<span class="tr-card-ico grey" aria-hidden="true">i</span><span class="tr-card-text"><b>About Training</b><span>Ratings, levels and how it all works</span></span><span class="tr-chev" aria-hidden="true">›</span>';
+    info.append(ab); hub.append(info);
     const back = btn('Back to the game', 'tr-link', close); hub.append(back);
+  }
+  function openAbout() {
+    hub.replaceChildren();
+    const head = el('div', 'tr-head'); const back = btn('', 'tr-back', () => openHub());
+    back.innerHTML = '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Training';
+    head.append(back, el('h2', '', 'About'));
+    hub.append(head);
+    const sec = (title, rows) => {
+      hub.append(el('div', 'tr-section', title));
+      const box = el('div', 'tr-about');
+      for (const [t, d] of rows) { const r = el('div', 'tr-about-item'); r.append(el('b', '', t), el('p', '', d)); box.append(r); }
+      hub.append(box);
+    };
+    const n = Math.round(P.puzzle.rating);
+    sec('Puzzle rating', [
+      ['Starts at 1200', 'Everyone begins at 1200, a standard chess starting point (Chess.com uses 400–1200 by skill, Lichess uses 1500). It lands your first puzzles in the Easy range. You are at ' + n + ' now.'],
+      ['Comparable to Lichess', 'Every puzzle comes from the Lichess database and carries its official difficulty, measured from millions of attempts, so your number lines up roughly with Lichess puzzle ratings.'],
+      ['Peak', 'Your highest rating so far. It never goes down.'],
+    ]);
+    sec('How it changes', [
+      ['Solve it clean', 'Solve a puzzle without hints and your rating goes up. Beating a puzzle rated above you is worth more.'],
+      ['Miss it', 'A wrong first move lowers your rating. Missing an easy puzzle costs more than missing a hard one.'],
+      ['Hints and solutions', 'Using a hint, showing the solution or retrying a miss makes that puzzle unrated. It still counts as practice.'],
+      ['Settles in', 'Your first 20 puzzles move your rating faster so it finds your level quickly. After that, changes get smaller.'],
+    ]);
+    sec('Difficulty', [
+      ['Adaptive', 'Picks puzzles within 150 points of your rating, so they get harder as you improve.'],
+      ['Fixed levels', 'Beginner 400–999 · Easy 1000–1399 · Intermediate 1400–1799 · Advanced 1800–2199 · Expert 2200+.'],
+      ['Categories', 'Mixed gives every theme. Pick one (mates, forks, pins and more) to drill a single idea.'],
+    ]);
+    sec('Endgames', [
+      ['Endgame Academy', '12 lessons from check and stalemate to the basic mates and pawn endings. A lesson is mastered when you win its final test.'],
+      ['Endgame Challenges', 'Win a set ending (basic mates, stalemate traps, pawn endings) against a computer that fights back. Several use exact endgame tables, so only precise play wins.'],
+      ['Overall', 'The ring on the Training page averages three things: puzzles solved (up to 100), lessons mastered and challenges won (up to 20).'],
+    ]);
+    hub.append(el('p', 'tr-about-foot', 'Progress is saved to your family account and is separate for each player.'));
+    hub.scrollTop = 0;
   }
 
   /* ------------------------------------------------------------------ puzzles */
