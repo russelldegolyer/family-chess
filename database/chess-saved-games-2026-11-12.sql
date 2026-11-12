@@ -247,3 +247,8 @@ end $$;
 --   chess_games.start_fen (a sent custom position starts from it); chess_save_local_game(..., p_replace, p_start_fen)
 --   saves custom positions with keep=true; chess_save_online_game copies start_fen; chess-saved-game Edge Function v2
 --   replays from start_fen and allows zero moves.
+
+-- Follow-up migration chess_saved_clock_actions_cap30 (same day): chess_saved_games.clock jsonb {mode,w,b}
+-- (time left on each clock at save; online saves subtract the running turn's elapsed time).
+-- chess_save_local_game(..., p_start_fen, p_actions jsonb, p_clock jsonb) also stores pawn-for-time actions.
+-- Limit 30 saved games per player. chess-saved-game Edge Function v3 applies the saved clock to the new game.

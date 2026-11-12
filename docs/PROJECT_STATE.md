@@ -38,7 +38,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Sound | `index.html` `Sound` (Web Audio), `fxForMove` | unlocked by any tap/key (document listeners); `navigator.audioSession.type='playback'` on iPhone |
 | Game review | `index.html` `startReview`, `reviewStep`, `renderHistory`; `chess-review-analysis.js` | key-moments stepping |
 | Clocks, pause, pawn-for-time | `chess-clock.js` (practice stops at 0:30 for a choice: pawn +1:30 or play on to 3:00); pawns are picked by tapping the board (`pawnPick` in `index.html`); server `chess-clock-action` + `database/chess-pawn-time-*.sql`, `chess-move60-*.sql` | |
-| Saved games | Save button (`btnSave`/`btnChatSave`, `saveCurrentGame`, `loadSavedGame`, resume banner in `index.html`); list/detail in `chess-training.js` (Training → Saved games); `chess-saved-game` Edge Function + `database/chess-saved-games-2026-11-12.sql` | |
+| Saved games | Save button (`btnSave`/`btnChatSave`, `saveCurrentGame`, `loadSavedGame`, resume banner in `index.html`); list/detail and Create game position editor (`openEditor`) in `chess-training.js` (Training → Saved games); saved clock restored via `ChessClock.resumeLocal`; `chess-saved-game` Edge Function + `database/chess-saved-games-2026-11-12.sql` | |
 | Play online sheet, My matches, profile/name | `chess-online.js` (`show`, `refresh`, `refreshLive`, `startMatch`, `syncMatch`) | |
 | Players, presence, challenges, push | `chess-social.js`, `chess-sw.js` | |
 | Chat | `chess-chat.js` (+ `renderChat`/`sendChat` delegates in `index.html`) | |

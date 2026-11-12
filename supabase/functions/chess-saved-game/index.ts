@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     if (target_id === me) return reply(400, { error: 'Choose another player.' });
 
     const { data: s, error: sErr } = await db.from('chess_saved_games')
-      .select('id,owner_id,group_id,owner_side,moves,actions,start_fen').eq('id', saved_id).maybeSingle();
+      .select('id,owner_id,group_id,owner_side,moves,actions,start_fen,clock').eq('id', saved_id).maybeSingle();
     if (sErr) throw sErr;
     if (!s || s.owner_id !== me) return reply(404, { error: 'Saved game not found.' });
     const side = body.side === 'w' || body.side === 'b' ? body.side : s.owner_side;
@@ -84,6 +84,12 @@ Deno.serve(async (req) => {
       status: 'waiting', current_fen: fen, resumed_plies: rows.length, saved_group: s.group_id, start_fen: startFen,
     }).select('id').single();
     if (gErr) throw gErr;
+    // Pick up with the time each side had when the game was saved (not fresh clocks).
+    const ck = s.clock && typeof s.clock === 'object' ? s.clock : null;
+    if (ck && ['off', '10m', '12m', '15m', 'move60'].includes(ck.mode)) {
+      const ms = (v: unknown) => Math.max(0, Math.min(3600000, Math.floor(Number(v) || 0)));
+      await db.from('chess_games').update({ clock_mode: ck.mode, clock_white_ms: ms(ck.w), clock_black_ms: ms(ck.b) }).eq('id', game.id);
+    }
     const other = target_id;
     const { error: mErr } = !rows.length ? { error: null } : await db.from('chess_moves').insert(rows.map((r) => ({
       game_id: game.id, player_id: r.mover === side ? me : other, ply: r.ply,

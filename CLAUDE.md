@@ -51,6 +51,10 @@ contradiction can't be resolved.
    Never push documentation-only commits on their own. Confirm the live site after the batch push.
 6. Database changes: apply via a reviewed migration, save a copy in `database/`, never blind-replay old scripts.
 
+## Changelog (every deploy)
+- Before each batch push, add a dated entry at the top of `docs/CHANGELOG.md` (Added / Improved / Fixed / Removed)
+  and update the commits-per-day table. Commit it with the batch.
+
 ## Keeping memory accurate
 - Update PROJECT_STATE.md when a feature, file location, or known issue changes (edit in place).
 - Add/supersede entries in DECISIONS.md for real product/architecture decisions only.

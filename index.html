@@ -15,7 +15,7 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=10"></script>
+<script defer src="./chess-clock.js?v=11"></script>
 <script defer src="./chess-online.js?v=17"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="./chess-training.css?v=15">
 <link rel="stylesheet" href="./chess-stats.css?v=1">
 <script defer src="./chess-stats.js?v=1"></script>
-<script defer src="./chess-training.js?v=16"></script>
+<script defer src="./chess-training.js?v=17"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -1164,7 +1164,10 @@ body.compact:not(.landscape) .bottom-bar .mine > * { order: 2; }
 .resume-banner .rb-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px; background: rgba(255,255,255,.07); font-weight: 600; font-size: 14.5px; }
 .resume-banner .rb-chip i { width: 10px; height: 10px; border-radius: 50%; }
 .resume-banner .rb-turn { font-size: 13px; color: #d1d1d6; }
-body.chat2d .resume-banner, body.pregame .resume-banner, body.training-open .resume-banner { display: none; }
+body.pregame .resume-banner, body.training-open .resume-banner { display: none; }
+body.compact.chat2d:not(.landscape) .resume-banner { top: calc(68px + env(safe-area-inset-top, 0px)); bottom: auto; padding: 6px 8px; gap: 4px; width: auto; max-width: 94vw; }
+body.compact.chat2d:not(.landscape) .resume-banner > b, body.compact.chat2d:not(.landscape) .resume-banner .rb-turn { display: none; }
+body.compact.chat2d:not(.landscape) .resume-banner .rb-chip { padding: 4px 9px; font-size: 13px; }
 
 /* board picker: 2D + 3D on one screen */
 body.col-open .train-top, body.col-open #accountControl, body.col-open #btnTrain { visibility: hidden !important; }
@@ -5258,6 +5261,14 @@ function sansFor(moves, actions) {
   }
   return out;
 }
+/* The practice clock as it stands now (null when no clock is running). */
+function localClockNow() {
+  const C = window.ChessClock; if (!C) return null;
+  const sn = C.snapshot(); if (!sn || sn.source !== 'local') return null;
+  if (sn.mode === 'off') return { mode: 'off', w: 0, b: 0 };
+  const now = Date.now();
+  return { mode: sn.mode, w: Math.round(C.remaining('w', now)), b: Math.round(C.remaining('b', now)) };
+}
 let saving = false;
 const lastSave = {};   // game key -> id of this player's most recent save of it
 function saveKey() { return G.onlineProvider === 'supabase' && G.gid ? 'g:' + G.gid : 'k:' + (G.key || ''); }
@@ -5267,7 +5278,6 @@ async function saveCurrentGame() {
   let uid = null;
   try { uid = (await api?.auth.getSession())?.data?.session?.user?.id || null; } catch { uid = null; }
   if (!api || !uid) { toast('Sign in to save games.'); return; }
-  if (!(G.onlineProvider === 'supabase' && G.gid) && (G.clockActions || []).length) { toast('Games with pawn-for-time changes can’t be saved yet.'); return; }
   const key = saveKey();
   let prev = lastSave[key] || null;
   if (!prev && G.onlineProvider === 'supabase' && G.gid) {
@@ -5294,8 +5304,10 @@ async function doSave(api, key, replace) {
       const you = cleanName(store.get('sg.name', '')) || 'You';
       const names = G.mode === 'cpu' ? (human === 'w' ? [you, 'Computer'] : ['Computer', you]) : ['White', 'Black'];
       const { data, error } = await api.rpc('chess_save_local_game', {
-        p_source: G.mode === 'cpu' ? 'computer' : 'local', p_moves: G.moves, p_sans: sansFor(G.moves, []),
-        p_fen: G.pos.chess.fen(), p_side: human, p_level: cpu.level, p_white: names[0], p_black: names[1], p_replace: replace, p_start_fen: START_FEN });
+        p_source: G.mode === 'cpu' ? 'computer' : 'local', p_moves: G.moves, p_sans: sansFor(G.moves, G.clockActions || []),
+        p_fen: G.pos.chess.fen(), p_side: human, p_level: cpu.level, p_white: names[0], p_black: names[1], p_replace: replace, p_start_fen: START_FEN,
+        p_actions: (G.clockActions || []).map((a) => ({ after_ply: Number(a.after_ply), kind: a.kind, square: a.square || null, fen_after: a.fen_after, side: a.side || null })),
+        p_clock: localClockNow() });
       if (error) throw error; id = data;
     }
     lastSave[key] = id; G.savedPly = G.moves.length; G.savedKey = key;
@@ -5316,6 +5328,7 @@ function loadSavedGame(row, { mode = 'cpu', level = 2, side = 'w' } = {}) {
   START_FEN = row.start_fen || null;
   G.moves = row.moves.slice(); G.clockActions = actions; G.pos = positionFrom(G.moves, G.moves.length, actions); G.version++;
   G.resumePlies = G.moves.length;
+  if (row.clock && row.clock.mode) window.ChessClock?.resumeLocal?.(row.clock.mode, row.clock.w, row.clock.b, G.pos.chess.turn(), G.moves.length);
   const want = wantedSide(); if (want !== viewSide) { viewSide = want; requestRender(); }
   syncBoard(G.pos, { animate: false }); updateAll(); fitCamera(true);
   if (G.mode === 'cpu' && G.pos.chess.turn() !== cpu.human) setTimeout(requestComputer, 900);

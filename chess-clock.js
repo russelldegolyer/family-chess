@@ -246,6 +246,17 @@
       claimedAt:0,claimInFlight:false,decided:{w:false,b:false}});
     tick();
   }
+  /* A saved game picks up with the time each side had when it was saved; the side to move's clock runs at once. */
+  function resumeLocal(mode,w,b,turn,ply) {
+    if(state.source!=='local')return;
+    mode=normalized(mode);
+    const cap=v=>Math.max(0,Math.min(3600000,Math.floor(Number(v)||0)));
+    state.mode=mode; state.w=mode==='off'?0:cap(w); state.b=mode==='off'?0:cap(b); state.turn=turn==='b'?'b':'w';
+    state.status='active'; state.clockState='running'; state.penaltySide=null;
+    state.startedAt=mode==='off'?0:Date.now();
+    state.history=[]; if(Number.isInteger(ply)&&ply>=0)state.history[ply]={w:state.w,b:state.b,turn:state.turn};
+    tick();
+  }
   function moveLocal(nextTurn,ply,ended=false) {
     if (state.source!=='local' || state.mode==='off') return;
     const now=Date.now();
@@ -350,7 +361,7 @@
     if(Number.isInteger(ply))state.history[ply]={w:state.w,b:state.b,turn:state.turn};
     tick();return true;
   }
-  window.ChessClock=Object.freeze({relayout:()=>{if(!hud.hidden)redraw();},MODES,getPreference,setPreference,startLocal,moveLocal,
+  window.ChessClock=Object.freeze({relayout:()=>{if(!hud.hidden)redraw();},MODES,getPreference,setPreference,startLocal,resumeLocal,moveLocal,
     undoLocal,stopLocal,showOnline,reset,remaining,check:tick,setPerspective,setHandlers,
     pauseLocal,resolveLocalPenalty,sacrificeLocal,endDecision,changeLocalMode,
     snapshot:()=>({...state,history:state.history.slice()})});

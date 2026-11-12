@@ -321,7 +321,7 @@
   async function loadSavedRows() {
     const c = api(); if (!c || uid === 'local') return null;
     const { data, error } = await c.from('chess_saved_games')
-      .select('id,group_id,source,owner_side,opponent_id,white_name,black_name,moves,sans,actions,fen,level,keep,created_at,start_fen')
+      .select('id,group_id,source,owner_side,opponent_id,white_name,black_name,moves,sans,actions,fen,level,keep,created_at,start_fen,clock')
       .order('created_at', { ascending: false }).limit(60);
     if (error) throw error;
     savedRows = data || []; savedCount = savedRows.length; return savedRows;
