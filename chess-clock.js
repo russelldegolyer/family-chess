@@ -346,7 +346,7 @@
     if(Number.isInteger(ply))state.history[ply]={w:state.w,b:state.b,turn:state.turn};
     tick();return true;
   }
-  window.ChessClock=Object.freeze({MODES,getPreference,setPreference,startLocal,moveLocal,
+  window.ChessClock=Object.freeze({relayout:()=>{if(!hud.hidden)redraw();},MODES,getPreference,setPreference,startLocal,moveLocal,
     undoLocal,stopLocal,showOnline,reset,remaining,check:tick,setPerspective,setHandlers,
     pauseLocal,resolveLocalPenalty,sacrificeLocal,endDecision,changeLocalMode,
     snapshot:()=>({...state,history:state.history.slice()})});
