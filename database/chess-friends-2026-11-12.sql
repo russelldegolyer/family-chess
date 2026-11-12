@@ -14,3 +14,5 @@
 -- * chess_befriend(a,b) (definer-only); chess_join_game now befriends the joiner and the inviter (invite links).
 -- * chess_friend_request returns jsonb {status: sent|accepted|pending|already, target}.
 -- * chess-notify-challenge v7: action 'friend_request' pushes "<name> wants to be friends".
+-- Fix migration chess_friends_profile_policy_fix (same day): the profile read policy compared the friendship row's own
+-- id instead of the profile id, so new friends' names didn't load. Columns are now fully qualified (chess_profiles.id).

@@ -14,6 +14,15 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Fixed**
+- New friends now appear in your Friends list right after accepting (server fix, live already).
+
+**Improved**
+- Watching a game shows one clear "Watching · A vs B — Leave" bar; Leave goes straight to the start screen.
+- In online games the New button reads **Leave**.
+
 ## 2026-11-12 — Friends, colour wheel, last move (deployed 4:16 PM)
 
 **Added**

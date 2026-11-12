@@ -506,7 +506,7 @@
     if(matchMode!=='watch')return;
     stopMatch();
     window.familyChessNative?.leaveToPractice();
-    show();
+    if(window.familyChessHome)window.familyChessHome();else show();
   }
   leaveWatch.addEventListener('click',leaveSpectating);
   $('cgPractice').addEventListener('click',()=>{

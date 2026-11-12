@@ -16,7 +16,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=11"></script>
-<script defer src="./chess-online.js?v=18"></script>
+<script defer src="./chess-online.js?v=19"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
@@ -1223,6 +1223,18 @@ body.col-open .train-top, body.col-open #accountControl, body.col-open #btnTrain
 body.clock-in-chat #plateTop { max-width: calc(100vw - 186px); box-sizing: border-box; }
 body.clock-in-chat #plateTop .pname { max-width: 26vw; }
 body.clock-in-chat #plateTop .chess-clock { flex: none; }
+
+/* spectating: a clear way back to the start screen */
+.watch-bar { position: fixed; z-index: 31; left: 50%; transform: translateX(-50%); top: calc(74px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 10px; padding: 5px 5px 5px 14px; border-radius: 999px;
+  background: rgba(22,22,26,.92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1), 0 8px 22px rgba(0,0,0,.45); color: #f2f2f7; font: 600 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.watch-bar[hidden] { display: none; }
+.watch-bar span { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.watch-bar span b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56vw; }
+#cgSpectatorBar { display: none !important; }
+.watch-bar i { width: 8px; height: 8px; border-radius: 50%; background: #ff3b30; box-shadow: 0 0 0 3px rgba(255,59,48,.25); animation: wb-pulse 1.6s ease-in-out infinite; }
+@keyframes wb-pulse { 50% { opacity: .35; } }
+.watch-bar button { border: 0; border-radius: 999px; padding: 8px 14px; background: #ff3b30; color: #fff; font: 650 14px/1 inherit; cursor: pointer; }
+body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
 </style>
 
 </head>
@@ -1281,6 +1293,7 @@ body.clock-in-chat #plateTop .chess-clock { flex: none; }
 
   <div class="status" id="status" role="status" aria-live="polite"></div>
   <div class="resume-banner" id="resumeBanner" hidden></div>
+  <div class="watch-bar" id="watchBar" hidden><span><i></i><b>Watching live</b></span><button type="button" id="btnStopWatch">Leave</button></div>
   <p class="sr" id="lostSummary" aria-live="polite"></p>
 
   <div class="banner" id="banner" role="status" hidden>
@@ -5263,6 +5276,7 @@ function goHome() {
 }
 function newGame() {
   if (PG.on) return;
+  if (G.onlineProvider === 'supabase' && !mySeat) { leaveWatching(); return; }   // spectating: just leave
   const playing = G.moves.length > 0 && G.status === 'active';
   if (!playing) { goHome(); return; }
   const online = G.onlineProvider === 'supabase';
@@ -5393,6 +5407,9 @@ window.familyChessToast = (m, ms) => toast(m, ms || 3600);
 $('btnSave').addEventListener('click', () => void saveCurrentGame());
 $('btnChatSave').addEventListener('click', () => void saveCurrentGame());
 $('btnNew').addEventListener('click', newGame);
+window.familyChessHome = goHome;
+const leaveWatching = () => { const b = document.querySelector('#cgSpectatorBar .cgLeave'); if (b) b.click(); else goHome(); };
+$('btnStopWatch').addEventListener('click', leaveWatching);
 $('btnChatNew').addEventListener('click', newGame);
 $('btnChatUndo').addEventListener('click', undo);
 $('btnChatCam').addEventListener('click', resetView);
@@ -5612,6 +5629,13 @@ function updateResignBtn() {
     (G.mode === 'local' || G.mode === 'cpu' || (mySeat && bothSeated()));
   $('btnResign').hidden = !playing;
   $('btnChatResign').hidden = !playing;
+  // Online games and spectating say "Leave" so the way back to the start screen is obvious.
+  const onlineNow = G.onlineProvider === 'supabase', watching = onlineNow && !mySeat;
+  const word = onlineNow ? 'Leave' : 'New';
+  if ($('btnNew').firstChild?.textContent !== word) { $('btnNew').firstChild.textContent = word; $('btnChatNew').textContent = word; }
+  $('btnNew').setAttribute('aria-label', onlineNow ? 'Leave match' : 'New game');
+  $('watchBar').hidden = !watching || !!review;
+  if (watching) { const t = document.querySelector('#cgSpectatorBar strong')?.textContent; if (t) $('watchBar').firstChild.lastChild.textContent = t; }
   const canSave = G.status === 'active' && G.moves.length > 0 && G.mode !== 'train';
   $('btnSave').hidden = !canSave; $('btnChatSave').hidden = !canSave;
   const savedNow = canSave && G.savedKey === saveKey() && G.savedPly === G.moves.length;
