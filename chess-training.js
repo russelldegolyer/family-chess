@@ -689,7 +689,7 @@
     let cat = CATS.find((c) => c[0] === P.settings.cat) || CATS[0];
     const recent = new Set(P.puzzle.history.slice(-300).map((h) => h.id));
     let [lo, hi] = band();
-    if (PATH && PATH.theme) { const th = PATH.theme, re = new RegExp('\\b' + th + '\\b'); cat = [th, th, (t) => re.test(t), th]; lo = PATH.lo; hi = PATH.hi; }
+    if (PATH && PATH.theme) { const th = PATH.theme, re = new RegExp('\\b' + th + '\\b'); cat = [th, th, (t) => re.test(t), th]; const up = Math.max(0, Math.min(400, Math.round(P.puzzle.rating) - 1300)); lo = PATH.lo + up; hi = PATH.hi + up; }
     const c = api();
     if (c && remotePuzzles && uid !== 'local') {
       try {
@@ -749,6 +749,7 @@
     const msg = el('div', 'tr-say', 'Loading a puzzle…'); panel.append(msg);
     const p = retry && PZ ? PZ.p : await nextPuzzle();
     if (my !== session) return;
+    if (!p && PATH) { say(msg, 'Couldn’t load a puzzle for this chapter. Check your connection and try again.', 'bad'); const r = el('div', 'tr-actions'); r.append(btn('Try again', 'primary', () => void startPuzzle()), btn('Back to chapter', 'quiet', () => RETURN && RETURN())); panel.append(r); return; }
     if (!p) { say(msg, 'No puzzles available for this filter. Try Mixed.', 'bad'); panel.append(btn('Settings', '', puzzleSettings)); return; }
     const C = B().Chess, c0 = new C(p.fen);
     const side = other(c0.turn());
@@ -774,7 +775,7 @@
     const row = el('div', 'tr-actions');
     PZ.hintBtn = btn('Hint', 'hint', () => hint(), 'hint'); PZ.hintBtn.setAttribute('aria-label', 'Hint (level 1 of 3)');
     const pips = el('span', 'tr-pips'); for (let k = 0; k < 3; k++) pips.append(el('i')); PZ.hintBtn.append(pips);
-    row.append(PZ.hintBtn, btn('Solution', 'quiet', () => void showSolution(), 'eye'), btn('Skip', 'quiet', () => void startPuzzle(), 'skip'));
+    row.append(PZ.hintBtn, btn('Solution', 'quiet', () => void showSolution(), 'eye'), btn('Skip', 'quiet', () => { if (PATH && PATH.step === 'prove' && !pathState(PATH.ch).prove) { pathState(PATH.ch).streak = 0; save(); } void startPuzzle(); }, 'skip'));
     PZ.rowNode = row;
     panel.append(head, msg, row);
   }
@@ -848,7 +849,7 @@
     meta.append(el('span', 'tr-pill', 'Puzzle ' + PZ.p.rating), el('span', 'tr-pill', rated ? (delta >= 0 ? '+' : '') + delta + ' → ' + Math.round(P.puzzle.rating) : 'Unrated'), el('span', 'tr-pill', 'Streak ' + P.puzzle.streak));
     const ex = el('div', 'tr-say', th.length ? th.slice(0, 2).map((x) => NAME[x] || x).join(' · ') + ' — ' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]]) : '');
     const row = el('div', 'tr-actions'); row.append(btn('Next puzzle', 'primary', () => void startPuzzle(), 'next'), btn('Retry', 'quiet', () => void startPuzzle(true), 'retry'));
-    const pathNote = PATH ? pathPuzzleResult(!PZ.failed && !PZ.retry, !PZ.hints, row) : null;
+    const pathNote = PATH ? pathPuzzleResult(!PZ.failed, !PZ.hints, row) : null;
     panel.append(head, meta, ex); if (pathNote) panel.append(pathNote); panel.append(row); puzzleTop();
   }
   function fail() {
@@ -1455,11 +1456,11 @@
     }
     hub.append(head, modes, el('p', 'tr-note', desc), list); hub.hidden = false;
   }
-  async function startChallenge(ch) {
+  async function startChallenge(ch, forced) {
     hub.hidden = true; screen = 'challenge';
     await loadTables();
-    setTop(ch.title, el('span', 'tr-chip dim', { guided: 'Guided', practice: 'Practice', challenge: 'Challenge' }[P.settings.mode]));
-    const mode = P.settings.mode;
+    const mode = forced || P.settings.mode;
+    setTop(ch.title, el('span', 'tr-chip dim', { guided: 'Guided', practice: 'Practice', challenge: 'Challenge' }[mode]));
     void playEnding({ fen: ch.gen(), goal: ch.goal, kind: ch.kind, task: ch.task, mode, side: ch.side || 'w', onDone: (res) => {
       const st = P.challenges[ch.id] || (P.challenges[ch.id] = { attempts: 0, wins: 0, best: 0 });
       st.attempts++; if (res.win) { st.wins++; st.best = Math.max(st.best || 0, res.perf); } save();
@@ -1470,7 +1471,9 @@
         res.stats.log.forEach((m, i) => { const tag = { mate: 'mate', good: '✓', ok: '·', inefficient: 'slow', lost: '✗ lost win', stalemate: '✗ stalemate', draw: '✗ draw' }[m.kind] || m.kind; rev.append(el('span', 'tr-rev ' + m.kind, (i + 1) + '. ' + m.uci + ' ' + tag)); });
         panel.append(rev);
       }
-      const row = el('div', 'tr-actions'); row.append(btn('New position', 'primary', () => startChallenge(ch), 'next'), btn(RETURN ? 'Back to chapter' : 'All challenges', 'quiet', RETURN || openChallenges)); panel.append(row);
+      const row = el('div', 'tr-actions'); if (RETURN && res.win) row.append(btn('Back to chapter', 'primary', RETURN, 'next'), btn('New position', 'quiet', () => startChallenge(ch, forced)));
+      else row.append(btn(RETURN ? 'Try again' : 'New position', 'primary', () => startChallenge(ch, forced), 'next'), btn(RETURN ? 'Back to chapter' : 'All challenges', 'quiet', RETURN || openChallenges));
+      panel.append(row);
     } });
   }
 
@@ -1490,7 +1493,7 @@
       learn: learn(['A fork is one move that attacks two targets. They can only save one.', 'Knights are the classic forkers, but queens, pawns and even kings fork too. Look for a square that touches two loose pieces, or the king and a piece.'], ['Knight jumps near the king', 'Two pieces on the same colour square', 'Checks that also attack']),
       practise: { theme: 'fork', lo: 600, hi: 1400, count: 6 }, prove: { theme: 'fork', lo: 1000, hi: 1700, count: 3 } },
     { id: 'c4', title: 'King and queen mate', blurb: 'The first mate everyone needs: push the king to the edge.',
-      learn: { lesson: 'l4' }, practise: { lesson: 'l2' }, prove: { challenge: 'kq' } },
+      learn: { lesson: 'l2' }, practise: { lesson: 'l4' }, prove: { challenge: 'kq' } },
     { id: 'c5', title: 'Pins', blurb: 'Freeze a piece in front of something more valuable.',
       learn: learn(['A pinned piece cannot move without exposing something bigger behind it — often the king, so it cannot legally move at all.', 'Pile up on a pinned piece: it cannot run, so attack it again and again.'], ['Pieces lined up with the king or queen', 'Bishops and rooks behind them', 'Attacking a piece that cannot move']),
       practise: { theme: 'pin', lo: 700, hi: 1500, count: 6 }, prove: { theme: 'pin', lo: 1100, hi: 1800, count: 3 } },
@@ -1530,7 +1533,7 @@
     const st = pathState(ch), s = ch[step];
     if (s.lesson) return !!P.lessons[s.lesson]?.mastered;
     if (s.challenge) return (P.challenges[s.challenge]?.wins || 0) > 0;
-    if (step === 'learn') return !!st.learn;
+    if (step === 'learn') return !!st.learn || (st.practise || 0) >= ch.practise.count;   /* practised it all: the idea has landed */
     if (step === 'practise') return (st.practise || 0) >= s.count;
     return !!st.prove;
   }
@@ -1540,7 +1543,7 @@
   const recommended = () => CHAPTERS.find((ch) => !chapterDone(ch)) || null;
   function stepLabel(ch, step) {
     const s = ch[step];
-    if (s.lesson) return (step === 'learn' ? 'Lesson: ' : 'Lesson: ') + (lessonById(s.lesson)?.title || 'Lesson');
+    if (s.lesson) return 'Lesson: ' + (lessonById(s.lesson)?.title || 'Lesson');
     if (s.challenge) return 'Challenge: ' + (challengeById(s.challenge)?.title || 'Challenge');
     if (step === 'learn') return 'The idea';
     const name = NAME[s.theme] || s.theme;
@@ -1557,11 +1560,12 @@
   }
   function pathPill() {
     const st = pathState(PATH.ch), s = PATH.ch[PATH.step];
-    return PATH.step === 'practise' ? Math.min(st.practise || 0, s.count) + '/' + s.count : (st.streak || 0) + '/' + s.count + ' in a row';
+    return PATH.step === 'practise' ? Math.min(st.practise || 0, s.count) + '/' + s.count : Math.min(st.streak || 0, s.count) + '/' + s.count + ' in a row';
   }
   /* after a path puzzle: count it, and offer the next step when this one is done */
   function pathPuzzleResult(clean, noHints, row) {
     const ch = PATH.ch, st = pathState(ch), s = ch[PATH.step];
+    if (PZ.retry) return el('div', 'tr-say', 'Retries are for practice and don’t change your chapter progress.');
     let done = false;
     if (PATH.step === 'practise') { if (clean) st.practise = (st.practise || 0) + 1; done = st.practise >= s.count; }
     else { if (clean && noHints) st.streak = (st.streak || 0) + 1; else st.streak = 0; if (st.streak >= s.count) { st.prove = true; done = true; } }
@@ -1616,6 +1620,7 @@
       list.append(b);
     });
     hub.append(list);
+    if (!nx) hub.append(el('div', 'tr-chap-done', '★ Chapter complete'));
     const row = el('div', 'tr-actions tr-chap-actions');
     if (nx) row.append(btn('Start: ' + ['Learn', 'Practise', 'Prove it'][STEPS.indexOf(nx)], 'primary', () => runStep(ch, nx), 'play'));
     else { const nc = recommended(); row.append(btn(nc ? 'Next chapter: ' + nc.title : 'Back to the path', 'primary', () => (nc ? openChapter(nc) : openPath()), 'next')); }
@@ -1625,7 +1630,7 @@
     const s = ch[step];
     RETURN = () => openChapter(ch);
     if (s.lesson) { const l = lessonById(s.lesson); if (l) { PATH = null; return startLesson(l); } }
-    if (s.challenge) { const c = challengeById(s.challenge); if (c) { PATH = null; return void startChallenge(c); } }
+    if (s.challenge) { const c = challengeById(s.challenge); if (c) { PATH = null; return void startChallenge(c, P.settings.mode === 'guided' ? 'practice' : undefined); } }
     if (step === 'learn') return openLearn(ch);
     if (step === 'prove') pathState(ch).streak = 0;
     PATH = { ch, step, theme: s.theme, lo: s.lo, hi: s.hi, count: s.count };
