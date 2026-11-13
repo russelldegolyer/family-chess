@@ -37,3 +37,6 @@ Per-player accuracy uses Lichess's win-chance formula on the built-in engine, ru
 
 ## D-27 2D black-piece accents (2026-11-12)
 Refines D-07 for 2D only: black pieces keep a black body, but their outline and carving lines use the player's colour (practice: yours; online: the Black player's). 3D black pieces are unchanged.
+
+## D-28 Switch sides before the first move (2026-11-12)
+The challenger still starts as White, but either player can swap seats until a move or clock action exists (`chess_swap_sides`, server-checked). Saved-game resumes keep their seats.

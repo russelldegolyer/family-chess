@@ -18,7 +18,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=13"></script>
-<script defer src="./chess-online.js?v=20"></script>
+<script defer src="./chess-online.js?v=21"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
@@ -1343,6 +1343,21 @@ body.compact #plateBottom.plate-floating .chess-clock.low .chess-clock-time { co
 body.pregame #plateBottom.plate-floating, body.training #plateBottom.plate-floating, body.reviewing #plateBottom.plate-floating .chess-clock { visibility: hidden !important; }
 @media (max-width: 400px) { body.compact #plateBottom.plate-floating .orb { display: none !important; }
   body.compact #plateBottom.plate-floating .pname, body.clock-in-plate #plateTop .pname { font-size: 16px !important; } }
+.side-pick { position: fixed; z-index: 35; left: 50%; transform: translateX(-50%); top: calc(max(19px, env(safe-area-inset-top, 0px) + 7px) + 62px); width: min(360px, calc(100vw - 32px)); box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 14px 12px; border-radius: 22px; background: rgba(24,24,28,.96);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 18px 44px rgba(0,0,0,.55); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.side-pick[hidden] { display: none; }
+.side-pick > b { font: 700 13px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: #a1a1a6; }
+.side-pick .sp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.side-pick button { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 10px; row-gap: 3px; min-height: 58px; padding: 8px 14px;
+  border: 0; border-radius: 16px; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); color: #f2f2f7; font: 650 17px/1 var(--body); text-align: left; cursor: pointer; }
+.side-pick button .orb { grid-row: 1 / span 2; width: 22px; height: 22px; }
+.side-pick button small { grid-column: 2; font: 500 12px/1 var(--body); color: #8e8e93; }
+.side-pick button.on { background: rgba(48,209,88,.15); box-shadow: inset 0 0 0 1.5px rgba(48,209,88,.6); }
+.side-pick button.on small { color: #7ee99a; font-weight: 650; }
+.side-pick button:not(.on):active { transform: scale(.98); background: rgba(255,255,255,.12); }
+.side-pick.busy { opacity: .7; pointer-events: none; }
+.side-pick .sp-note { font: 500 12px/1.3 var(--body); color: #8e8e93; text-align: center; }
 /* Phones: the plate looks the same with chat open or closed (no size jump) */
 body.clock-in-plate #plateTop { max-width: calc(100vw - 206px) !important; box-sizing: border-box; padding-left: 12px !important; padding-right: 12px !important; gap: 9px !important; }
 body.clock-in-plate #plateTop .orb { display: block !important; width: 16px !important; height: 16px !important; }
@@ -3412,7 +3427,7 @@ function updateStatus() {
   s.classList.toggle('alert',alert||penalty);
   $('btnUndo').disabled=$('btnChatUndo').disabled=!canUndo();
 }
-function updatePlates() { fillPlate($('plateTop'), other(viewSide)); fillPlate($('plateBottom'), viewSide); updateStatus(); updateCapStrips(); }
+function updatePlates() { fillPlate($('plateTop'), other(viewSide)); fillPlate($('plateBottom'), viewSide); updateStatus(); updateCapStrips(); renderSidePick(); }
 /* Phones: captured pieces and the material lead (+N), like chess.com. The opponent's line sits under their
    name plate, yours sits just above the bottom bar. Each line shows the pieces that player has taken. */
 function capStrip(id) {
@@ -3451,6 +3466,32 @@ function placeMyPlate() {
     myPlateHome.after(pl); pl.classList.remove('plate-floating'); pl.style.bottom = '';
   }
   return float ? pl : null;
+}
+/* Online, before the first move: a simple White / Black picker for both players. Tapping the other side switches
+   seats for both of you (server checks nothing has been played yet). */
+function renderSidePick() {
+  let el = $('sidePick');
+  const show = G.mode === 'live' && G.onlineProvider === 'supabase' && !!mySeat && G.status === 'active' && !G.moves.length
+    && !(G.clockActions || []).length && !G.resumePlies && !START_FEN && !review && !document.body.classList.contains('chat2d');
+  if (!show) { if (el) el.hidden = true; return; }
+  if (!el) {
+    el = document.createElement('div'); el.id = 'sidePick'; el.className = 'side-pick'; el.setAttribute('role', 'group'); el.setAttribute('aria-label', 'Pick your side');
+    el.innerHTML = '<b>Pick your side</b><div class="sp-row"><button type="button" data-s="w"><i class="orb white"></i>White<small></small></button><button type="button" data-s="b"><i class="orb"></i>Black<small></small></button></div><span class="sp-note">Either of you can switch until the first move.</span>';
+    el.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-s]'); if (!btn || btn.dataset.s === mySeat || el.dataset.busy) return;
+      el.dataset.busy = '1'; el.classList.add('busy');
+      try { await window.familyChessSwapSides?.(G.gid); } catch (err) { toast(err?.message || 'Could not switch sides'); }
+      delete el.dataset.busy; el.classList.remove('busy'); renderSidePick();
+    });
+    document.body.append(el);
+  }
+  for (const btn of el.querySelectorAll('button[data-s]')) {
+    const s = btn.dataset.s, mine = s === mySeat;
+    btn.classList.toggle('on', mine);
+    btn.querySelector('small').textContent = mine ? 'You' : (seatName(s) || '').split(/\s+/)[0];
+    btn.setAttribute('aria-pressed', mine ? 'true' : 'false');
+  }
+  el.hidden = false;
 }
 function updateCapStrips() {
   const top = capStrip('capTop'), bot = capStrip('capBottom');

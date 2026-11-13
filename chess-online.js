@@ -462,6 +462,13 @@
     if(!data?.ok)throw new Error(data?.error||'Pawn choice rejected');
     await syncMatch();return data;
   };
+  /* switch sides before the first move; either player may, and realtime moves the opponent too */
+  window.familyChessSwapSides = async id => {
+    if(!player||matchId!==id||matchMode!=='play')throw new Error('Only a player can switch sides');
+    const {data,error}=await api.rpc('chess_swap_sides',{p_game_id:id});
+    if(error)throw new Error(error.message||'Could not switch sides');
+    await syncMatch();return data;
+  };
   /* change the clock of the open online match; the server shifts both clocks and realtime syncs the opponent */
   window.familyChessChangeClock = async (id,mode) => {
     if(!player||matchId!==id||matchMode!=='play')throw new Error('Only a player can change this clock');

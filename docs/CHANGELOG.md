@@ -16,6 +16,9 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ## Unreleased
 
+**Added**
+- Online games: a **Pick your side** card (White / Black) shows for both players until the first move. Tap the other side to switch seats for both of you. Not shown for resumed saved games.
+
 **Improved**
 - 2D boards: black pieces stay black, but their outline and inner lines (and the bishop's slit) are drawn in the player's colour (practice: yours; online: the Black player's).
 
