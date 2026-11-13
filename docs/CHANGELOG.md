@@ -14,6 +14,15 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Fixed**
+- The computer never wears a colour: as White vs the computer, its black pieces are plain; as Black, its white pieces are plain white (2D and 3D) and its name plate is neutral grey.
+- 2D black-piece accents only show for a human playing Black (online: their colour; vs computer: yours when you're Black), and the lines are thinner.
+
+**Improved**
+- Name plates use each person's own colour (online, the Black player's plate now shows their colour too).
+
 ## 2026-11-12 — Rematch, chat across games, pick your side (deployed 9:43 PM)
 
 **Added**

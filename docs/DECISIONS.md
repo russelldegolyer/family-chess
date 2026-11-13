@@ -40,3 +40,6 @@ Refines D-07 for 2D only: black pieces keep a black body, but their outline and 
 
 ## D-28 Switch sides before the first move (2026-11-12)
 The challenger still starts as White, but either player can swap seats until a move or clock action exists (`chess_swap_sides`, server-checked). Saved-game resumes keep their seats.
+
+## D-29 The computer has no colour (2026-11-12)
+Russell: computer pieces are plain white or black. Vs the computer, only the human's army wears their colour (White pieces in 3D/2D when you're White; 2D black accents when you're Black). Plates rim in each human's colour; the computer's plate is neutral. Supersedes D-07's "White always wears your colour in practice" for games vs the computer (the opening chooser is unchanged).

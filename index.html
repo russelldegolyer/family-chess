@@ -3360,7 +3360,7 @@ function fillPlate(node, side) {
   node.classList.toggle('turn', turn);
   // The coloured outline is the player's selection, never an indication
   // that they are White or Black. Only the subtitle conveys their chess side.
-  const chosen=sideColors()[side];
+  const chosen=plateRim(side);
   node.style.setProperty('--plate-accent',chosen);
   // Exact selected player colour is the rim. Contrast trim only improves
   // visibility for black / very dark selections; it never becomes green.
@@ -3813,6 +3813,7 @@ function setMyColor(hex) {
    on this screen (practice, the side chooser, the computer) White wears your colour whichever side you play;
    online, White wears the colour of whoever is playing White. Nothing changes colour when you pick a side. */
 const BLACK_PIECES = COLOR_DEF.opp;
+const PLAIN_WHITE = '#e8e6e1';
 function sideColors() {
   const mine = myColor();
   if (G.mode === 'live' && !PG.on) {
@@ -3820,7 +3821,15 @@ function sideColors() {
     const w = uid && uid === me.id ? mine : chromaOk(c[uid]) ? c[uid] : COLOR_DEF.mine;
     return { w, b: BLACK_PIECES };
   }
+  /* vs the computer: only your army wears your colour; the computer's White is plain white */
+  if (G.mode === 'cpu' && !PG.on && cpu.human === 'b') return { w: PLAIN_WHITE, b: BLACK_PIECES };
   return { w: mine, b: BLACK_PIECES };
+}
+/* name-plate rim: each human's own colour, the computer a neutral grey */
+function plateRim(side) {
+  if (G.mode === 'cpu' && !PG.on) return side === cpu.human ? myColor() : '#7d7d82';
+  if (G.mode === 'live' && !PG.on) { const uid = G.seats?.[side]; if (uid && uid === me.id) return myColor(); const c = G.colors?.[uid]; if (chromaOk(c)) return c; }
+  return sideColors()[side];
 }
 /* themes whose pieces wear the players' colours */
 const COLOR_THEMES = new Set(['unnamed']);
@@ -4002,11 +4011,12 @@ function artCentres() {
   return ART_C;
 }
 const LETTER = { k: 'K', q: 'Q', r: 'R', b: 'B', n: 'N', p: 'P' };
-/* The accent for black 2D pieces: online, the Black player's colour; practice, your own colour. */
+/* The accent for black 2D pieces: the colour of the human playing Black (online: their colour; vs computer: yours
+   only when you play Black). The computer and two-player games on one screen keep plain black pieces. */
 function blackAccent2D() {
   let c = null;
   if (G.mode === 'live' && !PG.on) { const uid = G.seats?.b; c = uid && uid === me.id ? myColor() : (G.colors && chromaOk(G.colors[uid]) ? G.colors[uid] : null); }
-  else c = myColor();
+  else if (G.mode === 'cpu' && !PG.on) c = cpu.human === 'b' ? myColor() : null;   /* the computer never wears a colour */
   return c && hexOk(c) && lum(c) > 0.04 ? c : null;
 }
 function piece2D(type, color, scale = 1, halo = false) {
@@ -4044,14 +4054,14 @@ function piece2D(type, color, scale = 1, halo = false) {
   /* Black pieces stay black, but their carving lines, marks and outline wear the player's colour (2D only) */
   const acc = !W && dark ? blackAccent2D() : null;
   const ink = acc ? acc : dark ? mixHex(base, '#ffffff', 0.42) : mixHex(base, '#000000', 0.62);
-  for (const d of A.detail) sv('path', { d, fill: 'none', stroke: ink, 'stroke-width': dark ? 1.05 : 1.2, 'stroke-opacity': dark ? 0.85 : 0.9 }, inner);
+  for (const d of A.detail) sv('path', { d, fill: 'none', stroke: ink, 'stroke-width': acc ? 0.85 : dark ? 1.05 : 1.2, 'stroke-opacity': acc ? 0.75 : dark ? 0.85 : 0.9 }, inner);
   for (const [cx, cy, rx, ry] of A.dots || []) sv('ellipse', { cx, cy, rx, ry, fill: acc ? acc : dark ? mixHex(base, '#ffffff', 0.7) : '#151515' }, inner);
   /* signature marks (the bishop's slit) are drawn bold and in strong contrast so they read at a glance */
   for (const d of A.cut || []) sv('path', { d, fill: 'none', stroke: acc ? mixHex(acc, '#ffffff', 0.15) : dark ? mixHex(base, '#ffffff', 0.78) : mixHex(base, '#000000', 0.82), 'stroke-width': 2.1 }, inner);
   /* the black outline goes on last, so it always sits over the carving lines where they meet the edge */
   /* on near-black dark squares a heavy dark outline eats into light pieces, so it's drawn a little finer there */
   const fine = !dark && C2 && hexOk(C2.dark) && lum(C2.dark) < 0.03;
-  for (const d of A.body) sv('path', { d, fill: 'none', stroke: acc ? mixHex(acc, '#000000', 0.25) : outline, 'stroke-width': acc ? 1.35 : fine ? 1.15 : 1.5 }, inner);
+  for (const d of A.body) sv('path', { d, fill: 'none', stroke: acc ? mixHex(acc, '#000000', 0.35) : outline, 'stroke-width': acc ? 1.05 : fine ? 1.15 : 1.5 }, inner);
   return g;
 }
 /* knights look toward the middle of the board: mirrored when they stand on the left half */
@@ -4203,6 +4213,8 @@ const TYPE_ORDER = { p: 0, n: 1, b: 2, r: 3, q: 4, k: 5 };
 const byType = (list) => list.slice().sort((a, b) => TYPE_ORDER[a] - TYPE_ORDER[b]);
 function sync2D(pos, opts = {}) {
   if (!b2.svg) return;
+  /* who wears the Black accent can change with the game (vs computer as White: nobody): redraw the pieces then */
+  { const acc = blackAccent2D() || ''; if (b2.acc !== acc) { b2.acc = acc; for (const m of b2.items) m.el.remove(); b2.items = []; } }
   const anim = VIEW === '2d' && b2.ready && !REDUCED && opts.animate !== false;
   const hint = opts.hint || null;
   const T = pos.board.map(([sq, type, color, flag]) => ({ sq, type, color, ghost: flag === 'ghost' }));

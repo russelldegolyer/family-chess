@@ -106,7 +106,7 @@ test('pawn exchange is rejected outside standard timed games on all layers',()=>
 });
 
 test('nameplate accent is tied to selected piece color, independent of turn',()=>{
-  assert.match(page,/const chosen=sideColors\(\)\[side\]/);
+  assert.match(page,/const chosen=plateRim\(side\)/);
   assert.match(page,/setProperty\('--plate-accent',chosen\)/);
   assert.match(page,/setProperty\('--plate-ring',chosen\)/);
   assert.match(page,/#plateTop:not\(\.turn\),#plateBottom:not\(\.turn\)/);
