@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-12 | 44 |
+| 2026-11-12 | 48 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
 | 2026-11-09 | 130 |
@@ -14,7 +14,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-12 — Computer stays plain, black-piece colour fixes (deployed 10:00 PM)
 
 **Fixed**
 - The computer never wears a colour: as White vs the computer, its black pieces are plain; as Black, its white pieces are plain white (2D and 3D) and its name plate is neutral grey.
