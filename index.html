@@ -1294,6 +1294,30 @@ body.col-open .train-top, body.col-open #accountControl, body.col-open #btnTrain
 }
 /* opponent plate with clock: never runs under the Challenges button */
 body.clock-in-chat #plateTop { max-width: calc(100vw - 186px); box-sizing: border-box; }
+/* Chat header on phones: clock, tools, clear and close as one even row of matching 38px pills */
+body.clock-in-chat .panel-head { gap: 6px !important; padding-left: 12px !important; padding-right: 12px !important; align-items: center; }
+body.clock-in-chat .panel-head .chess-clock { height: 38px !important; padding: 0 12px !important; border-radius: 999px !important; border: 0 !important;
+  background: rgba(255,255,255,.06) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08) !important; }
+body.clock-in-chat .panel-head .chess-clock-time { font: 700 17px/1 var(--body) !important; letter-spacing: -.01em; font-variant-numeric: tabular-nums; color: #f2f2f7; }
+body.clock-in-chat .panel-head .chess-clock.active { background: rgba(48,209,88,.16) !important; box-shadow: inset 0 0 0 1px rgba(48,209,88,.5) !important; }
+body.clock-in-chat .panel-head .chess-clock.active .chess-clock-time { color: #8af0ad !important; }
+body.clock-in-chat .panel-head .chess-clock.low { background: rgba(255,69,58,.16) !important; box-shadow: inset 0 0 0 1px rgba(255,69,58,.55) !important; }
+body.clock-in-chat .panel-head .chess-clock.low .chess-clock-time { color: #ff8b84 !important; }
+body.clock-in-chat .panel-head .chat-tools { height: 38px; flex: 1 1 auto !important; min-width: 0; justify-content: space-between; padding: 0 4px; gap: 0 !important;
+  background: rgba(255,255,255,.06) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08) !important; }
+body.clock-in-chat #panel .panel-head .chat-tools { overflow: hidden; }
+body.clock-in-chat #panel .panel-head .chat-tools .chat-tool { height: 34px !important; flex: 0 1 auto !important; min-width: 0 !important; width: auto !important; padding: 0 5px !important; }
+body.clock-in-chat #panel .panel-head .chat-tools .chat-tool:not(.chat-word) { width: 26px !important; padding: 0 !important; flex: none !important; }
+body.clock-in-chat #panel .panel-head .chat-tools .chat-tool.chat-word { font: 600 14px/1 var(--body) !important; padding: 0 4px !important; flex: none !important; }
+body.clock-in-chat .panel-head .chess-clock { padding: 0 10px !important; }
+body.clock-in-chat .panel-head .chess-clock-time { font-size: 16px !important; }
+@media (max-width: 410px) { body.clock-in-chat #panel .panel-head #btnChatCam { display: none !important; } }
+body.clock-in-chat #panel .panel-head .chat-tools .chat-tool svg { width: 18px; height: 18px; }
+body.clock-in-chat .panel-head > * { margin-left: 0 !important; margin-right: 0 !important; }
+body.clock-in-chat .panel-head .head-gap { display: none !important; }
+body.clock-in-chat .panel-head .chess-clock-actions:not(:has(button:not([hidden]))) { display: none !important; }
+body.clock-in-chat #panel .panel-head .chat-clear, body.clock-in-chat #panel .panel-head .sheet-close { flex: none; margin: 0 !important; width: 36px !important; height: 36px !important; border-radius: 50% !important;
+  background-color: rgba(255,255,255,.06) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08) !important; display: grid; place-items: center; }
 /* Phones: the plate looks the same with chat open or closed (no size jump) */
 body.clock-in-plate #plateTop { max-width: calc(100vw - 206px) !important; box-sizing: border-box; padding-left: 12px !important; padding-right: 12px !important; gap: 9px !important; }
 body.clock-in-plate #plateTop .orb { display: block !important; width: 16px !important; height: 16px !important; }

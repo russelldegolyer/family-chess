@@ -18,6 +18,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 **Improved**
 - Phones: the opponent's clock sits inside their name plate (one button, player colour border) instead of a separate box below. Challenges and Online pills are a little slimmer in games to make room. The plate stays the same size with chat open or closed.
+- Chat header on phones: clock, tools, clear and close are one even row of matching pills (the clock turns green on your turn, red when low); the reset-view button is left out there since the board is flat with chat open.
 
 ## 2026-11-12 — Accuracy, captured pieces, new opening screen (deployed 5:53 PM)
 
