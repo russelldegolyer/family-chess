@@ -48,4 +48,9 @@ Russell: computer pieces are plain white or black. Vs the computer, only the hum
 Russell: chapters build on each other, all open with a recommended next, personal only (no family progress/races). Chapter progress lives in the training profile (`P.path`), alongside lessons and challenges.
 
 ## D-31 Voice chat (2026-11-13)
-WebRTC audio between the two players' apps; signalling over a Supabase realtime broadcast channel per game (`chess-voice-<gameId>`), no database tables. Open line with mute, tap-and-accept to start. STUN only for now (a TURN relay can be added if some networks fail to connect). `vercel.json` allows `microphone=(self)`.
+WebRTC audio between the two players' apps (encrypted by WebRTC, never recorded or stored). Handshake on a PRIVATE
+Supabase realtime channel `chess-voice:<userA>:<userB>` (ids sorted); RLS policies `chess_voice_pair_listen/send` on
+`realtime.messages` allow only those two friends and only topics starting `chess-voice:`. Tap-and-accept to start; the
+call follows the pair (survives game end, review, Home, new games) and ends when either taps the mic or leaves the app.
+Mic is requested only on tap and released on end. STUN only for now (TURN relay if some networks fail).
+`vercel.json` allows `microphone=(self)`.

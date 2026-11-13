@@ -17,7 +17,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Added**
-- **Voice chat** in live games: tap the mic, the other player gets "X wants to talk — Join / Not now". Open line with mute and hang up; no phone numbers, audio goes app to app. Ends when either of you leaves the game.
+- **Voice chat**: tap the mic in a live game; the other player gets "X wants to talk — Join / Not now". Once connected it stays on through the end of the game, review, Home and new games, until either of you taps the green mic or leaves the app. Separate mute button. No phone numbers; audio goes app to app, encrypted, never recorded; the handshake channel is private to the two friends.
 
 ## 2026-11-12 — Your path, desktop polish (deployed 11:11 PM)
 

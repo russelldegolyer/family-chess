@@ -1,7 +1,11 @@
-/* Voice chat for live games between two players (no phone numbers: internet audio between the two apps).
+/* Voice chat between two players (no phone numbers: internet audio between the two apps).
    Tap the mic to call; the other player gets "X wants to talk — Join / Not now". Once joined it is an open
-   line with mute and hang up. Audio goes phone-to-phone (WebRTC); the game's Supabase realtime connection
-   only carries the short "how to reach me" messages. Nothing is recorded or stored. */
+   line that stays up through the end of the game, review and new games. It ends when either of you taps the
+   green mic again or leaves the app.
+   Privacy: the microphone is only opened after a tap (call or Join) and is fully released the moment the call
+   ends. Audio goes straight between the two apps, encrypted by WebRTC (DTLS-SRTP); it is never recorded,
+   uploaded or stored. The short "how to reach me" handshake runs on a PRIVATE realtime channel that only the
+   two signed-in friends can join (database rule chess_voice_pair_*). */
 (() => {
   'use strict';
   const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
@@ -33,10 +37,9 @@
 #voiceBox button:active{transform:scale(.96)}
 #voiceBox[data-s="calling"] .v-main,#voiceBox[data-s="connecting"] .v-main{color:#7ee99a;animation:vPulse 1.2s ease-in-out infinite}
 #voiceBox[data-s="live"] .v-main{background:#1f8f45;color:#fff;box-shadow:0 0 0 2px rgba(48,209,88,.5),0 6px 18px rgba(0,0,0,.45)}
-#voiceBox[data-s="live"].muted .v-main{background:#3a3a3e;color:#ff8b84;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
 #voiceBox[data-s="live"].talking .v-main{box-shadow:0 0 0 4px rgba(48,209,88,.75),0 0 18px rgba(48,209,88,.6)}
-#voiceBox .v-end{background:#d93025;color:#fff}
-#voiceBox .v-end[hidden]{display:none}
+#voiceBox .v-mute[hidden]{display:none}
+#voiceBox.muted .v-mute{background:#d93025;color:#fff}
 #voiceBox .v-lbl{font:600 12px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#c7c7cc;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 #voiceBox .v-lbl:empty{display:none}
 #voiceBox.inline{position:static;gap:6px}
@@ -59,12 +62,12 @@
     document.head.append(css);
     box = document.createElement('div'); box.id = 'voiceBox'; box.dataset.s = 'idle';
     mainBtn = document.createElement('button'); mainBtn.type = 'button'; mainBtn.className = 'v-main';
-    endBtn = document.createElement('button'); endBtn.type = 'button'; endBtn.className = 'v-end'; endBtn.innerHTML = HANG; endBtn.hidden = true;
-    endBtn.setAttribute('aria-label', 'Hang up');
+    endBtn = document.createElement('button'); endBtn.type = 'button'; endBtn.className = 'v-mute'; endBtn.innerHTML = MIC_OFF; endBtn.hidden = true;
+    endBtn.setAttribute('aria-label', 'Mute');
     const lbl = document.createElement('span'); lbl.className = 'v-lbl';
     box.append(lbl, endBtn, mainBtn); document.body.append(box);
     mainBtn.addEventListener('click', onMain);
-    endBtn.addEventListener('click', () => hangUp(true));
+    endBtn.addEventListener('click', toggleMute);
     ring = document.createElement('div'); ring.id = 'voiceRing'; ring.hidden = true; ring.setAttribute('role', 'alertdialog');
     ring.innerHTML = '<span class="vr-ico">' + MIC + '</span><span class="vr-txt"><b></b><span>Voice chat</span></span><button type="button" class="vr-no">Not now</button><button type="button" class="vr-yes">Join</button>';
     document.body.append(ring);
@@ -77,7 +80,7 @@
   /* phones with chat closed: floating above the chat button; otherwise inline in the chat header */
   function place() {
     if (!box) return;
-    const show = !!S.gid && !!S.opp && supported() && !document.body.classList.contains('pregame') && !document.body.classList.contains('training-open');
+    const show = !!S.opp && S.inGame && supported() && !document.body.classList.contains('pregame') && !document.body.classList.contains('training-open');
     box.classList.toggle('show', show || S.state !== 'idle');
     const fab = $('chatFab'), fr = fab && getComputedStyle(fab).display !== 'none' ? fab.getBoundingClientRect() : null;
     const head = document.querySelector('#panel .panel-head'), clear = head?.querySelector('.chat-clear');
@@ -87,29 +90,38 @@
       box.style.right = Math.round(window.innerWidth - fr.right + (fr.width - 46) / 2) + 'px';
       box.style.bottom = Math.round(window.innerHeight - fr.top + 12) + 'px';
       box.style.flexDirection = 'row';
-    } else if (head) {
+    } else if (head && head.getClientRects().length && getComputedStyle(head).visibility !== 'hidden' && head.getBoundingClientRect().bottom > 0) {
       if (box.parentNode !== head) (clear ? clear.before(box) : head.append(box));
       box.classList.add('inline'); box.style.right = box.style.bottom = '';
+    } else {   /* opening screen, menus: keep a call reachable at the bottom right */
+      if (box.parentNode !== document.body) document.body.append(box);
+      box.classList.remove('inline');
+      const card = document.body.classList.contains('pregame') ? document.querySelector('.pg-bottom')?.getBoundingClientRect() : null;
+      box.style.right = 'max(16px, env(safe-area-inset-right, 0px))';
+      box.style.bottom = card && card.height ? Math.round(window.innerHeight - card.top + 12) + 'px' : 'calc(env(safe-area-inset-bottom, 0px) + 96px)';
     }
   }
   function paint() {
     if (!box) return;
     box.dataset.s = S.state;
     box.classList.toggle('muted', S.muted);
-    endBtn.hidden = S.state === 'idle' || S.state === 'ringing';
+    endBtn.hidden = S.state !== 'live';
+    endBtn.innerHTML = S.muted ? MIC : MIC_OFF; endBtn.setAttribute('aria-label', S.muted ? 'Unmute' : 'Mute'); endBtn.title = endBtn.getAttribute('aria-label');
     const lbl = box.querySelector('.v-lbl');
-    lbl.textContent = S.state === 'calling' ? 'Calling ' + S.oppName + '…' : S.state === 'connecting' ? 'Connecting…' : S.state === 'live' ? (S.muted ? 'Muted' : 'On call') : '';
-    mainBtn.innerHTML = S.state === 'live' && S.muted ? MIC_OFF : MIC;
-    mainBtn.setAttribute('aria-label', S.state === 'idle' ? 'Voice chat with ' + (S.oppName || 'your opponent') : S.state === 'live' ? (S.muted ? 'Unmute' : 'Mute') : 'Calling');
+    lbl.textContent = S.state === 'calling' ? 'Calling ' + S.oppName + '…' : S.state === 'connecting' ? 'Connecting…' : S.state === 'live' ? (S.muted ? 'Muted · ' : 'On call · ') + S.oppName : '';
+    mainBtn.innerHTML = MIC;
+    mainBtn.setAttribute('aria-label', S.state === 'idle' ? 'Voice chat with ' + (S.oppName || 'your opponent') : S.state === 'live' ? 'End voice chat' : 'Cancel call');
     mainBtn.title = mainBtn.getAttribute('aria-label');
     place();
   }
 
   /* ---------------- signalling over the game's realtime connection ---------------- */
-  function join(gid) {
+  async function join(pair) {
     leaveChannel();
-    const c = api(); if (!c || !gid) return;
-    S.ch = c.channel('chess-voice-' + gid, { config: { broadcast: { self: false } } });
+    const c = api(); if (!c || !pair) return;
+    try { await c.realtime?.setAuth?.(); } catch { /* older client: token is already on the socket */ }
+    if (S.pair !== pair) return;
+    S.ch = c.channel('chess-voice:' + pair, { config: { private: true, broadcast: { self: false } } });
     S.ch.on('broadcast', { event: 'v' }, ({ payload }) => onSignal(payload || {}));
     S.ch.subscribe();
   }
@@ -201,16 +213,18 @@
     S.pc = null; S.pendingIce = [];
     for (const t of S.local?.getTracks() || []) t.stop();
     S.local = null; S.remote = null; if (audio) audio.srcObject = null;
-    stopMeter(); S.needTap = false; S.state = 'idle'; S.muted = false; S.callId = null; paint();
+    stopMeter(); S.needTap = false; S.state = 'idle'; S.muted = false; S.callId = null;
+    if (lastView !== undefined) update(lastView); else paint();
   }
   function onMain() {
     if (S.state === 'idle') return void call();
     if (S.needTap) { S.needTap = false; void audio.play().catch(() => {}); return; }   /* iPhone: first tap only starts the sound */
-    if (S.state === 'live') {
-      S.muted = !S.muted; for (const t of S.local?.getAudioTracks() || []) t.enabled = !S.muted;
-      void audio.play().catch(() => {}); paint(); return;
-    }
-    if (S.state === 'calling' || S.state === 'connecting') hangUp(true);
+    hangUp(true);   /* on a call (or calling): the mic button ends it */
+  }
+  function toggleMute() {
+    if (S.state !== 'live') return;
+    S.muted = !S.muted; for (const t of S.local?.getAudioTracks() || []) t.enabled = !S.muted;
+    void audio.play().catch(() => {}); paint();
   }
   function showRing() {
     ring.querySelector('b').textContent = S.oppName + ' wants to talk';
@@ -235,19 +249,25 @@
 
   /* ---------------- game hookup ---------------- */
   /* called by the game whenever the online view changes */
+  let lastView = null;
   function update(v) {
-    build();
+    build(); lastView = v;
     const live = v && v.gameId && v.userId && (v.mySeat === 'w' || v.mySeat === 'b') && v.whiteId && v.blackId && v.status !== 'waiting';
-    const gid = live ? v.gameId : null;
+    S.inGame = !!live;
+    /* during a call nothing about the game changes it: game over, review, a new game, even Home keep talking */
+    if (S.state !== 'idle') { paint(); return; }
     const opp = live ? (v.mySeat === 'w' ? v.blackId : v.whiteId) : null;
-    if (gid !== S.gid || opp !== S.opp) {
-      if (S.state !== 'idle') hangUp(true);
-      S.gid = gid; S.opp = opp; S.me = live ? v.userId : null;
-      if (gid) join(gid); else leaveChannel();
-    }
+    const pair = live ? [v.userId, opp].sort().join(':') : null;
+    if (pair !== S.pair) { S.pair = pair; S.opp = opp; S.me = live ? v.userId : null; if (pair) void join(pair); else leaveChannel(); }
     if (live) { S.oppName = (v.mySeat === 'w' ? v.blackName : v.whiteName) || 'Your opponent'; S.myName = (v.mySeat === 'w' ? v.whiteName : v.blackName) || ''; }
     paint();
   }
+  /* leaving the app ends the call: closing it, or (phones) switching away from it */
   window.addEventListener('pagehide', () => hangUp(true));
+  let awayTimer = 0;
+  document.addEventListener('visibilitychange', () => {
+    clearTimeout(awayTimer);
+    if (document.visibilityState === 'hidden' && matchMedia('(pointer: coarse)').matches) awayTimer = setTimeout(() => { if (document.visibilityState === 'hidden') hangUp(true); }, 4000);
+  });
   window.familyChessVoice = { update, hangUp: () => hangUp(true), state: () => S.state };
 })();
