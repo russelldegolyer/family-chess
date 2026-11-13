@@ -135,19 +135,21 @@
     const plate=document.getElementById('plateTop'),title=document.querySelector('#panel .panel-head .chat-title');
     // Phones (portrait): the opponent's clock always lives inside their name plate - one button, not two.
     const phone=document.body.classList.contains('compact')&&!document.body.classList.contains('landscape');
+    const desk=!document.body.classList.contains('compact');   // desktop: both clocks live inside the name plates too
     if(row&&plate&&title){
       if(nodes[opp].node.parentNode!==plate) plate.append(nodes[opp].node);
       if(nodes[own].node.nextSibling!==actions||actions.nextSibling!==title) title.before(nodes[own].node,actions);
     }else if(hud.prepend){
       // Phones: your clock lives inside your own floating plate (mirror of the opponent's).
       const mine=document.getElementById('plateBottom');
-      if(phone&&mine&&mine.classList.contains('plate-floating')){ if(nodes[own].node.parentNode!==mine) mine.append(nodes[own].node); if(actions.parentNode!==hud) hud.append(actions); }
+      if(mine&&((phone&&mine.classList.contains('plate-floating'))||desk)){ if(nodes[own].node.parentNode!==mine) mine.append(nodes[own].node); if(actions.parentNode!==hud) hud.append(actions); }
       else if(nodes[own].node.parentNode!==hud){ hud.prepend(nodes[own].node); hud.append(actions); }
-      if(phone&&plate){ if(nodes[opp].node.parentNode!==plate) plate.append(nodes[opp].node); }
+      if((phone||desk)&&plate){ if(nodes[opp].node.parentNode!==plate) plate.append(nodes[opp].node); }
       else if(nodes[opp].node.parentNode!==hud) hud.prepend(nodes[opp].node);
     }
     document.body.classList.toggle('clock-in-chat',!!(row&&plate&&title));
     document.body.classList.toggle('clock-in-plate',!!(phone&&plate));
+    document.body.classList.toggle('clocks-in-plates',!!(desk&&plate));
     nodes[opp].node.style.top=top+'px';
     const ownTop=bottom;
     nodes[own].node.style.top=ownTop+'px';

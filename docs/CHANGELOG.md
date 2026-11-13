@@ -16,7 +16,14 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ## Unreleased
 
+**Improved** (desktop)
+- Name plates are bigger and each clock sits inside its plate; the bottom bar is one bar instead of two boxes.
+
 **Added**
+- Voice chat: a soft ring sound for incoming calls; calls reach a friend anywhere in the app (Home, Challenges, review), not only inside the same game; a push notification ("Russell wants to talk") so a closed app can open and join; the caller keeps ringing for 35 s so a phone opened from the notification still catches it.
+- Voice chat can use a relay server for mobile networks that block direct calls, once one is configured (Edge Secrets `CHESS_TURN_URLS`, `CHESS_TURN_USERNAME`, `CHESS_TURN_CREDENTIAL`).
+- **Daily puzzle** on the Challenges page: one puzzle a day from the chapter you're on, with a 🔥 streak.
+- End card: when your biggest swing missed a checkmate, a free piece or a fork, a **Practise** link opens that chapter of Your path.
 - **Voice chat**: tap the mic in a live game; the other player gets "X wants to talk — Join / Not now". Once connected it stays on through the end of the game, review, Home and new games, until either of you taps the green mic or leaves the app. Separate mute button. No phone numbers; audio goes app to app, encrypted, never recorded; the handshake channel is private to the two friends.
 
 ## 2026-11-12 — Your path, desktop polish (deployed 11:11 PM)

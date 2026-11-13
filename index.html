@@ -17,7 +17,7 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=13"></script>
+<script defer src="./chess-clock.js?v=14"></script>
 <script defer src="./chess-online.js?v=22"></script>
 <script defer src="./chess-chat.js?v=8"></script>
 <script defer src="./chess-voice.js?v=3"></script>
@@ -1388,11 +1388,34 @@ body.pregame #plateBottom.plate-floating, body.training #plateBottom.plate-float
    in 2D the 3D scene is hidden rather than ghosting behind the flat board */
 body:not(.compact) .panel-head .chat-tools { display: none !important; }
 body:not(.compact).view-2d #stage { opacity: 0 !important; }
+/* Desktop: bigger name plates with each clock inside its own plate (like phones) */
+body:not(.compact) .plate { min-height: 54px; padding: 7px 14px 7px 12px; gap: 10px; }
+body:not(.compact) .plate .pname { font-size: 19px; }
+body:not(.compact) .plate .ptag { font-size: 12px; }
+body.clocks-in-plates #plateBottom .chess-clock { position: static !important; top: auto !important; left: auto !important; width: auto !important; min-width: 0; flex: none; display: flex; align-items: center;
+  margin-left: 4px; padding: 0 0 0 12px; height: 34px; border: 0; border-left: 1px solid rgba(255,255,255,.14); border-radius: 0; background: none; box-shadow: none; }
+body.clocks-in-plates #plateBottom .chess-clock::after, body.clocks-in-plates #plateBottom .chess-clock-label { display: none; }
+body.clocks-in-plates #plateBottom .chess-clock-time, body.clocks-in-plates #plateTop .chess-clock-time { font: 750 22px/1 var(--body); letter-spacing: -.02em; color: #f2f2f6; font-variant-numeric: tabular-nums; }
+body.clocks-in-plates #plateBottom .chess-clock.active .chess-clock-time { color: #83efac; }
+body.clocks-in-plates #plateBottom .chess-clock.low .chess-clock-time { color: #ff8b98; }
+body.reviewing #plateBottom .chess-clock { display: none !important; }
+body:not(.compact) #plateBottom { flex: none !important; width: auto !important; }
+body:not(.compact) #plateBottom .pwrap { min-width: 0; flex: none; }
+body:not(.compact) #plateBottom .pname { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+/* Desktop: one bottom bar instead of two boxes */
+body:not(.compact) .bottom-bar { right: auto; justify-content: flex-start; gap: 0; padding: 5px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); background: rgba(20,18,16,.78);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 10px 28px rgba(0,0,0,.35); max-width: calc(100vw - var(--area-r) - var(--gl) - var(--gr)); }
+body:not(.compact) .bottom-bar .controls, body:not(.compact) .bottom-bar .mine { background: none !important; border: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+body:not(.compact) .bottom-bar .controls { position: relative; margin-left: 6px; padding-left: 11px !important; }
+body.clocks-in-plates:not(.compact) .board-chip .chip-text { display: none; }
+body.clocks-in-plates:not(.compact) .board-chip { padding: 3px !important; }
+body:not(.compact) .bottom-bar .mine, body:not(.compact) .bottom-bar .controls { flex: none; }
+body:not(.compact) .bottom-bar .controls::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 1px; background: rgba(255,255,255,.12); }
 /* Phones: the plate looks the same with chat open or closed (no size jump) */
-body.clock-in-plate #plateTop { max-width: calc(100vw - 206px) !important; box-sizing: border-box; padding-left: 12px !important; padding-right: 12px !important; gap: 9px !important; }
-body.clock-in-plate #plateTop .orb { display: block !important; width: 16px !important; height: 16px !important; }
-body.clock-in-plate #plateTop .chess-clock { margin-left: 2px !important; padding-left: 10px !important; }
-body.clock-in-plate #plateTop .chess-clock-time { font-size: 19px !important; }
+body.compact.clock-in-plate #plateTop { max-width: calc(100vw - 206px) !important; box-sizing: border-box; padding-left: 12px !important; padding-right: 12px !important; gap: 9px !important; }
+body.compact.clock-in-plate #plateTop .orb { display: block !important; width: 16px !important; height: 16px !important; }
+body.compact.clock-in-plate #plateTop .chess-clock { margin-left: 2px !important; padding-left: 10px !important; }
+body.compact.clock-in-plate #plateTop .chess-clock-time { font-size: 19px !important; }
 @media (max-width: 400px) { body.clock-in-plate #plateTop .orb { display: none !important; } }
 body.clock-in-chat #plateTop .pname, body.clock-in-plate #plateTop .pname { max-width: 26vw; }
 body.clock-in-chat #plateTop .chess-clock, body.clock-in-plate #plateTop .chess-clock { flex: none; }
