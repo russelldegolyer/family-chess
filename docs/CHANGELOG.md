@@ -14,6 +14,16 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Added**
+- End card: **Biggest swing** line under accuracy (your costliest move, e.g. "move 14… Nf3"); tap it to jump straight into Review at that move. A clean game says so.
+
+**Improved**
+- Phones: your own name plate now floats above the bottom bar with your clock inside, matching the opponent's plate. Captured pieces sit beside it.
+- Long names show the first name only on phones; names are a little smaller on narrow screens.
+- 3D last move is a softer yellow, matching the 2D board.
+
 ## 2026-11-12 — Clock in the name plate, tidier chat header (deployed 7:30 PM)
 
 **Improved**

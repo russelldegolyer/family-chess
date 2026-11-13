@@ -235,7 +235,7 @@
      Each move is scored by how much of the mover's winning chances it gave away compared with the
      engine's best move (Lichess's published formula), then a game score blends the average with the
      harmonic mean so a few big blunders weigh in properly. Runs on this device; cached per game. */
-  const AKEY = 'chess.acc1.';
+  const AKEY = 'chess.acc2.';
   const winPct = (cp) => { const c = Math.max(-1500, Math.min(1500, cp)); return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * c)) - 1); };
   function moveAcc(r, uci) {
     if (!r || !Number.isFinite(r.bestScore) || !Number.isFinite(r.playedScore)) return null;
@@ -256,14 +256,19 @@
     const hit = accCached(key); if (hit) return Promise.resolve(hit);
     if (running.has(key)) return running.get(key);
     const job = (async () => {
-      const per = { w: [], b: [] };
+      const per = { w: [], b: [] }, swing = { w: null, b: null };
       for (let i = 0; i < moves.length; i++) {
         const side = fens[i].split(' ')[1] === 'b' ? 'b' : 'w';
         const r = await engine(fens[i], moves[i]); const a = moveAcc(r, moves[i]);
         if (a != null) per[side].push(a);
+        /* the move that gave away the most winning chances, per side (only if it really mattered) */
+        if (r && Number.isFinite(r.bestScore) && Number.isFinite(r.playedScore) && r.move !== moves[i]) {
+          const drop = winPct(r.bestScore) - winPct(Math.min(r.playedScore, r.bestScore));
+          if (drop >= 12 && (!swing[side] || drop > swing[side].drop)) swing[side] = { ply: i + 1, drop: Math.round(drop), best: r.move || null };
+        }
         try { onProgress?.(i + 1, moves.length); } catch { /* UI only */ }
       }
-      const out = { w: gameAcc(per.w), b: gameAcc(per.b) };
+      const out = { w: gameAcc(per.w), b: gameAcc(per.b), swing };
       if (out.w != null || out.b != null) try { localStorage.setItem(AKEY + key, JSON.stringify(out)); } catch { /* memory only */ }
       return out;
     })().finally(() => running.delete(key));

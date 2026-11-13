@@ -17,7 +17,7 @@
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=12"></script>
+<script defer src="./chess-clock.js?v=13"></script>
 <script defer src="./chess-online.js?v=20"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
@@ -25,7 +25,7 @@
 <script defer src="./chess-social.js?v=18"></script>
 <link rel="stylesheet" href="./chess-training.css?v=17">
 <link rel="stylesheet" href="./chess-stats.css?v=2">
-<script defer src="./chess-stats.js?v=2"></script>
+<script defer src="./chess-stats.js?v=3"></script>
 <script defer src="./chess-training.js?v=21"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -1191,6 +1191,13 @@ body.compact.chat2d:not(.landscape) .chat-list>.chat-empty-state { background: r
 #endCard .ec-acc-cell span { font: 500 12px/1.1 var(--body); color: #a1a1a6; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #endCard .ec-acc-cell.me { background: rgba(48,209,88,.14); box-shadow: inset 0 0 0 1px rgba(48,209,88,.35); }
 #endCard .ec-acc-cell.me b { color: #7ee99a; }
+#endCard .ec-acc-tip { display: grid; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: auto auto; align-items: center; column-gap: 10px; row-gap: 3px; width: 100%; margin-top: 10px; padding: 10px 12px; border: 0; border-radius: 12px; background: rgba(255,159,10,.12);
+  box-shadow: inset 0 0 0 1px rgba(255,159,10,.3); color: #f2f2f7; font: 500 13px/1.2 var(--body); text-align: left; cursor: pointer; }
+#endCard .ec-acc-tip span { grid-column: 1; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #ffb340; }
+#endCard .ec-acc-tip b { grid-column: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#endCard .ec-acc-tip em { grid-column: 2; grid-row: 1 / span 2; font-style: normal; font-weight: 600; color: #ffb340; }
+#endCard .ec-acc-tip:active { filter: brightness(1.2); }
+#endCard .ec-acc-note { margin-top: 10px; font: 500 13px/1.3 var(--body); color: #7ee99a; }
 #endCard .ec-acc-bar { margin-top: 10px; height: 4px; border-radius: 2px; background: #2c2c30; overflow: hidden; }
 #endCard .ec-acc-bar i { display: block; height: 100%; background: #30d158; transition: width .25s ease; }
 #endCard .ec-meta span { padding: 5px 10px; border-radius: 999px; background: #2c2c30; font: 600 12px/1 var(--body); color: #c7c7cc; }
@@ -1318,6 +1325,24 @@ body.clock-in-chat .panel-head .head-gap { display: none !important; }
 body.clock-in-chat .panel-head .chess-clock-actions:not(:has(button:not([hidden]))) { display: none !important; }
 body.clock-in-chat #panel .panel-head .chat-clear, body.clock-in-chat #panel .panel-head .sheet-close { flex: none; margin: 0 !important; width: 36px !important; height: 36px !important; border-radius: 50% !important;
   background-color: rgba(255,255,255,.06) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08) !important; display: grid; place-items: center; }
+/* Phones: your own plate floats bottom-left above the bar, matching the opponent's plate */
+body.compact #plateBottom.plate-floating { display: inline-flex !important; position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); z-index: 31;
+  flex: none !important; min-width: 0; min-height: 50px !important; max-width: calc(100vw - 206px) !important; overflow: hidden; box-sizing: border-box;
+  padding: 6px 12px !important; gap: 9px !important; background: rgba(22,22,25,.94) !important; }
+body.compact #plateBottom.plate-floating .ptag { display: block !important; font-size: 11.5px !important; }
+body.compact #plateBottom.plate-floating .pname { font-size: 18px !important; max-width: 26vw !important; }
+body.compact #plateBottom.plate-floating .orb { width: 16px !important; height: 16px !important; }
+body.compact #plateBottom.plate-floating .pcap, body.compact #plateBottom.plate-floating .plate-turn-hint { display: none !important; }
+body.compact #plateBottom.plate-floating .chess-clock { position: static !important; top: auto !important; left: auto !important; width: auto !important; min-width: 0; flex: none; display: flex; align-items: center;
+  margin-left: 2px; padding: 0 0 0 10px; height: 34px; border: 0; border-left: 1px solid rgba(255,255,255,.14); border-radius: 0; background: none; box-shadow: none; }
+body.compact #plateBottom.plate-floating .chess-clock::after { display: none; }
+body.compact #plateBottom.plate-floating .chess-clock-label { display: none; }
+body.compact #plateBottom.plate-floating .chess-clock-time { font: 750 19px/1 var(--body); letter-spacing: -.02em; color: #f2f2f6; font-variant-numeric: tabular-nums; }
+body.compact #plateBottom.plate-floating .chess-clock.active .chess-clock-time { color: #83efac; }
+body.compact #plateBottom.plate-floating .chess-clock.low .chess-clock-time { color: #ff8b98; }
+body.pregame #plateBottom.plate-floating, body.training #plateBottom.plate-floating, body.reviewing #plateBottom.plate-floating .chess-clock { visibility: hidden !important; }
+@media (max-width: 400px) { body.compact #plateBottom.plate-floating .orb { display: none !important; }
+  body.compact #plateBottom.plate-floating .pname, body.clock-in-plate #plateTop .pname { font-size: 16px !important; } }
 /* Phones: the plate looks the same with chat open or closed (no size jump) */
 body.clock-in-plate #plateTop { max-width: calc(100vw - 206px) !important; box-sizing: border-box; padding-left: 12px !important; padding-right: 12px !important; gap: 9px !important; }
 body.clock-in-plate #plateTop .orb { display: block !important; width: 16px !important; height: 16px !important; }
@@ -3267,8 +3292,8 @@ function updateMarkers() {
   placeSq(MK.lastTo, last && last.to);
   { const rm = resumeMoves(); for (let i = 0; i < 4; i++) placeSq(MK.resume[i], null);
     if (rm) for (const m of rm) { const k = m.color === 'w' ? 0 : 2; placeSq(MK.resume[k], m.from); placeSq(MK.resume[k + 1], m.to); } }
-  MK.lastTo.material.opacity = pending ? 0.32 : 0.5;
-  MK.lastFrom.material.opacity = 0.3;
+  MK.lastTo.material.opacity = pending ? 0.22 : 0.34;   /* soft wash, matching the 2D board */
+  MK.lastFrom.material.opacity = 0.2;
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   placeSq(MK.check, kingSq || null);
   const live = selected && canAct();
@@ -3296,7 +3321,9 @@ function fillPlate(node, side) {
   node.classList.toggle('black', side === 'b');
   node.classList.toggle('white', side === 'w');
   node.querySelector('.orb').className = 'orb' + (side === 'w' ? ' white' : '');
-  node.querySelector('.pname').textContent = seatName(side);
+  { const full = seatName(side), pn = node.querySelector('.pname');
+    const short = compact && full.length > 10 && /\s/.test(full) ? full.split(/\s+/)[0] : full;   /* phones: first name if long */
+    pn.textContent = short; pn.title = full; }
   const pos = displayPos();
   const turn = G.status === 'active' && !review && seatsReady() && pos.chess.turn() === side;
   node.classList.toggle('turn', turn);
@@ -3408,11 +3435,28 @@ function fillCapStrip(el, side, pos) {
   el.setAttribute('aria-label', seatName(side) + (taken.length ? ' has taken ' + taken.length + ' piece' + (taken.length > 1 ? 's' : '') : '') + (lead ? ', ahead by ' + lead : ''));
   return taken.length || lead;
 }
+/* Phones: your name plate floats above the bottom bar (same look as the opponent's, clock inside). */
+let myPlateHome = null;
+function placeMyPlate() {
+  const pl = $('plateBottom'); if (!pl) return null;
+  const b = document.body.classList;
+  const float = compact && !b.contains('landscape') && !b.contains('chat2d');
+  if (!myPlateHome) { myPlateHome = document.createComment('plateBottom'); pl.before(myPlateHome); }
+  if (float) {
+    if (pl.parentNode !== document.body) document.body.append(pl);
+    pl.classList.add('plate-floating');
+    const bar = document.querySelector('.bottom-bar')?.getBoundingClientRect();
+    if (bar) pl.style.bottom = Math.round(window.innerHeight - bar.top + 10) + 'px';
+  } else if (pl.classList.contains('plate-floating')) {
+    myPlateHome.after(pl); pl.classList.remove('plate-floating'); pl.style.bottom = '';
+  }
+  return float ? pl : null;
+}
 function updateCapStrips() {
   const top = capStrip('capTop'), bot = capStrip('capBottom');
   const b = document.body.classList;
   const show = compact && !b.contains('landscape') && !b.contains('pregame') && !b.contains('training') && !review && G.mode !== 'connecting' && $('endCard')?.hidden !== false;
-  if (!show) { top.hidden = bot.hidden = true; return; }
+  if (!show) { top.hidden = bot.hidden = true; placeMyPlate(); return; }
   const pos = displayPos();
   const tHas = fillCapStrip(top, other(viewSide), pos), bHas = fillCapStrip(bot, viewSide, pos);
   const pr = $('plateTop').getBoundingClientRect(), bar = document.querySelector('.bottom-bar')?.getBoundingClientRect();
@@ -3420,11 +3464,13 @@ function updateCapStrips() {
   if (bar) {
     const rb = document.querySelector('.resume-banner'), rr = rb && !rb.hidden && rb.getClientRects().length ? rb.getBoundingClientRect() : null;
     const chat = b.contains('chat2d') ? $('panel')?.getBoundingClientRect() : null;
-    const myClock = !chat ? document.querySelector('#chessClockHud:not([hidden]) .clock-bottom') : null, mc = myClock?.getClientRects().length ? myClock.getBoundingClientRect() : null;
+    const mine = placeMyPlate(), mp = mine && !document.body.classList.contains('pregame') ? mine.getBoundingClientRect() : null;
     if (chat) {                       /* chat open: just above the chat sheet */
       bot.style.left = Math.round(bar.left + 10) + 'px'; bot.style.bottom = Math.round(window.innerHeight - chat.top + 8) + 'px';
-    } else if (mc && mc.width) {      /* your clock floats above the bar: sit beside it, not on it */
-      bot.style.left = Math.round(mc.right + 8) + 'px'; bot.style.bottom = Math.round(window.innerHeight - (mc.top + mc.height / 2) - 13) + 'px';
+    } else if (mp && mp.width) {      /* beside your plate, or above it when there is no room */
+      const sw = bot.getBoundingClientRect().width || 120;
+      if (mp.right + 8 + sw <= window.innerWidth - 8) { bot.style.left = Math.round(mp.right + 8) + 'px'; bot.style.bottom = Math.round(window.innerHeight - (mp.top + mp.height / 2) - 13) + 'px'; }
+      else { bot.style.left = Math.round(mp.left + 6) + 'px'; bot.style.bottom = Math.round(window.innerHeight - mp.top + 8) + 'px'; }
     } else { bot.style.left = Math.round(bar.left + 10) + 'px'; bot.style.bottom = Math.round(window.innerHeight - bar.top + 10) + 'px'; }
     if (rr && rr.height && !chat) bot.dataset.covered = '1'; else delete bot.dataset.covered;
   }
@@ -3558,8 +3604,8 @@ function applyTheme(t) {
   /* no lights shining down on the board: no glare spots */
   for (const l of rig.children) l.intensity = 0;
   rig.visible = false;
-  MK.lastFrom.material.color.setHex(0xffd60a);
-  MK.lastTo.material.color.setHex(0xffd60a);
+  MK.lastFrom.material.color.setHex(0xf3d36a);
+  MK.lastTo.material.color.setHex(0xf3d36a);
   MK.check.material.map = CHECK_TEX[THEME]; MK.check.material.needsUpdate = true;
   for (const p of meshes) { p.mesh.geometry = geoFor(p.type); orientMesh(p.mesh, p.type, p.color, p.tgt.x); p.mesh.castShadow = D.shadows; setPieceHighlight(p, !p.dying && !!selected && p.sq === selected); syncBlob(p); }
   requestRender();
@@ -5706,6 +5752,19 @@ function fillEndAccuracy(me) {
       cell.append(v, n); row.append(cell);
     }
     box.append(row);
+    /* one coaching line: your biggest swing (or the first one in a two-player game), tap to review it */
+    const who = me || 'w', sw = acc?.swing?.[who] || (!me ? acc?.swing?.b : null);
+    if (acc && sw) {
+      const mv = Math.ceil(sw.ply / 2) + (sw.ply % 2 ? '.' : '…');
+      let san = ''; try { san = positionFrom(G.moves, sw.ply).last?.san || ''; } catch { /* keep it plain */ }
+      const tip = el('button', 'ec-acc-tip'); tip.type = 'button';
+      tip.innerHTML = '<span>Biggest swing</span><b></b><em>Review ›</em>';
+      tip.querySelector('b').textContent = (me ? '' : (sw === acc.swing.w ? 'White · ' : 'Black · ')) + 'move ' + mv + ' ' + san;
+      tip.addEventListener('click', () => { endDismissed = endKey(); $('endCard').hidden = true; beginGameReview(); setTimeout(() => reviewTo(sw.ply), 60); });
+      box.append(tip);
+    } else if (acc && me && acc[me] != null && acc[me] >= 85) {
+      const tip = el('div', 'ec-acc-note'); tip.textContent = 'Clean game — no big swings.'; box.append(tip);
+    }
     if (!acc) { const bar = el('div', 'ec-acc-bar'); const i = el('i'); i.style.width = Math.round((done / Math.max(1, total)) * 100) + '%'; bar.append(i); box.append(bar); }
     box.hidden = false;
   };
