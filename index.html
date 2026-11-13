@@ -3945,6 +3945,13 @@ function artCentres() {
   return ART_C;
 }
 const LETTER = { k: 'K', q: 'Q', r: 'R', b: 'B', n: 'N', p: 'P' };
+/* The accent for black 2D pieces: online, the Black player's colour; practice, your own colour. */
+function blackAccent2D() {
+  let c = null;
+  if (G.mode === 'live' && !PG.on) { const uid = G.seats?.b; c = uid && uid === me.id ? myColor() : (G.colors && chromaOk(G.colors[uid]) ? G.colors[uid] : null); }
+  else c = myColor();
+  return c && hexOk(c) && lum(c) > 0.04 ? c : null;
+}
 function piece2D(type, color, scale = 1, halo = false) {
   const A = ART[type], W = color === 'w';
   const g = sv('g', { class: 'p2' });
@@ -3977,15 +3984,17 @@ function piece2D(type, color, scale = 1, halo = false) {
      never disappears into the square; on lighter squares the rim is left off */
   if (dark && !halo && C2 && hexOk(C2.dark) && contrast(C2.dark, base) < 2.2) for (const d of A.body) sv('path', { d, fill: 'none', stroke: 'rgba(238,236,230,0.5)', 'stroke-width': 4.4 }, inner);
   for (const d of A.body) sv('path', { d, fill: `url(#${id})`, stroke: 'none' }, inner);
-  const ink = dark ? mixHex(base, '#ffffff', 0.42) : mixHex(base, '#000000', 0.62);
+  /* Black pieces stay black, but their carving lines, marks and outline wear the player's colour (2D only) */
+  const acc = !W && dark ? blackAccent2D() : null;
+  const ink = acc ? acc : dark ? mixHex(base, '#ffffff', 0.42) : mixHex(base, '#000000', 0.62);
   for (const d of A.detail) sv('path', { d, fill: 'none', stroke: ink, 'stroke-width': dark ? 1.05 : 1.2, 'stroke-opacity': dark ? 0.85 : 0.9 }, inner);
-  for (const [cx, cy, rx, ry] of A.dots || []) sv('ellipse', { cx, cy, rx, ry, fill: dark ? mixHex(base, '#ffffff', 0.7) : '#151515' }, inner);
+  for (const [cx, cy, rx, ry] of A.dots || []) sv('ellipse', { cx, cy, rx, ry, fill: acc ? acc : dark ? mixHex(base, '#ffffff', 0.7) : '#151515' }, inner);
   /* signature marks (the bishop's slit) are drawn bold and in strong contrast so they read at a glance */
-  for (const d of A.cut || []) sv('path', { d, fill: 'none', stroke: dark ? mixHex(base, '#ffffff', 0.78) : mixHex(base, '#000000', 0.82), 'stroke-width': 2.1 }, inner);
+  for (const d of A.cut || []) sv('path', { d, fill: 'none', stroke: acc ? mixHex(acc, '#ffffff', 0.15) : dark ? mixHex(base, '#ffffff', 0.78) : mixHex(base, '#000000', 0.82), 'stroke-width': 2.1 }, inner);
   /* the black outline goes on last, so it always sits over the carving lines where they meet the edge */
   /* on near-black dark squares a heavy dark outline eats into light pieces, so it's drawn a little finer there */
   const fine = !dark && C2 && hexOk(C2.dark) && lum(C2.dark) < 0.03;
-  for (const d of A.body) sv('path', { d, fill: 'none', stroke: outline, 'stroke-width': fine ? 1.15 : 1.5 }, inner);
+  for (const d of A.body) sv('path', { d, fill: 'none', stroke: acc ? mixHex(acc, '#000000', 0.25) : outline, 'stroke-width': acc ? 1.35 : fine ? 1.15 : 1.5 }, inner);
   return g;
 }
 /* knights look toward the middle of the board: mirrored when they stand on the left half */
@@ -6524,7 +6533,7 @@ function trainExit() {
 const PIECE_IMG = {};
 window.familyChessPieceImg = (ch) => {
   const color = ch === ch.toUpperCase() ? 'w' : 'b', type = ch.toLowerCase();
-  const key = ch + (color === 'w' ? C2.wp : C2.bp) + PREF2D.pieces + (C2.dark || '');
+  const key = ch + (color === 'w' ? C2.wp : C2.bp + (blackAccent2D() || '')) + PREF2D.pieces + (C2.dark || '');
   if (PIECE_IMG[key]) return PIECE_IMG[key];
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); svg.setAttribute('viewBox', '-0.5 -0.5 1 1');

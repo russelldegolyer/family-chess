@@ -14,6 +14,11 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Improved**
+- 2D boards: black pieces stay black, but their outline and inner lines (and the bishop's slit) are drawn in the player's colour (practice: yours; online: the Black player's).
+
 ## 2026-11-12 — Your plate, biggest swing, softer 3D last move (deployed 8:37 PM)
 
 **Added**

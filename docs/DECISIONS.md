@@ -34,3 +34,6 @@ Dates are when the decision was made or shipped (2026).
 
 ## D-26 Accuracy (2026-11-12)
 Per-player accuracy uses Lichess's win-chance formula on the built-in engine, run on the player's device after the game. Online values are saved once per game via `chess_set_game_accuracy` (first values stay); computer games keep it in the device game log.
+
+## D-27 2D black-piece accents (2026-11-12)
+Refines D-07 for 2D only: black pieces keep a black body, but their outline and carving lines use the player's colour (practice: yours; online: the Black player's). 3D black pieces are unchanged.
