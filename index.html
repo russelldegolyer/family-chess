@@ -4049,10 +4049,10 @@ function piece2D(type, color, scale = 1, halo = false) {
   const outline = dark ? '#050505' : '#1a1a1a';
   /* a dark piece on dark squares (Black & White, or dark custom colours) gets a soft light rim so its shape
      never disappears into the square; on lighter squares the rim is left off */
-  if (dark && !halo && C2 && hexOk(C2.dark) && contrast(C2.dark, base) < 2.2) for (const d of A.body) sv('path', { d, fill: 'none', stroke: 'rgba(238,236,230,0.5)', 'stroke-width': 4.4 }, inner);
+  const acc = !W && dark ? blackAccent2D() : null;   /* coloured black pieces need no light rim */
+  if (dark && !acc && !halo && C2 && hexOk(C2.dark) && contrast(C2.dark, base) < 2.2) for (const d of A.body) sv('path', { d, fill: 'none', stroke: 'rgba(238,236,230,0.5)', 'stroke-width': 4.4 }, inner);
   for (const d of A.body) sv('path', { d, fill: `url(#${id})`, stroke: 'none' }, inner);
   /* Black pieces stay black, but their carving lines, marks and outline wear the player's colour (2D only) */
-  const acc = !W && dark ? blackAccent2D() : null;
   const ink = acc ? acc : dark ? mixHex(base, '#ffffff', 0.42) : mixHex(base, '#000000', 0.62);
   for (const d of A.detail) sv('path', { d, fill: 'none', stroke: ink, 'stroke-width': acc ? 0.85 : dark ? 1.05 : 1.2, 'stroke-opacity': acc ? 0.75 : dark ? 0.85 : 0.9 }, inner);
   for (const [cx, cy, rx, ry] of A.dots || []) sv('ellipse', { cx, cy, rx, ry, fill: acc ? acc : dark ? mixHex(base, '#ffffff', 0.7) : '#151515' }, inner);
