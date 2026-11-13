@@ -17,9 +17,14 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Added**
+- Online end card: **Rematch** sends your opponent a new challenge in one tap (and you can pick sides once they accept).
+- Chat follows the two of you: messages from your recent games together stay in the thread (with a "New game" marker), and you can keep chatting after a game ends.
 - Online games: a **Pick your side** card (White / Black) shows for both players until the first move. Tap the other side to switch seats for both of you. Not shown for resumed saved games.
 
 **Improved**
+- End card redesign: badge beside the result, tighter spacing, names instead of White/Black online; your plate, captured pieces and the status pill no longer show through it.
+- Opening a new online game closes the last game's review, so chat is back right away.
+- 3D board re-frames itself after an online game opens, so it never sits off in the distance.
 - 2D boards: black pieces stay black, but their outline and inner lines (and the bishop's slit) are drawn in the player's colour (practice: yours; online: the Black player's).
 
 ## 2026-11-12 — Your plate, biggest swing, softer 3D last move (deployed 8:37 PM)

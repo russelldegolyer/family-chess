@@ -1,4 +1,5 @@
-/* Per-match Supabase chat. Only the match participants can read or send. */
+/* Per-match Supabase chat. Only the match participants can read or send.
+   Player chat follows the pair: messages from your recent games with the same person stay in the thread. */
 (function familyChessChat() {
   'use strict';
   const db = window.chessSupabase;
@@ -26,7 +27,7 @@
   const state = {
     id: null, mode: null, view: null, messages: [], pending: [],
     loaded: false, error: '', generation: 0, channel: null, poll: null,
-    sending: false, readBusy: false, reread: false, seen: new Set(), names: {}, clearing:false, readAt:'1970-01-01T00:00:00Z', readReady:false, readLoading:false, unread:0, marking:false, markAgain:false, paintKey:''
+    sending: false, ids: new Set(), pairKey: '', readBusy: false, reread: false, seen: new Set(), names: {}, clearing:false, readAt:'1970-01-01T00:00:00Z', readReady:false, readLoading:false, unread:0, marking:false, markAgain:false, paintKey:''
   };
 
   const visible = () => {
@@ -38,8 +39,9 @@
   const table=()=>state.mode==='watch'?'chess_spectator_messages':'chess_chat_messages';
   function canSend(v = state.view) {
     if (!v || !state.id || v.gameId !== state.id || !v.userId ||
-        v.status!=='active' || state.sending || state.clearing) return false;
+        (state.mode==='watch' && v.status!=='active') || state.sending || state.clearing) return false;
     if(state.mode==='watch') return v.mySeat == null;
+    if(state.mode==='play' && !['active','finished','over'].includes(v.status)) return false;
     return state.mode==='play' && (v.mySeat==='w'||v.mySeat==='b') &&
       (v.userId===v.whiteId||v.userId===v.blackId);
   }
@@ -51,7 +53,7 @@
       ? (permitted ? 'Message other spectators…' : 'Spectator chat is closed')
       : !state.id
         ? 'Open a family game to chat'
-        : state.view?.status === 'finished' || state.view?.status === 'over'
+        : state.mode==='watch' && (state.view?.status === 'finished' || state.view?.status === 'over')
           ? 'This match has ended'
           : state.view?.status === 'waiting'
             ? 'Waiting for your opponent'
@@ -99,8 +101,10 @@
       frag.append(note('Private chat','Only the two players can view game messages.'));
     else if(!entries.length)frag.append(note(state.mode==='watch'?'Spectator chat':'Messages',
       state.loaded?'No messages yet. Say hello.':'Loading messages…'));
-    let previous=null,lastDay='';
+    let previous=null,lastDay='',lastGame=null;
     for(const m of entries){
+      if(lastGame&&m.game_id&&m.game_id!==lastGame){const g=document.createElement('div');g.className='fc-day fc-game';g.textContent='New game';frag.append(g);previous=null;}
+      if(m.game_id)lastGame=m.game_id;
       const date=new Date(m.created_at);
       const day=Number.isNaN(date.getTime())?'':date.toLocaleDateString([],{month:'short',day:'numeric'});
       if(day!==lastDay){
@@ -203,7 +207,7 @@
     if(!state.id)return;
     const latest=new Map((replace?[]:state.messages).map(m=>[m.id,m]));
     for(const row of rows||[]){
-      if(!row||row.game_id!==state.id||typeof row.body!=='string')continue;
+      if(!row||(row.game_id!==state.id&&!state.ids.has(row.game_id))||typeof row.body!=='string')continue;
       latest.set(row.id,row);
       state.pending=state.pending.filter(m=>m.id!==row.id);
     }
@@ -224,9 +228,21 @@
     state.readBusy=true;
     const id=state.id,generation=state.generation;
     try {
+      /* players: this game plus recent games with the same opponent, so the conversation carries on */
+      let ids=[id];
+      const v=state.view;
+      if(state.mode==='play'&&v?.whiteId&&v?.blackId){
+        const a=v.whiteId,b=v.blackId;
+        const {data:games}=await db.from('chess_games').select('id')
+          .in('white_player_id',[a,b]).in('black_player_id',[a,b])
+          .order('created_at',{ascending:false}).limit(15);
+        if(id!==state.id||generation!==state.generation) return;
+        ids=[...new Set([id,...(games||[]).map(g=>g.id)])];
+      }
+      state.ids=new Set(ids);
       const {data,error}=await db.from(table())
         .select('id,game_id,sender_id,body,created_at')
-        .eq('game_id',id)
+        .in('game_id',ids)
         .order('created_at',{ascending:false})
         .limit(100);
       if (id!==state.id||generation!==state.generation) return;
@@ -261,7 +277,7 @@
     state.clearing=false;state.names={};
     state.readAt='1970-01-01T00:00:00Z';state.readReady=false;state.readLoading=false;
     state.unread=0;state.marking=false;state.markAgain=false;state.paintKey='';
-    state.reread=false;state.seen.clear();
+    state.reread=false;state.seen.clear();state.ids=new Set();state.pairKey='';
     showUnread();updateInput();
   }
   function begin(id,mode) {
@@ -345,6 +361,9 @@
 
   function render(view,forceBottom=false){
     state.view=view;
+    /* first time we know both players (or they changed): reload so the older games' messages join in */
+    const pk=state.mode==='play'&&view?.whiteId&&view?.blackId?[view.whiteId,view.blackId].sort().join(':'):'';
+    if(pk&&pk!==state.pairKey){state.pairKey=pk;void refresh();}
     const title=document.querySelector('#panel .chat-title');
     if(title)title.textContent=state.mode==='watch'?'Spectators':'Chat';
     paint(forceBottom);

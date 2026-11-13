@@ -19,10 +19,10 @@
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=13"></script>
 <script defer src="./chess-online.js?v=21"></script>
-<script defer src="./chess-chat.js?v=7"></script>
+<script defer src="./chess-chat.js?v=8"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
-<script defer src="./chess-social.js?v=18"></script>
+<script defer src="./chess-social.js?v=19"></script>
 <link rel="stylesheet" href="./chess-training.css?v=17">
 <link rel="stylesheet" href="./chess-stats.css?v=2">
 <script defer src="./chess-stats.js?v=3"></script>
@@ -1208,6 +1208,22 @@ body.compact.chat2d:not(.landscape) .chat-list>.chat-empty-state { background: r
 #endCard .ec-tile { background: #2c2c30 !important; color: var(--ink) !important; border: 0 !important; font-size: 15px !important; white-space: nowrap; padding: 0 10px !important; }
 #endCard .ec-links { display: flex; justify-content: center; gap: 28px; padding-top: 2px; }
 #endCard .ec-links .btn { min-height: 40px; background: none !important; border: 0 !important; box-shadow: none !important; color: var(--ink-2) !important; font: 600 15px/1 var(--body) !important; padding: 0 6px; }
+/* visual pass: tighter card, badge beside the verdict, nothing from the board peeking over it */
+#endCard .ec { display: grid; grid-template-columns: auto minmax(0,1fr); column-gap: 14px; align-items: center; text-align: left; padding: 18px 16px 10px; max-width: 370px; }
+#endCard .ec > * { grid-column: 1 / -1; }
+#endCard .ec-badge { grid-column: 1; grid-row: 1 / span 2; width: 52px; height: 52px; margin: 0; font-size: 26px; }
+#endCard .ec-verdict { grid-column: 2; grid-row: 1; font-size: 26px; }
+#endCard .ec h2 { grid-column: 2; grid-row: 2; margin: 2px 0 0; font-size: 14.5px; }
+#endCard .ec p { text-align: center; margin-top: 10px; }
+#endCard .ec-meta { justify-content: flex-start; margin: 12px 0 12px; }
+#endCard .ec-acc { margin: 0 0 14px; padding: 11px 12px 12px; }
+#endCard .ec-acc-cell { padding: 8px 4px; }
+#endCard .ec-acc-cell b { font-size: 22px; }
+#endCard .ec-acc-tip { margin-top: 8px; padding: 9px 12px; }
+#endCard .end-actions .btn { min-height: 50px; }
+#endCard .ec-hint { margin: -2px 0 2px; text-align: center; font: 500 12px/1.3 var(--body); color: #8e8e93; }
+#endCard .ec-primary:disabled { opacity: .75; }
+body:has(#endCard:not([hidden])) #plateBottom.plate-floating, body:has(#endCard:not([hidden])) .cap-strip, body:has(#endCard:not([hidden])) #sidePick, body:has(#endCard:not([hidden])) #status { visibility: hidden !important; }
 
 /* review on a phone: the clocks step aside so the board can grow, and the lesson fits without scrolling */
 body.reviewing #chessClockHud { display: none !important; }
@@ -5761,13 +5777,25 @@ function maybeShowEndCard() {
   const meta = $('endEyebrow'); meta.replaceChildren();
   for (const t of [G.mode === 'cpu' ? 'vs Computer · Level ' + LEVEL_NAME[cpu.level] : G.mode === 'live' ? 'Online game' : 'Game ' + G.n, n + ' ' + (n === 1 ? 'move' : 'moves')]) { const x = el('span'); x.textContent = t; meta.append(x); }
   $('endTitle').textContent = title.replace(' — ', ' · ').split(' ').map((w, i, a) => (i === 0 || a[i - 1] === '·' || /^(White|Black)$/.test(w) ? w : w.toLowerCase())).join(' ');
-  const showLine = line && !(G.mode === 'cpu' && res !== 'draw');
+  if (G.mode === 'live') $('endTitle').textContent = $('endTitle').textContent.replace(/\b(White|Black) wins\b/, (m0, c) => (seatName(c === 'White' ? 'w' : 'b') || c) + ' wins');
+  const showLine = line && !(G.mode === 'cpu' && res !== 'draw') && G.mode !== 'live';   /* online: the names are already on the card */
   $('endLine').textContent = showLine ? line : '';
   $('endLine').hidden = !showLine;
   const acts = $('endActions');
   acts.replaceChildren();
   const ico = (b, svg) => { b.insertAdjacentHTML('afterbegin', '<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg>'); return b; };
   if (G.mode !== 'live') acts.append(ico(button('Play again', 'ec-primary', () => rematch(false)), '<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/>'));
+  /* online: one tap sends the same opponent a new challenge; sides can be switched once they accept */
+  const opp = G.mode === 'live' && mySeat ? G.seats?.[other(mySeat)] : null;
+  if (opp && window.familyChessRematch) {
+    const rb = ico(button('Rematch', 'ec-primary', async () => {
+      rb.disabled = true; rb.lastChild.textContent = 'Sending…';
+      try { await window.familyChessRematch(opp); rb.lastChild.textContent = 'Rematch sent'; }
+      catch { rb.disabled = false; rb.lastChild.textContent = 'Rematch'; }
+    }), '<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/>');
+    acts.append(rb);
+    const hint = el('div', 'ec-hint'); hint.textContent = 'You can pick White or Black once they accept.'; acts.append(hint);
+  }
   const row = el('div', 'ec-row');
   if (G.mode !== 'live') row.append(ico(button('Swap colours', 'ec-tile', () => rematch(true)), '<path d="M7 7h11l-3-3M17 17H6l3 3"/>'));
   row.append(ico(button('Review', 'ec-tile', () => { endDismissed = endKey(); beginGameReview(); }), '<path d="M7 5l12 7-12 7z"/>'));
@@ -6956,6 +6984,8 @@ window.familyChessNative = {
     if(label)label.textContent=watching?'Spectating · '+G.names.w+' vs '+G.names.b:
       'Online · '+(mySeat==='w'?'White':'Black');
     const seatChanged = priorSeat !== mySeat || !sameGame;
+    /* a new match never opens inside the last game's review: close it so the chat shows again */
+    if (!sameGame && historyOpen) openHistory(false);
     if (seatChanged) {stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop(); flipped = false; review = null; pending = null; selected = null; lockUntil = 0;}
     const desired = wantedSide();
     const sideChanged = desired !== viewSide;
@@ -6991,6 +7021,8 @@ window.familyChessNative = {
     }
     // The original practice renderer initializes before Supabase connects.
     // Refresh the empty/chat state as soon as a private match is displayed.
+    /* re-frame the 3D board once the opening screen's swing and the layout have settled */
+    if (!sameGame) for (const t of [PG.swingDur + 250, PG.swingDur + 900]) setTimeout(() => { if (G.gid === game.id && !userCam && !PG.on && !review && VIEW === '3d') fitCamera(true); }, t);
     renderChat();
     if (G.status === 'over' && !wasOver) setTimeout(() => maybeShowEndCard(), REDUCED ? 0 : 600);
     return {mySeat,turn:pos.chess.turn(),status:G.status};

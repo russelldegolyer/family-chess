@@ -73,7 +73,8 @@
  }
  const validUid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(v);
  const nameFor=id=>profiles.find(p=>p.id===id)?.display_name||'Family player';
- const message=(msg)=>{$('cgChallengeStatus').textContent=msg;};
+ let toastMode=false;
+ const message=(msg)=>{$('cgChallengeStatus').textContent=msg;if(toastMode&&msg)window.familyChessToast?.(msg.replace(/ Push accepted for \d+ devices?\./,''),4500);};
  const remaining=c=>Math.max(0,Math.ceil((Date.parse(c.expires_at)-Date.now())/1000));
  const deepLink=new URL(location.href).searchParams.get('challenge');
  const clearDeepLink=()=>{
@@ -237,6 +238,8 @@
  }
  $('cgAccept').addEventListener('click',()=>{void answer(true)});
  $('cgDecline').addEventListener('click',()=>{void answer(false)});
+ /* Rematch from the end card: same challenge, with progress shown as a toast over the board */
+ window.familyChessRematch=async(targetId)=>{toastMode=true;try{await sendChallenge(targetId);}finally{toastMode=false;}};
  async function sendChallenge(targetId){
   if(!user||requesting)return;
   requesting=true;
