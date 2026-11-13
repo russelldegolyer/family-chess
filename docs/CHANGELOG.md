@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-12 | 31 |
+| 2026-11-12 | 37 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
 | 2026-11-09 | 130 |
@@ -14,11 +14,12 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-12 — Clock in the name plate, tidier chat header (deployed 7:30 PM)
 
 **Improved**
 - Phones: the opponent's clock sits inside their name plate (one button, player colour border) instead of a separate box below. Challenges and Online pills are a little slimmer in games to make room. The plate stays the same size with chat open or closed.
 - Chat header on phones: clock, tools, clear and close are one even row of matching pills (the clock turns green on your turn, red when low); the reset-view button is left out there since the board is flat with chat open.
+- Captured pieces and +N stay visible with chat open (just above the chat), and sit beside your clock instead of covering it.
 
 ## 2026-11-12 — Accuracy, captured pieces, new opening screen (deployed 5:53 PM)
 

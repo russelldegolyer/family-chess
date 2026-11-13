@@ -3411,7 +3411,7 @@ function fillCapStrip(el, side, pos) {
 function updateCapStrips() {
   const top = capStrip('capTop'), bot = capStrip('capBottom');
   const b = document.body.classList;
-  const show = compact && !b.contains('landscape') && !b.contains('chat2d') && !b.contains('pregame') && !b.contains('training') && !review && G.mode !== 'connecting' && $('endCard')?.hidden !== false;
+  const show = compact && !b.contains('landscape') && !b.contains('pregame') && !b.contains('training') && !review && G.mode !== 'connecting' && $('endCard')?.hidden !== false;
   if (!show) { top.hidden = bot.hidden = true; return; }
   const pos = displayPos();
   const tHas = fillCapStrip(top, other(viewSide), pos), bHas = fillCapStrip(bot, viewSide, pos);
@@ -3419,13 +3419,19 @@ function updateCapStrips() {
   top.style.left = Math.round(pr.left + 6) + 'px'; top.style.top = Math.round(pr.bottom + 8) + 'px';
   if (bar) {
     const rb = document.querySelector('.resume-banner'), rr = rb && !rb.hidden && rb.getClientRects().length ? rb.getBoundingClientRect() : null;
-    bot.style.left = Math.round(bar.left + 10) + 'px'; bot.style.bottom = Math.round(window.innerHeight - bar.top + 10) + 'px';
-    if (rr && rr.height) bot.dataset.covered = '1'; else delete bot.dataset.covered;
+    const chat = b.contains('chat2d') ? $('panel')?.getBoundingClientRect() : null;
+    const myClock = !chat ? document.querySelector('#chessClockHud:not([hidden]) .clock-bottom') : null, mc = myClock?.getClientRects().length ? myClock.getBoundingClientRect() : null;
+    if (chat) {                       /* chat open: just above the chat sheet */
+      bot.style.left = Math.round(bar.left + 10) + 'px'; bot.style.bottom = Math.round(window.innerHeight - chat.top + 8) + 'px';
+    } else if (mc && mc.width) {      /* your clock floats above the bar: sit beside it, not on it */
+      bot.style.left = Math.round(mc.right + 8) + 'px'; bot.style.bottom = Math.round(window.innerHeight - (mc.top + mc.height / 2) - 13) + 'px';
+    } else { bot.style.left = Math.round(bar.left + 10) + 'px'; bot.style.bottom = Math.round(window.innerHeight - bar.top + 10) + 'px'; }
+    if (rr && rr.height && !chat) bot.dataset.covered = '1'; else delete bot.dataset.covered;
   }
   top.hidden = !tHas; bot.hidden = !bHas || !bar || !!bot.dataset.covered;
 }
 { let capRaf = 0; const later = () => { if (!capRaf) capRaf = requestAnimationFrame(() => { capRaf = 0; if (G.pos) updateCapStrips(); }); };
-  new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(() => { later(); setTimeout(later, 220); setTimeout(later, 520); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   const ec = document.getElementById('endCard'); if (ec) new MutationObserver(later).observe(ec, { attributes: true, attributeFilter: ['hidden'] });
   window.addEventListener('resize', () => setTimeout(later, 60)); }
 
