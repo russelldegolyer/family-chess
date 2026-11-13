@@ -22,6 +22,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Online games: a **Pick your side** card (White / Black) shows for both players until the first move. Tap the other side to switch seats for both of you. Not shown for resumed saved games.
 
 **Improved**
+- Review: the ‹ › buttons always move exactly one move; the |‹ ›| buttons jump to the previous / next key moment.
 - End card redesign: badge beside the result, tighter spacing, names instead of White/Black online; your plate, captured pieces and the status pill no longer show through it.
 - Opening a new online game closes the last game's review, so chat is back right away.
 - 3D board re-frames itself after an online game opens, so it never sits off in the distance.

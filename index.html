@@ -5009,6 +5009,12 @@ function reviewTo(ply, auto = false) {
   updateAll();
 }
 let reviewKeyOnly = store.get('sg.reviewKeys', true) !== false;
+function keyStep(d) {
+  if (!review) return;
+  const at = review.ply, keys = window.ChessReviewAnalyzer?.keyMoments?.() || [];
+  const target = d > 0 ? keys.find((p) => p > at) : [...keys].reverse().find((p) => p < at);
+  reviewTo(target != null ? target : d > 0 ? review.moves.length : 0);
+}
 function reviewStep(d, auto = false) {
   const at = review ? review.ply : G.moves.length;
   if (review && reviewKeyOnly && !auto) {
@@ -5309,10 +5315,11 @@ function renderHistory() {
       }
     }
     const step = el('div', review ? 'review-stepper' : 'stepper');
-    const first = iconBtn('first', 'Beginning of game', () => reviewTo(0), false);
-    const prev = iconBtn('prev', 'Previous move', () => reviewStep(-1), false);
-    const next = iconBtn('next', 'Next move', () => reviewStep(1), false);
-    const last = iconBtn('last', 'Final move', () => reviewTo(review ? review.moves.length : G.moves.length), false);
+    /* review: < > step exactly one move; |< >| jump between key moments (start / end when there are none left) */
+    const first = review ? iconBtn('first', 'Previous key moment', () => keyStep(-1), false) : iconBtn('first', 'Beginning of game', () => reviewTo(0), false);
+    const prev = iconBtn('prev', 'Previous move', () => (review ? reviewTo(review.ply - 1) : reviewStep(-1)), false);
+    const next = iconBtn('next', 'Next move', () => (review ? reviewTo(review.ply + 1) : reviewStep(1)), false);
+    const last = review ? iconBtn('last', 'Next key moment', () => keyStep(1), false) : iconBtn('last', 'Final move', () => reviewTo(G.moves.length), false);
     if (review) {
       first.disabled = prev.disabled = review.ply <= 0;
       next.disabled = last.disabled = review.ply >= review.moves.length;
