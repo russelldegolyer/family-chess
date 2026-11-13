@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-12 | 48 |
+| 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
 | 2026-11-09 | 130 |
@@ -14,7 +14,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-12 — Your path, desktop polish (deployed 11:11 PM)
 
 **Added**
 - **Your path** in Challenges: 16 chapters from checkmate basics to two-bishop mates. Each chapter is Learn → Practise → Prove it, using the existing lessons, themed puzzles and endgame challenges. All chapters are open; the first unfinished one is marked Recommended next. Progress is saved to your account.
