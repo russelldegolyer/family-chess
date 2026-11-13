@@ -6,6 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
+| 2026-11-13 | 7 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
@@ -14,7 +15,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-13 — Desktop polish, voice chat upgrades, daily puzzle (deployed 5:35 PM)
 - Improved: on desktop the Online sheet is wider with two columns (friends and records left, Live now, My matches and Settings right), so it fits without scrolling. Phones unchanged.
 
 **Improved** (desktop)
