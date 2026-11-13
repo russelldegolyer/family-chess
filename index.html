@@ -3860,8 +3860,10 @@ function tintPieceMat(m, hex, marked) {
 }
 let sideColorKey = '';
 function applySideColors(force = false) {
-  const c = sideColors(), marked = tooSimilar(c.w, c.b), key = c.w + c.b + THEME + VIEW;
+  const c = sideColors(), marked = tooSimilar(c.w, c.b), acc = blackAccent2D() || '', key = c.w + c.b + acc + THEME + VIEW;
   if (!force && key === sideColorKey) return; sideColorKey = key;
+  /* 2D black pieces wear the Black player's colour: redraw them as soon as that colour changes */
+  try { if (b2.svg && b2.acc !== acc) sync2D(displayPos(), { animate: false }); } catch { /* 2D board not built yet */ }
   if (UNNAMED_SET) {
     tintPieceMat(UNNAMED_SET.mat.w, c.w, false); tintPieceMat(UNNAMED_SET.hi.w, c.w, false);
     tintPieceMat(UNNAMED_SET.mat.b, c.b, marked); tintPieceMat(UNNAMED_SET.hi.b, c.b, marked);

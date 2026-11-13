@@ -21,6 +21,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - 2D black-piece accents only show for a human playing Black (online: their colour; vs computer: yours when you're Black), and the lines are thinner.
 
 **Improved**
+- 2D black pieces update to a new colour right away (no need to leave and re-enter 2D), and coloured black pieces drop the light rim.
 - Name plates use each person's own colour (online, the Black player's plate now shows their colour too).
 
 ## 2026-11-12 — Rematch, chat across games, pick your side (deployed 9:43 PM)
