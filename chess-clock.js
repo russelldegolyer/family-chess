@@ -138,7 +138,7 @@
     if(row&&plate&&title){
       if(nodes[opp].node.parentNode!==plate) plate.append(nodes[opp].node);
       if(nodes[own].node.nextSibling!==actions||actions.nextSibling!==title) title.before(nodes[own].node,actions);
-    }else{
+    }else if(hud.prepend){
       if(nodes[own].node.parentNode!==hud){ hud.prepend(nodes[own].node); hud.append(actions); }
       if(phone&&plate){ if(nodes[opp].node.parentNode!==plate) plate.append(nodes[opp].node); }
       else if(nodes[opp].node.parentNode!==hud) hud.prepend(nodes[opp].node);
