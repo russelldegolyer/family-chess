@@ -81,7 +81,7 @@ body.training #endCard, body.training-open #accountControl, body.training-open #
   letter-spacing: .01em; cursor: pointer; box-shadow: 0 5px 18px rgba(0,0,0,.5); }
 .train-top:active { filter: brightness(1.2); }
 @media (max-width: 899px) { .train-top { padding: 0 13px; font-size: 13.5px; } }
-@media (min-width: 900px) { .train-top { top: 64px; right: 10px; } }
+@media (min-width: 900px) { .train-top { top: max(14px, env(safe-area-inset-top, 0px)); right: calc(var(--gr, 16px) + 96px); } }
 body.training-open .train-top { display: none; }
 /* ---- panel v2: one clean card under the board ---- */
 .tr-panel { gap: 10px; padding-top: 14px; background: linear-gradient(180deg, rgba(24,24,27,.97), rgba(12,12,14,.98)); border-top: 1px solid rgba(255,255,255,.07); border-radius: 22px 22px 0 0; }

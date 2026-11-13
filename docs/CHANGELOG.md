@@ -14,6 +14,15 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Improved** (desktop)
+- Top right is now two matching pills, **Challenges** and **Online**, instead of the email / "Practice mode" strip (email and Sign out stay in Online → Settings).
+- Opening screen: the board is much bigger and centred above the White/Black card, and the card sits under the board (not under the chat).
+- Chat header is just "Chat" with clear and close (game controls are in the bottom bar), so nothing overlaps.
+- 2D board no longer has the 3D board ghosting behind it.
+- "Pick your side" sits in the left column so it never covers the board.
+
 ## 2026-11-12 — Computer stays plain, black-piece colour fixes (deployed 10:00 PM)
 
 **Fixed**

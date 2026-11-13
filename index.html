@@ -13,17 +13,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Chess">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="stylesheet" href="./auth.css?v=3">
+<link rel="stylesheet" href="./auth.css?v=4">
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=13"></script>
-<script defer src="./chess-online.js?v=21"></script>
+<script defer src="./chess-online.js?v=22"></script>
 <script defer src="./chess-chat.js?v=8"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
 <script defer src="./chess-social.js?v=19"></script>
-<link rel="stylesheet" href="./chess-training.css?v=17">
+<link rel="stylesheet" href="./chess-training.css?v=18">
 <link rel="stylesheet" href="./chess-stats.css?v=2">
 <script defer src="./chess-stats.js?v=3"></script>
 <script defer src="./chess-training.js?v=21"></script>
@@ -981,6 +981,10 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
 .pregame.dragging .pg-hint, .pregame.touched .pg-hint { opacity: 0; }
 .pg-hint-pill { display: inline-flex; align-items: center; gap: 14px; padding: 9px 20px; border-radius: 999px; background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 6px 18px rgba(0,0,0,0.35); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font: 700 13px/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); }
 @media (max-height: 720px) { .pg-top { padding-top: calc(env(safe-area-inset-top, 0px) + 98px); } .pg-hint-pill { padding: 7px 16px; } }
+@media (min-width: 900px) { .pg-top { padding-top: 24px !important; }
+  /* desktop: the card and swipe hint sit under the board, centred in the space left of the chat panel */
+  .pregame .pg-bottom { margin-left: max(16px, calc((100vw - var(--area-r, 0px)) / 2 - 210px)) !important; margin-right: auto !important; }
+  .pregame .pg-hint { right: var(--area-r, 0px); } }
 .pg-hint i { font-style: normal; font-size: 22px; line-height: 0.8; letter-spacing: 0; color: var(--ink-2); }
 .pg-hint i:first-child { animation: pgNudgeL 1.8s ease-in-out infinite; }
 .pg-hint i:last-child { animation: pgNudgeR 1.8s ease-in-out infinite; }
@@ -1374,6 +1378,11 @@ body.pregame #plateBottom.plate-floating, body.training #plateBottom.plate-float
 .side-pick button:not(.on):active { transform: scale(.98); background: rgba(255,255,255,.12); }
 .side-pick.busy { opacity: .7; pointer-events: none; }
 .side-pick .sp-note { font: 500 12px/1.3 var(--body); color: #8e8e93; text-align: center; }
+@media (min-width: 900px) { .side-pick { left: var(--gl, 16px); transform: none; top: calc(var(--gt, 16px) + 72px); width: 220px; } .side-pick .sp-row { grid-template-columns: 1fr; } }
+/* Desktop: the bottom bar has the game controls, so the chat header is just the title and its own buttons;
+   in 2D the 3D scene is hidden rather than ghosting behind the flat board */
+body:not(.compact) .panel-head .chat-tools { display: none !important; }
+body:not(.compact).view-2d #stage { opacity: 0 !important; }
 /* Phones: the plate looks the same with chat open or closed (no size jump) */
 body.clock-in-plate #plateTop { max-width: calc(100vw - 206px) !important; box-sizing: border-box; padding-left: 12px !important; padding-right: 12px !important; gap: 9px !important; }
 body.clock-in-plate #plateTop .orb { display: block !important; width: 16px !important; height: 16px !important; }
@@ -4552,7 +4561,9 @@ function boundsPts() {
   if (THEME === 'unnamed') { const h = UN_HALF; for (const x of [-h, h]) for (const z of [-h, h]) { add(x, 0.02, z); add(x, -UN_H, z); } }
   for (const x of [-3.5, 3.5]) for (const z of [-3.5, 3.5]) add(x, 1.45, z);
   const R = 0.55;
-  if (trayMode === 'side') { for (const x of [-6.25 - R, 6.25 + R]) for (const z of [-4.4, 4.4]) add(x, 0.5, z); }
+  let pgOn = false; try { pgOn = PG.on; } catch { /* not set up yet */ }
+  if (pgOn) { /* opening screen: no captured pieces yet, frame the board alone */ }
+  else if (trayMode === 'side') { for (const x of [-6.25 - R, 6.25 + R]) for (const z of [-4.4, 4.4]) add(x, 0.5, z); }
   else if (trayMode === 'chips') { /* no trays in the scene */ }
   else for (const x of [-4.1, 4.1]) for (const z of [-6.6 - R, 6.6 + R]) add(x, 0.5, z);
   return P;
@@ -4566,7 +4577,7 @@ function fitCamera(animate) {
   if (compact && !landscapePhone) { const r = uiReserve(); topR = r.top; botR = r.bottom; }
   if (PG.on) { const r = pregameReserve(); topR = r.top; botR = r.bottom; }
   const shiftFrom = viewYShift;
-  viewYShift = compact && !landscapePhone ? -Math.round((topR - botR) / 2) : 0;
+  viewYShift = (compact && !landscapePhone) || PG.on ? -Math.round((topR - botR) / 2) : 0;   /* opening screen: centre in the band above the card on desktop too */
   const shiftTo = viewYShift;
   applyProjection();
   /* the play view is high and readable, like looking down at a real board; the close view is lower and
@@ -6798,6 +6809,7 @@ function pregameReserve() {
   const H = window.innerHeight, top = $('pregame').querySelector('.pg-top').getBoundingClientRect().bottom;
   const card = $('pgBottom').getBoundingClientRect();
   /* leave a strip above the card for the swipe hint */
+  if (!compact) return { top: Math.max(top + 10, 70), bottom: H - card.top + 62 };   /* desktop: no pills over the board */
   return { top: Math.max(top + 10, 110), bottom: H - card.top + 40 };
 }
 function pgSetLevel(v) {
@@ -6811,7 +6823,7 @@ function openPregame() {
   /* the chooser is a 3D moment: close the chat sheet and leave the flat board first */
   if (sheetOpen) setSheet(false);
   if (VIEW === '2d') applyView('3d', false);
-  PG.on = true; PG.swing = false; PG.az = PG_BASE; PG.polar = compact && window.innerWidth < window.innerHeight ? 0.8 : 0.86; /* higher camera: the board fills the space and reads clearly side-on */
+  PG.on = true; PG.swing = false; PG.az = PG_BASE; PG.polar = compact && window.innerWidth < window.innerHeight ? 0.8 : compact ? 0.86 : 0.74; /* higher camera: the board fills the space and reads clearly side-on */
   document.body.classList.add('pregame');
   const el = $('pregame'); el.classList.remove('leaving', 'touched'); el.hidden = false;
   pgSetLevel(cpu.level);
@@ -6821,6 +6833,8 @@ function openPregame() {
   PG.target = PG.az; PG.lean = null;
   $('pgWhite').classList.remove('lean'); $('pgBlack').classList.remove('lean');
   pgMeasure();
+  /* measure again once the card, fonts and side panel have settled (desktop boots with the chat panel still laying out) */
+  for (const t of [250, 800]) setTimeout(() => { if (PG.on && !PG.drag) pgMeasure(); }, t);
   pgLean(true);
   /* plain white and black armies (and button dots) while choosing: re-tint now, the game's colours were already on */
   applySideColors(true); if (VIEW === '2d') draw2D(true);

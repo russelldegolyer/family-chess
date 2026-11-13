@@ -117,7 +117,7 @@
   `;
   document.head.appendChild(style);
   const launch = document.createElement('button');
-  launch.id = 'cgLaunch'; launch.type = 'button'; launch.textContent = 'Online games'; launch.hidden = true;
+  launch.id = 'cgLaunch'; launch.type = 'button'; launch.textContent = 'Online'; launch.hidden = true;
   // The account controls were moved into a nested actions panel; inserting
   // against the outer account div aborts initialization on mobile.
   const accountActions = document.getElementById('authAccountActions') || account;
