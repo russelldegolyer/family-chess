@@ -1,4 +1,5 @@
-// Secure best-effort web push for a Chess challenge (60 s) or a saved-game invitation (10 min).
+// Secure best-effort web push for a Chess challenge (60 s), a saved-game invitation (10 min),
+// a friend request, or a voice call ("X wants to talk", friends only, ~40 s).
 // Secrets CHESS_VAPID_PRIVATE_KEY + CHESS_VAPID_PUBLIC_KEY live ONLY in Supabase Edge Secrets.
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 import webpush from "npm:web-push@3.6.7";
@@ -32,12 +33,20 @@ Deno.serve(async req=>{
   const body=await req.json().catch(()=>({}));
   const isTest=body?.action==="self_test";
   const isFriend=body?.action==="friend_request";
+  const isVoice=body?.action==="voice_call";
   const challengeId=body?.challenge_id;
-  if(isFriend&&!uuid(body?.target_id))return respond(400,{error:"Invalid player"});
-  if(!isTest&&!isFriend&&!uuid(challengeId))return respond(400,{error:"Invalid challenge ID"});
+  if((isFriend||isVoice)&&!uuid(body?.target_id))return respond(400,{error:"Invalid player"});
+  if(!isTest&&!isFriend&&!isVoice&&!uuid(challengeId))return respond(400,{error:"Invalid challenge ID"});
   const admin=createClient(url,service,{auth:{persistSession:false}});
   let c:any;
-  if(isFriend){
+  if(isVoice){
+   // Only friends can ring each other.
+   const a=user.id<body.target_id?user.id:body.target_id,b=user.id<body.target_id?body.target_id:user.id;
+   const {data:fr}=await admin.from("chess_friendships").select("id").eq("user_a",a).eq("user_b",b).eq("status","accepted").maybeSingle();
+   if(!fr)return respond(403,{error:"You can only call friends"});
+   c={id:fr.id,challenger_id:user.id,target_id:body.target_id,status:"pending",kind:"voice",
+      expires_at:new Date(Date.now()+40000).toISOString(),push_sent_at:null};
+  } else if(isFriend){
    // One push per pending request the caller sent (push_sent_at claims it).
    const a=user.id<body.target_id?user.id:body.target_id,b=user.id<body.target_id?body.target_id:user.id;
    const {data:fr}=await admin.from("chess_friendships").update({push_sent_at:new Date().toISOString()})
@@ -78,7 +87,7 @@ Deno.serve(async req=>{
   if(subsError)return respond(500,{error:"Push subscriptions unavailable"});
   if(!subs?.length)return respond(200,{configured:true,sent:0});
   // An atomic update prevents repeated push spam if the client retries the request.
-  if(!isTest&&!isFriend){
+  if(!isTest&&!isFriend&&!isVoice){
    const {data:claimed,error:claimError}=await admin.from("chess_challenges")
     .update({push_sent_at:new Date().toISOString()}).eq("id",c.id)
     .is("push_sent_at",null).eq("status","pending")
@@ -89,17 +98,17 @@ Deno.serve(async req=>{
   const {data:sender}=await admin.from("chess_profiles")
    .select("display_name").eq("id",user.id).maybeSingle();
   const name=String(sender?.display_name||"A family member").slice(0,40);
-  const saved=c.kind==="saved",friend=c.kind==="friend";
+  const saved=c.kind==="saved",friend=c.kind==="friend",voice=c.kind==="voice";
   webpush.setVapidDetails("mailto:no-reply@auth.allseasonpestllc.com",publicKey,privateKey);
   const message=JSON.stringify({
-   title:isTest?"Chess test":friend?"Friend request":saved?"Pick up your saved game":"Chess challenge",
-   body:isTest?"Push notifications are working on this device.":friend?name+" wants to be friends on Chess. Open Play online to accept.":saved
+   title:isTest?"Chess test":voice?name+" wants to talk":friend?"Friend request":saved?"Pick up your saved game":"Chess challenge",
+   body:isTest?"Push notifications are working on this device.":voice?"Open Chess to join the voice chat.":friend?name+" wants to be friends on Chess. Open Play online to accept.":saved
     ?name+" wants to continue your saved game. Accept within 10 minutes."
     :name+" challenged you. Accept within 60 seconds.",
-   url:isTest||friend?"/":"/?challenge="+c.id,
-   tag:isTest?"chess-push-self-test":friend?"chess-friend-"+c.id:"chess-challenge-"+c.id
+   url:isTest||friend||voice?"/":"/?challenge="+c.id,
+   tag:isTest?"chess-push-self-test":voice?"chess-voice-"+user.id:friend?"chess-friend-"+c.id:"chess-challenge-"+c.id
   });
-  const ttl=friend?86400:Math.max(1,Math.min(saved?600:60,Math.ceil((Date.parse(c.expires_at)-Date.now())/1000)));
+  const ttl=voice?40:friend?86400:Math.max(1,Math.min(saved?600:60,Math.ceil((Date.parse(c.expires_at)-Date.now())/1000)));
   let sent=0,failed=0;
   const failureCodes: string[]=[];
   await Promise.all(subs.map(async sub=>{
@@ -123,7 +132,7 @@ Deno.serve(async req=>{
   // If the provider rejected every delivery, do not permanently consume
   // the one notification attempt. This allows a retry within the window.
   if(isFriend&&sent===0&&failed>0)await admin.from("chess_friendships").update({push_sent_at:null}).eq("id",c.id);
-  if(!isTest&&!isFriend&&sent===0&&failed>0){
+  if(!isTest&&!isFriend&&!isVoice&&sent===0&&failed>0){
    await admin.from("chess_challenges").update({push_sent_at:null})
      .eq("id",c.id).eq("status","pending");
   }

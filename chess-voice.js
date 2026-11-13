@@ -8,10 +8,19 @@
    two signed-in friends can join (database rule chess_voice_pair_*). */
 (() => {
   'use strict';
-  const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  const STUN = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  let iceCache = null;   /* { at, servers } from the chess-voice-ice function (adds a relay when one is configured) */
+  async function iceServers() {
+    if (iceCache && Date.now() - iceCache.at < 10 * 60 * 1000) return iceCache.servers;
+    try {
+      const { data } = await api().functions.invoke('chess-voice-ice', { body: {} });
+      const list = Array.isArray(data?.iceServers) && data.iceServers.length ? data.iceServers : STUN;
+      iceCache = { at: Date.now(), servers: list }; return list;
+    } catch { return STUN; }
+  }
   const RING_MS = 35000;
   const S = {
-    view: null, gid: null, me: null, opp: null, oppName: '', ch: null,
+    me: null, opp: null, oppName: '', ringTick: 0,
     state: 'idle',            /* idle | calling | ringing | connecting | live */
     pc: null, local: null, remote: null, muted: false, ringTimer: 0, callId: null, pendingIce: [],
     meter: null,
@@ -24,7 +33,6 @@
   /* ---------------- UI ---------------- */
   const MIC = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   const MIC_OFF = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 4l16 16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
-  const HANG = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 14.5c5-4.6 13-4.6 18 0l-2.2 2.6-3.3-1.4v-2.5a11 11 0 0 0-7 0v2.5l-3.3 1.4z" fill="currentColor"/></svg>';
   let box, mainBtn, endBtn, ring, audio;
   function build() {
     if (box) return;
@@ -116,25 +124,42 @@
   }
 
   /* ---------------- signalling over the game's realtime connection ---------------- */
-  async function join(pair) {
-    leaveChannel();
-    const c = api(); if (!c || !pair) return;
+  /* one PRIVATE channel per friend (chess-voice:<idA>:<idB>), so a call reaches you on any screen of the app */
+  const chans = new Map(), names = new Map();   /* friendId -> channel; friendId -> display name */
+  async function listen(friend) {
+    if (!S.me || !friend || chans.has(friend)) return;
+    const c = api(); if (!c) return;
+    chans.set(friend, null);
     try { await c.realtime?.setAuth?.(); } catch { /* older client: token is already on the socket */ }
-    if (S.pair !== pair) return;
-    S.ch = c.channel('chess-voice:' + pair, { config: { private: true, broadcast: { self: false } } });
-    S.ch.on('broadcast', { event: 'v' }, ({ payload }) => onSignal(payload || {}));
-    S.ch.subscribe();
+    const ch = c.channel('chess-voice:' + [S.me, friend].sort().join(':'), { config: { private: true, broadcast: { self: false } } });
+    ch.on('broadcast', { event: 'v' }, ({ payload }) => onSignal(payload || {}, friend));
+    ch.subscribe(); chans.set(friend, ch);
   }
-  function leaveChannel() { try { if (S.ch) api()?.removeChannel?.(S.ch); } catch { /* ignore */ } S.ch = null; }
-  const send = (t, extra = {}) => S.ch?.send({ type: 'broadcast', event: 'v', payload: { t, from: S.me, to: S.opp, call: S.callId, ...extra } });
+  function unlistenAll() { for (const ch of chans.values()) try { if (ch) api()?.removeChannel?.(ch); } catch { /* ignore */ } chans.clear(); }
+  async function loadFriends() {
+    const c = api(); if (!c) return;
+    let uid = null;
+    try { const { data } = await c.auth.getSession(); uid = data?.session?.user?.id || null; } catch { /* signed out */ }
+    if (uid !== S.me) { if (S.state !== 'idle') hangUp(true); unlistenAll(); S.me = uid; }
+    if (!uid) return;
+    try {
+      const { data } = await c.from('chess_friendships').select('user_a,user_b').eq('status', 'accepted');
+      const ids = (data || []).map((f) => (f.user_a === uid ? f.user_b : f.user_a)).filter(Boolean);
+      if (ids.length) { const { data: ps } = await c.from('chess_profiles').select('id,display_name').in('id', ids); for (const p of ps || []) names.set(p.id, p.display_name || 'Your friend'); }
+      for (const id of ids) void listen(id);
+    } catch { /* offline: the game opponent is still covered by update() */ }
+  }
+  const send = (t, extra = {}) => chans.get(S.opp)?.send({ type: 'broadcast', event: 'v', payload: { t, from: S.me, to: S.opp, call: S.callId, ...extra } });
 
-  function onSignal(m) {
-    if (m.from !== S.opp || m.to !== S.me) return;          /* only my opponent, only to me */
+  function onSignal(m, friend) {
+    if (m.from !== friend || m.to !== S.me) return;          /* only that friend, only to me */
     if (m.t === 'ring') {
-      if (S.state === 'calling') { S.callId = [S.callId, m.call].sort()[0]; return void (S.me < S.opp ? startOffer() : null); } /* both tapped: lower id makes the offer */
-      if (S.state !== 'idle') return;
+      if (S.state === 'calling' && friend === S.opp && m.call !== S.callId) { S.callId = [S.callId, m.call].sort()[0]; clearInterval(S.ringTick); return void (S.me < S.opp ? startOffer() : null); } /* both tapped: lower id makes the offer */
+      if (S.state !== 'idle') return;   /* already ringing (repeat ring) or on another call */
+      S.opp = friend; S.oppName = names.get(friend) || m.name || 'Your friend';
       S.callId = m.call; S.state = 'ringing'; showRing(); return;
     }
+    if (friend !== S.opp) return;
     if (m.call !== S.callId) return;
     if (m.t === 'cancel' || m.t === 'end') { if (S.state !== 'idle') { toast(m.t === 'end' ? S.oppName + ' left the voice chat' : 'Missed voice call from ' + S.oppName); reset(); } return; }
     if (m.t === 'decline') { toast(S.oppName + " can't talk right now"); reset(); return; }
@@ -152,7 +177,7 @@
     return S.local;
   }
   function makePc() {
-    const pc = new RTCPeerConnection({ iceServers: ICE });
+    const pc = new RTCPeerConnection({ iceServers: S.ice || STUN });
     pc.onicecandidate = (e) => { if (e.candidate) send('ice', { c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
     pc.ontrack = (e) => { S.remote = e.streams[0] || new MediaStream([e.track]); audio.srcObject = S.remote; void audio.play().catch(() => { S.needTap = true; toast('Tap the mic button to hear ' + S.oppName); }); watchTalking(); };
     pc.onconnectionstatechange = () => {
@@ -166,6 +191,7 @@
   async function startOffer() {
     try {
       S.state = 'connecting'; paint();
+      S.ice = await iceServers();
       const pc = makePc(); for (const t of (await mic()).getTracks()) pc.addTrack(t, S.local);
       const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
       send('offer', { sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp } });
@@ -173,7 +199,7 @@
   }
   async function onOffer(sdp) {
     try {
-      if (!S.pc) makePc();
+      if (!S.pc) { S.ice = await iceServers(); makePc(); }
       const pc = S.pc;
       for (const t of (await mic()).getTracks()) if (!pc.getSenders().some((s) => s.track === t)) pc.addTrack(t, S.local);
       await pc.setRemoteDescription(sdp); flushIce();
@@ -183,11 +209,15 @@
     } catch (e) { micError(e); }
   }
   async function call() {
-    if (!S.ch || !S.opp) return;
+    if (!S.opp) return;
+    if (!chans.get(S.opp)) { await listen(S.opp); await new Promise((r) => setTimeout(r, 400)); }
     try { await mic(); } catch (e) { return micError(e); }   /* ask for the mic now, while the tap counts as a gesture */
     void audio.play().catch(() => {});
     S.callId = Math.random().toString(36).slice(2, 10); S.state = 'calling'; paint();
     send('ring', { name: S.myName });
+    clearInterval(S.ringTick); S.ringTick = setInterval(() => { if (S.state === 'calling') send('ring', { name: S.myName }); else clearInterval(S.ringTick); }, 3000);
+    /* if their app is closed, a push lets them open it and still catch the call */
+    void Promise.resolve(api()?.functions.invoke('chess-notify-challenge', { body: { action: 'voice_call', target_id: S.opp } })).catch(() => {});
     clearTimeout(S.ringTimer);
     S.ringTimer = setTimeout(() => { if (S.state === 'calling') { send('cancel'); toast(S.oppName + " didn't answer"); reset(); } }, RING_MS);
   }
@@ -208,7 +238,7 @@
     reset();
   }
   function reset() {
-    clearTimeout(S.ringTimer); hideRing();
+    clearTimeout(S.ringTimer); clearInterval(S.ringTick); hideRing();
     try { S.pc?.close(); } catch { /* closed */ }
     S.pc = null; S.pendingIce = [];
     for (const t of S.local?.getTracks() || []) t.stop();
@@ -226,12 +256,28 @@
     S.muted = !S.muted; for (const t of S.local?.getAudioTracks() || []) t.enabled = !S.muted;
     void audio.play().catch(() => {}); paint();
   }
+  /* a soft two-note ring while the card is up; Web Audio needs one earlier tap to be allowed (iPhone) */
+  let actx = null, ringLoop = 0;
+  const unlock = () => { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') void actx.resume(); } catch { /* no audio */ } };
+  ['pointerdown', 'keydown', 'touchend'].forEach((e) => window.addEventListener(e, unlock, { passive: true }));
+  function chime() {
+    if (!actx) return;
+    const t0 = actx.currentTime;
+    [[659.25, 0], [880, 0.22], [659.25, 0.9], [880, 1.12]].forEach(([f, d]) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(actx.destination);
+      g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(0.22, t0 + d + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.32);
+      o.start(t0 + d); o.stop(t0 + d + 0.35);
+    });
+  }
+  function startRingSound() { stopRingSound(); unlock(); chime(); ringLoop = setInterval(chime, 3000); }
+  function stopRingSound() { clearInterval(ringLoop); ringLoop = 0; }
   function showRing() {
     ring.querySelector('b').textContent = S.oppName + ' wants to talk';
-    ring.hidden = false; navigator.vibrate?.([120, 80, 120]);
+    ring.hidden = false; navigator.vibrate?.([120, 80, 120]); startRingSound();
     clearTimeout(S.ringTimer); S.ringTimer = setTimeout(() => { if (S.state === 'ringing') { hideRing(); reset(); } }, RING_MS + 2000);
   }
-  function hideRing() { if (ring) ring.hidden = true; }
+  function hideRing() { if (ring) ring.hidden = true; stopRingSound(); }
   /* a soft glow on the button while the other person is speaking */
   function watchTalking() {
     stopMeter();
@@ -257,11 +303,14 @@
     /* during a call nothing about the game changes it: game over, review, a new game, even Home keep talking */
     if (S.state !== 'idle') { paint(); return; }
     const opp = live ? (v.mySeat === 'w' ? v.blackId : v.whiteId) : null;
-    const pair = live ? [v.userId, opp].sort().join(':') : null;
-    if (pair !== S.pair) { S.pair = pair; S.opp = opp; S.me = live ? v.userId : null; if (pair) void join(pair); else leaveChannel(); }
-    if (live) { S.oppName = (v.mySeat === 'w' ? v.blackName : v.whiteName) || 'Your opponent'; S.myName = (v.mySeat === 'w' ? v.whiteName : v.blackName) || ''; }
+    if (live && !S.me) S.me = v.userId;
+    S.opp = opp;
+    if (live) { S.oppName = (v.mySeat === 'w' ? v.blackName : v.whiteName) || 'Your opponent'; S.myName = (v.mySeat === 'w' ? v.whiteName : v.blackName) || ''; names.set(opp, S.oppName); void listen(opp); }
     paint();
   }
+  /* listen for calls from every friend while signed in (and refresh now and then: new friends, sign-in changes) */
+  const boot = () => { if (!api()) return void setTimeout(boot, 800); build(); void loadFriends(); api().auth.onAuthStateChange?.(() => void loadFriends()); setInterval(() => void loadFriends(), 120000); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   /* leaving the app ends the call: closing it, or (phones) switching away from it */
   window.addEventListener('pagehide', () => hangUp(true));
   let awayTimer = 0;
