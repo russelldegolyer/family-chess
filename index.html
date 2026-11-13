@@ -1294,11 +1294,12 @@ body.col-open .train-top, body.col-open #accountControl, body.col-open #btnTrain
 }
 /* opponent plate with clock: never runs under the Challenges button */
 body.clock-in-chat #plateTop { max-width: calc(100vw - 186px); box-sizing: border-box; }
-body.clock-in-plate:not(.clock-in-chat) #plateTop { max-width: calc(100vw - 206px); box-sizing: border-box; padding-left: 12px; padding-right: 12px; gap: 9px; }
-body.clock-in-plate:not(.clock-in-chat) #plateTop .orb { width: 16px; height: 16px; }
-body.clock-in-plate:not(.clock-in-chat) #plateTop .chess-clock { margin-left: 2px; padding-left: 10px; }
-body.clock-in-plate:not(.clock-in-chat) #plateTop .chess-clock-time { font-size: 19px; }
-@media (max-width: 400px) { body.clock-in-plate:not(.clock-in-chat) #plateTop .orb { display: none; } }
+/* Phones: the plate looks the same with chat open or closed (no size jump) */
+body.clock-in-plate #plateTop { max-width: calc(100vw - 206px) !important; box-sizing: border-box; padding-left: 12px !important; padding-right: 12px !important; gap: 9px !important; }
+body.clock-in-plate #plateTop .orb { display: block !important; width: 16px !important; height: 16px !important; }
+body.clock-in-plate #plateTop .chess-clock { margin-left: 2px !important; padding-left: 10px !important; }
+body.clock-in-plate #plateTop .chess-clock-time { font-size: 19px !important; }
+@media (max-width: 400px) { body.clock-in-plate #plateTop .orb { display: none !important; } }
 body.clock-in-chat #plateTop .pname, body.clock-in-plate #plateTop .pname { max-width: 26vw; }
 body.clock-in-chat #plateTop .chess-clock, body.clock-in-plate #plateTop .chess-clock { flex: none; }
 
