@@ -46,3 +46,6 @@ Russell: computer pieces are plain white or black. Vs the computer, only the hum
 
 ## D-30 Challenges path (2026-11-12)
 Russell: chapters build on each other, all open with a recommended next, personal only (no family progress/races). Chapter progress lives in the training profile (`P.path`), alongside lessons and challenges.
+
+## D-31 Voice chat (2026-11-13)
+WebRTC audio between the two players' apps; signalling over a Supabase realtime broadcast channel per game (`chess-voice-<gameId>`), no database tables. Open line with mute, tap-and-accept to start. STUN only for now (a TURN relay can be added if some networks fail to connect). `vercel.json` allows `microphone=(self)`.

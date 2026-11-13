@@ -14,6 +14,11 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Added**
+- **Voice chat** in live games: tap the mic, the other player gets "X wants to talk — Join / Not now". Open line with mute and hang up; no phone numbers, audio goes app to app. Ends when either of you leaves the game.
+
 ## 2026-11-12 — Your path, desktop polish (deployed 11:11 PM)
 
 **Added**

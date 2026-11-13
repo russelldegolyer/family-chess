@@ -42,6 +42,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Play online sheet, My matches, profile/name | `chess-online.js` (`show`, `refresh`, `refreshLive`, `startMatch`, `syncMatch`) | |
 | Players, presence, challenges, push | `chess-social.js`, `chess-sw.js` | |
 | Chat | `chess-chat.js` (+ `renderChat`/`sendChat` delegates in `index.html`) | |
+| Voice chat | `chess-voice.js` (WebRTC; `familyChessVoice.update` called from `renderChat`) | |
 | Sign-in | `auth-gate.js`, `auth.css`, `config.js` | |
 | Training (puzzles, Endgame Academy, Endgame Challenges) | `chess-training.js` / `.css`; board bridge `window.familyChessBoard` + `TRAIN`/`START_FEN` (`G.mode === 'train'`) in `index.html`; dev puzzles `chess-puzzles-dev.json`; loader `tools/import-lichess-puzzles.py`; exact endgame tables `endgame-k{q,r,p}k.bin` built by `tools/build-endgame-tables.mjs` (verified against the Lichess tablebase) | "Challenges" button at the top right beside the profile button; saves and restores the current game; progress in localStorage + `chess_training_progress` |
 | Live clock change | `ChessClock.changeLocalMode` (practice), `applyClockChange` in `index.html`, `familyChessChangeClock` → RPC `chess_change_clock` (online) | total→total shifts both clocks by the difference |
