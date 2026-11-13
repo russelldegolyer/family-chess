@@ -24,10 +24,10 @@
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
 <script defer src="./chess-social.js?v=19"></script>
-<link rel="stylesheet" href="./chess-training.css?v=20">
+<link rel="stylesheet" href="./chess-training.css?v=21">
 <link rel="stylesheet" href="./chess-stats.css?v=2">
 <script defer src="./chess-stats.js?v=3"></script>
-<script defer src="./chess-training.js?v=23"></script>
+<script defer src="./chess-training.js?v=24"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -1202,6 +1202,10 @@ body.compact.chat2d:not(.landscape) .chat-list>.chat-empty-state { background: r
 #endCard .ec-acc-tip b { grid-column: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #endCard .ec-acc-tip em { grid-column: 2; grid-row: 1 / span 2; font-style: normal; font-weight: 600; color: #ffb340; }
 #endCard .ec-acc-tip:active { filter: brightness(1.2); }
+#endCard .ec-acc-fix { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 8px; padding: 9px 12px; border: 0; border-radius: 12px; background: rgba(229,48,42,.12);
+  box-shadow: inset 0 0 0 1px rgba(229,48,42,.3); color: #f2f2f7; font: 600 13px/1.25 var(--body); text-align: left; cursor: pointer; }
+#endCard .ec-acc-fix span { flex: 1; min-width: 0; }
+#endCard .ec-acc-fix em { flex: none; font-style: normal; color: #ff8a83; }
 #endCard .ec-acc-note { margin-top: 10px; font: 500 13px/1.3 var(--body); color: #7ee99a; }
 #endCard .ec-acc-bar { margin-top: 10px; height: 4px; border-radius: 2px; background: #2c2c30; overflow: hidden; }
 #endCard .ec-acc-bar i { display: block; height: 100%; background: #30d158; transition: width .25s ease; }
@@ -5869,6 +5873,15 @@ function fillEndAccuracy(me) {
       tip.querySelector('b').textContent = (me ? '' : (sw === acc.swing.w ? 'White · ' : 'Black · ')) + 'move ' + mv + ' ' + san;
       tip.addEventListener('click', () => { endDismissed = endKey(); $('endCard').hidden = true; beginGameReview(); setTimeout(() => reviewTo(sw.ply), 60); });
       box.append(tip);
+      /* fix this next: what the better move was, and the chapter that drills it */
+      const fix = me ? missedIdea(sw) : null;
+      if (fix && window.familyChessTraining?.openChapterId) {
+        const go = el('button', 'ec-acc-fix'); go.type = 'button';
+        go.innerHTML = '<span></span><em>Practise ›</em>';
+        go.querySelector('span').textContent = 'Missed ' + fix.what + ' → ' + fix.title;
+        go.addEventListener('click', () => { endDismissed = endKey(); $('endCard').hidden = true; window.familyChessTraining.openChapterId(fix.id); });
+        box.append(go);
+      }
     } else if (acc && me && acc[me] != null && acc[me] >= 85) {
       const tip = el('div', 'ec-acc-note'); tip.textContent = 'Clean game — no big swings.'; box.append(tip);
     }
@@ -5883,6 +5896,25 @@ function fillEndAccuracy(me) {
   paint(null, 0, G.moves.length);
   const moves = G.moves.slice();
   A.forGame(key, fens, moves, (d, t) => paint(null, d, t)).then((acc) => { paint(acc); saveAccuracy(key, acc); }).catch(() => { box.hidden = true; });
+}
+/* What did the better move do? Only clear, teachable patterns: checkmate, a free piece, a fork. */
+function missedIdea(sw) {
+  if (!sw || !sw.best) return null;
+  try {
+    const before = positionFrom(G.moves, sw.ply - 1, G.clockActions || []).chess.fen();
+    const c = new Chess(before), u = sw.best;
+    const mv = c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] || undefined });
+    const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+    if (c.isCheckmate()) return { id: 'c1', what: 'a checkmate', title: 'Checkmate basics' };
+    if (mv.captured && !c.moves({ verbose: true }).some((m) => m.to === mv.to)) return { id: 'c2', what: 'a free ' + ({ p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen' }[mv.captured] || 'piece'), title: 'Free pieces' };
+    /* fork: from its new square the piece hits two valuable targets (the king counts when it is check) */
+    const parts = c.fen().split(' '); parts[1] = mv.color; parts[3] = '-';
+    const again = new Chess(); again.load(parts.join(' '), { skipValidation: true });
+    const hits = again.moves({ square: mv.to, verbose: true }).filter((m) => m.captured && VAL[m.captured] >= 3 && VAL[m.captured] >= VAL[mv.piece] - 2);
+    const targets = new Set(hits.map((m) => m.to)).size + (c.inCheck() ? 1 : 0);
+    if (targets >= 2) return { id: 'c3', what: 'a fork', title: 'Forks' };
+  } catch { /* unusual position: no suggestion */ }
+  return null;
 }
 function saveAccuracy(key, acc) {
   if (!acc) return;

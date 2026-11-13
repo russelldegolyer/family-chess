@@ -37,3 +37,13 @@ test('the path: chapters with learn / practise / prove, all open, recommended ne
  assert.match(tr,/lessons: \{\}, challenges: \{\}, path: \{\}/);
  for (const id of ['l1','l4','l2','l5','l3','f3','f4','f5','l8','p2','l6','l7']) assert.match(tr,new RegExp("lesson: '"+id+"'"));
 });
+
+test('daily puzzle streak and fix-this-next link',()=>{
+ const tr=readFileSync(new URL('../chess-training.js',import.meta.url),'utf8');
+ const page=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ assert.match(tr,/D\.streak = D\.last === yesterday\(\) \? \(D\.streak \|\| 0\) \+ 1 : 1;/);
+ assert.match(tr,/if \(D\.last && D\.last !== today && D\.last !== yesterday\(\)\) D\.streak = 0;/);
+ assert.match(tr,/openChapterId/);
+ assert.match(page,/function missedIdea\(sw\)/);
+ assert.match(page,/familyChessTraining\.openChapterId\(fix\.id\)/);
+});

@@ -36,7 +36,7 @@
     v: 1, updated: 0,
     puzzle: { rating: 1200, peak: 1200, attempted: 0, solved: 0, clean: 0, failed: 0, streak: 0, best: 0, hints: 0, cats: {}, history: [] },
     settings: { level: 'adaptive', cat: 'mixed', mode: 'practice' },
-    lessons: {}, challenges: {}, path: {},
+    lessons: {}, challenges: {}, path: {}, daily: { day: '', done: false, streak: 0, best: 0, last: '' },
   });
   let P = fresh();
   const key = () => 'chess.training.' + uid;
@@ -304,7 +304,7 @@
     card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
     card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
     card('Saved games', 'Pick up a game where you left it', '★', savedCount ? String(savedCount) : '', () => openSaved());
-    hub.append(head, hero, mini, pathCard(), el('div', 'tr-section', 'Practice'), cards);
+    hub.append(head, hero, mini, pathCard(), dailyCard(), el('div', 'tr-section', 'Practice'), cards);
     const info = el('div', 'tr-cards tr-about-row');
     const ab = btn('', 'tr-card', () => openAbout());
     ab.innerHTML = '<span class="tr-card-ico grey" aria-hidden="true">i</span><span class="tr-card-text"><b>About Training</b><span>Ratings, levels and how it all works</span></span><span class="tr-chev" aria-hidden="true">›</span>';
@@ -720,6 +720,7 @@
     void startPuzzle();
   }
   function puzzleTop() {
+    if (PATH && PATH.daily) { setTop('Daily puzzle', el('span', 'tr-chip dim', '🔥 ' + (P.daily.streak || 0))); return; }
     if (PATH) { setTop(PATH.ch.title, el('span', 'tr-chip dim', pathPill())); return; }
     const r = el('button', 'tr-chip', Math.round(P.puzzle.rating) + ''); r.type = 'button'; r.title = 'Puzzle rating · settings';
     r.addEventListener('click', puzzleSettings);
@@ -1564,6 +1565,7 @@
   }
   /* after a path puzzle: count it, and offer the next step when this one is done */
   function pathPuzzleResult(clean, noHints, row) {
+    if (PATH.daily) return dailyResult(row);
     const ch = PATH.ch, st = pathState(ch), s = ch[PATH.step];
     if (PZ.retry) return el('div', 'tr-say', 'Retries are for practice and don’t change your chapter progress.');
     let done = false;
@@ -1575,6 +1577,44 @@
       : (clean && noHints ? 'In a row: ' : 'Streak reset — no misses or hints here: ') + (st.streak || 0) + '/' + s.count);
     if (done) { row.replaceChildren(btn(chapterDone(ch) ? 'Back to the path' : 'Back to chapter', 'primary', chapterDone(ch) ? openPath : () => openChapter(ch), 'next'), btn('One more', 'quiet', () => void startPuzzle(), 'retry')); }
     return note;
+  }
+  /* ---- daily puzzle: one a day from the chapter you're on, with a streak ---- */
+  const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
+  function dailyState() {
+    const D = P.daily || (P.daily = { day: '', done: false, streak: 0, best: 0, last: '' });
+    const today = dayKey();
+    if (D.day !== today) { D.day = today; D.done = false; }
+    if (D.last && D.last !== today && D.last !== yesterday()) D.streak = 0;   /* missed a day: the flame goes out */
+    return D;
+  }
+  function dailyTheme() {
+    const rec = recommended() || CHAPTERS[CHAPTERS.length - 1];
+    const s = rec.practise.theme ? rec.practise : rec.prove.theme ? rec.prove : null;
+    return s ? { theme: s.theme, lo: s.lo, hi: s.hi, label: rec.title } : { theme: 'mateIn2', lo: 900, hi: 1600, label: rec.title };
+  }
+  function dailyCard() {
+    const D = dailyState(), t = dailyTheme();
+    const c = btn('', 'tr-daily' + (D.done ? ' done' : ''), () => (D.done ? null : startDaily()));
+    c.innerHTML = '<span class="tr-daily-flame"></span><span class="tr-card-text"><b></b><span></span></span><span class="tr-daily-go"></span>';
+    c.querySelector('.tr-daily-flame').textContent = D.streak ? '🔥' : '✦';
+    c.querySelector('b').textContent = D.done ? 'Daily puzzle done' : 'Daily puzzle';
+    c.querySelector('.tr-card-text span').textContent = D.done ? (D.streak > 1 ? D.streak + ' days in a row — back tomorrow' : 'Back tomorrow to start a streak')
+      : (D.streak ? D.streak + '-day streak · keep it alive' : 'One puzzle a day') + ' · ' + t.label;
+    c.querySelector('.tr-daily-go').textContent = D.done ? '✓' : 'Play';
+    return c;
+  }
+  function startDaily() {
+    const t = dailyTheme(), up = Math.max(0, Math.min(400, Math.round(P.puzzle.rating) - 1300));
+    RETURN = () => openHub();
+    PATH = { daily: true, theme: t.theme, lo: t.lo, hi: t.hi, step: 'daily' };
+    hub.hidden = true; screen = 'puzzle'; void startPuzzle();
+  }
+  function dailyResult(row) {
+    const D = dailyState(), today = dayKey();
+    if (!D.done) { D.streak = D.last === yesterday() ? (D.streak || 0) + 1 : 1; D.best = Math.max(D.best || 0, D.streak); D.last = today; D.done = true; save(); }
+    row.replaceChildren(btn('Back to Training', 'primary', () => openHub(), 'next'), btn('Keep going', 'quiet', () => { PATH = null; RETURN = null; void startPuzzle(); }, 'retry'));
+    return el('div', 'tr-say good', '🔥 ' + D.streak + (D.streak === 1 ? ' day' : ' days') + ' in a row' + (D.streak > 1 && D.streak === D.best ? ' — your best yet!' : '') + ' See you tomorrow.');
   }
   function pathCard() {
     const rec = recommended(), done = CHAPTERS.filter(chapterDone).length;
@@ -1660,5 +1700,12 @@
     document.body.append(b);
   }
   mountButton(); document.addEventListener('DOMContentLoaded', mountButton);
-  window.familyChessTraining = { open, close, _test: { suggest, keepers, probe, genTable, loadTables, genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
+  /* open Training straight on one chapter (the end card's "Practise" link) */
+  function openChapterId(id) {
+    const ch = CHAPTERS.find((c) => c.id === id); if (!ch || !B()) return;
+    root.hidden = false; document.body.classList.add('training-open'); B().enter();
+    void loadProfile().then(() => { if (screen === 'chapter') openChapter(ch); });
+    openChapter(ch);
+  }
+  window.familyChessTraining = { open, close, openChapterId, _test: { suggest, keepers, probe, genTable, loadTables, genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
 })();
