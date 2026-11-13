@@ -14,6 +14,11 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Improved**
+- Phones: the opponent's clock sits inside their name plate (one button, player colour border) instead of a separate box below. Challenges and Online pills are a little slimmer in games to make room.
+
 ## 2026-11-12 — Accuracy, captured pieces, new opening screen (deployed 5:53 PM)
 
 **Added**

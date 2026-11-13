@@ -13,17 +13,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Chess">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="stylesheet" href="./auth.css?v=2">
+<link rel="stylesheet" href="./auth.css?v=3">
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=11"></script>
+<script defer src="./chess-clock.js?v=12"></script>
 <script defer src="./chess-online.js?v=20"></script>
 <script defer src="./chess-chat.js?v=7"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
 <script defer src="./chess-social.js?v=18"></script>
-<link rel="stylesheet" href="./chess-training.css?v=16">
+<link rel="stylesheet" href="./chess-training.css?v=17">
 <link rel="stylesheet" href="./chess-stats.css?v=2">
 <script defer src="./chess-stats.js?v=2"></script>
 <script defer src="./chess-training.js?v=21"></script>
@@ -1294,8 +1294,13 @@ body.col-open .train-top, body.col-open #accountControl, body.col-open #btnTrain
 }
 /* opponent plate with clock: never runs under the Challenges button */
 body.clock-in-chat #plateTop { max-width: calc(100vw - 186px); box-sizing: border-box; }
-body.clock-in-chat #plateTop .pname { max-width: 26vw; }
-body.clock-in-chat #plateTop .chess-clock { flex: none; }
+body.clock-in-plate:not(.clock-in-chat) #plateTop { max-width: calc(100vw - 206px); box-sizing: border-box; padding-left: 12px; padding-right: 12px; gap: 9px; }
+body.clock-in-plate:not(.clock-in-chat) #plateTop .orb { width: 16px; height: 16px; }
+body.clock-in-plate:not(.clock-in-chat) #plateTop .chess-clock { margin-left: 2px; padding-left: 10px; }
+body.clock-in-plate:not(.clock-in-chat) #plateTop .chess-clock-time { font-size: 19px; }
+@media (max-width: 400px) { body.clock-in-plate:not(.clock-in-chat) #plateTop .orb { display: none; } }
+body.clock-in-chat #plateTop .pname, body.clock-in-plate #plateTop .pname { max-width: 26vw; }
+body.clock-in-chat #plateTop .chess-clock, body.clock-in-plate #plateTop .chess-clock { flex: none; }
 
 /* spectating: a clear way back to the start screen */
 .watch-bar { position: fixed; z-index: 31; left: 50%; transform: translateX(-50%); top: calc(74px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 10px; padding: 5px 5px 5px 14px; border-radius: 999px;

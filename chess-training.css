@@ -75,11 +75,12 @@ body.training .controls #btnNew, body.training .controls #btnUndo, body.training
 body.training #endCard, body.training-open #accountControl, body.training-open #pregame { display: none !important; }
 
 /* Challenges: a permanent pill at the top right, beside the profile button */
-.train-top { position: fixed; z-index: 89; top: max(19px, calc(env(safe-area-inset-top, 0px) + 7px)); right: max(104px, calc(env(safe-area-inset-right, 0px) + 92px));
+.train-top { position: fixed; z-index: 89; top: max(19px, calc(env(safe-area-inset-top, 0px) + 7px)); right: max(90px, calc(env(safe-area-inset-right, 0px) + 78px));
   height: 40px; padding: 0 16px; border: 1px solid rgba(229,48,42,.55); border-radius: 999px; background: rgba(22,22,25,.92);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: #ff7a72; font: 700 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: .01em; cursor: pointer; box-shadow: 0 5px 18px rgba(0,0,0,.5); }
 .train-top:active { filter: brightness(1.2); }
+@media (max-width: 899px) { .train-top { padding: 0 13px; font-size: 13.5px; } }
 @media (min-width: 900px) { .train-top { top: 64px; right: 10px; } }
 body.training-open .train-top { display: none; }
 /* ---- panel v2: one clean card under the board ---- */

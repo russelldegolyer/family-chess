@@ -133,11 +133,18 @@
     // Chat open on a phone: both clocks shrink into a strip inside the chat so the board keeps the screen.
     const row=split&&!document.body.classList.contains('landscape');
     const plate=document.getElementById('plateTop'),title=document.querySelector('#panel .panel-head .chat-title');
+    // Phones (portrait): the opponent's clock always lives inside their name plate - one button, not two.
+    const phone=document.body.classList.contains('compact')&&!document.body.classList.contains('landscape');
     if(row&&plate&&title){
       if(nodes[opp].node.parentNode!==plate) plate.append(nodes[opp].node);
       if(nodes[own].node.nextSibling!==actions||actions.nextSibling!==title) title.before(nodes[own].node,actions);
-    }else if(nodes.w.node.parentNode&&nodes.w.node.parentNode!==hud&&hud.prepend){ hud.prepend(nodes.w.node,nodes.b.node); hud.append(actions); }
+    }else{
+      if(nodes[own].node.parentNode!==hud){ hud.prepend(nodes[own].node); hud.append(actions); }
+      if(phone&&plate){ if(nodes[opp].node.parentNode!==plate) plate.append(nodes[opp].node); }
+      else if(nodes[opp].node.parentNode!==hud) hud.prepend(nodes[opp].node);
+    }
     document.body.classList.toggle('clock-in-chat',!!(row&&plate&&title));
+    document.body.classList.toggle('clock-in-plate',!!(phone&&plate));
     nodes[opp].node.style.top=top+'px';
     const ownTop=bottom;
     nodes[own].node.style.top=ownTop+'px';
