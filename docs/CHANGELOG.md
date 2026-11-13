@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-12 | 38 |
+| 2026-11-12 | 44 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
 | 2026-11-09 | 130 |
@@ -14,7 +14,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-12 — Rematch, chat across games, pick your side (deployed 9:43 PM)
 
 **Added**
 - Online end card: **Rematch** sends your opponent a new challenge in one tap (and you can pick sides once they accept).
