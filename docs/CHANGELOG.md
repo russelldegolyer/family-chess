@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-12 | 37 |
+| 2026-11-12 | 38 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
 | 2026-11-09 | 130 |
@@ -14,7 +14,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-12 — Your plate, biggest swing, softer 3D last move (deployed 8:37 PM)
 
 **Added**
 - End card: **Biggest swing** line under accuracy (your costliest move, e.g. "move 14… Nf3"); tap it to jump straight into Review at that move. A clean game says so.
