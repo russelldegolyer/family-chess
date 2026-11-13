@@ -28,3 +28,12 @@ test('phones show captured pieces and the material lead',()=>{
  assert.match(page,/b\.textContent = '\+' \+ lead/);
  assert.match(page,/if \(compact\) return;   \/\* phones show captured pieces/);
 });
+
+test('the path: chapters with learn / practise / prove, all open, recommended next',()=>{
+ const tr=readFileSync(new URL('../chess-training.js',import.meta.url),'utf8');
+ assert.match(tr,/const CHAPTERS = \[/);
+ assert.match(tr,/const recommended = \(\) => CHAPTERS\.find\(\(ch\) => !chapterDone\(ch\)\)/);
+ assert.match(tr,/if \(PATH && PATH\.theme\)/);
+ assert.match(tr,/lessons: \{\}, challenges: \{\}, path: \{\}/);
+ for (const id of ['l1','l4','l2','l5','l3','f3','f4','f5','l8','p2','l6','l7']) assert.match(tr,new RegExp("lesson: '"+id+"'"));
+});

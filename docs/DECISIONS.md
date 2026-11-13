@@ -43,3 +43,6 @@ The challenger still starts as White, but either player can swap seats until a m
 
 ## D-29 The computer has no colour (2026-11-12)
 Russell: computer pieces are plain white or black. Vs the computer, only the human's army wears their colour (White pieces in 3D/2D when you're White; 2D black accents when you're Black). Plates rim in each human's colour; the computer's plate is neutral. Supersedes D-07's "White always wears your colour in practice" for games vs the computer (the opening chooser is unchanged).
+
+## D-30 Challenges path (2026-11-12)
+Russell: chapters build on each other, all open with a recommended next, personal only (no family progress/races). Chapter progress lives in the training profile (`P.path`), alongside lessons and challenges.

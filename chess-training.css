@@ -435,3 +435,35 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-ed-tool .tr-ed-img { width: 30px; height: 30px; }
 .tr-ed-row:nth-child(1) .tr-ed-tool { background: #4a4a50; } .tr-ed-row:nth-child(2) .tr-ed-tool { background: #c9c9ce; }
 .tr-ed-sq.from { background-image: linear-gradient(rgba(255,214,10,.45), rgba(255,214,10,.45)); }
+
+/* ---- the path: hub card, chapter list, chapter steps, learn card ---- */
+.tr-path-card { display: grid; gap: 6px; width: 100%; margin-top: 16px; padding: 16px 16px 14px; border: 0; border-radius: 20px; text-align: left; color: var(--tr-fg); font: inherit; cursor: pointer;
+  background: radial-gradient(120% 140% at 100% 0%, rgba(229,48,42,.28), transparent 60%), linear-gradient(145deg, #241517, #17171a); box-shadow: inset 0 0 0 1px rgba(229,48,42,.35), 0 10px 30px rgba(0,0,0,.35); }
+.tr-path-card:active { filter: brightness(1.12); }
+.tr-path-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ff8a83; }
+.tr-path-top em { font-style: normal; font-weight: 600; letter-spacing: 0; text-transform: none; color: #a1a1a6; }
+.tr-path-card > b { font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+.tr-path-sub { font-size: 13.5px; color: #c7c7cc; }
+.tr-path-bar { height: 5px; margin-top: 6px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
+.tr-path-bar i { display: block; height: 100%; min-width: 4px; border-radius: 3px; background: linear-gradient(90deg, #ff5a4f, #e5302a); }
+.tr-path-list, .tr-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.tr-chap, .tr-step { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 14px; border: 0; border-radius: 16px; background: #1c1c1f;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); color: var(--tr-fg); text-align: left; font: inherit; cursor: pointer; }
+.tr-chap:active, .tr-step:active { background: #242428; }
+.tr-chap-num, .tr-step-num { flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: #2a2a2e; color: #d1d1d6; font-variant-numeric: tabular-nums; }
+.tr-chap.done .tr-chap-num, .tr-step.done .tr-step-num { background: rgba(48,209,88,.18); color: #7ee99a; }
+.tr-chap.next, .tr-step.next { box-shadow: inset 0 0 0 1.5px rgba(48,209,88,.55), 0 6px 18px rgba(48,209,88,.12); }
+.tr-chap.next .tr-chap-num, .tr-step.next .tr-step-num { background: #30d158; color: #062b12; }
+.tr-chap .tr-card-text span, .tr-step .tr-card-text span { font-size: 12.5px; color: #8e8e93; }
+.tr-chap.next .tr-card-text span { color: #7ee99a; }
+.tr-step .tr-card-text small { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #ff8a83; }
+.tr-dots { flex: none; display: flex; gap: 4px; }
+.tr-dots i { width: 8px; height: 8px; border-radius: 50%; background: #3a3a3e; }
+.tr-dots i.on { background: #30d158; }
+.tr-chap-actions { margin-top: 14px; }
+.tr-chap-actions .tr-btn { min-height: 50px; font-size: 16px; }
+.tr-learn { margin-top: 12px; padding: 16px 16px 14px; border-radius: 18px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
+.tr-learn h3 { margin: 0 0 8px; font-size: 20px; }
+.tr-learn p { margin: 0 0 10px; font-size: 15px; line-height: 1.45; color: #d1d1d6; }
+.tr-learn ul { margin: 6px 0 0; padding-left: 20px; color: #e5e5ea; font-size: 14.5px; line-height: 1.6; }
+.tr-learn .tr-label { display: block; margin-top: 4px; }

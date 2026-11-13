@@ -36,7 +36,7 @@
     v: 1, updated: 0,
     puzzle: { rating: 1200, peak: 1200, attempted: 0, solved: 0, clean: 0, failed: 0, streak: 0, best: 0, hints: 0, cats: {}, history: [] },
     settings: { level: 'adaptive', cat: 'mixed', mode: 'practice' },
-    lessons: {}, challenges: {},
+    lessons: {}, challenges: {}, path: {},
   });
   let P = fresh();
   const key = () => 'chess.training.' + uid;
@@ -223,9 +223,10 @@
   let session = 0; /* bumps on every screen change so stale async work stops */
   function setTop(title, right) {
     top.replaceChildren();
-    const back = btn('', 'tr-back', () => openHub());
+    const back = btn('', 'tr-back', () => (RETURN ? RETURN() : openHub()));
     back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training</span>';
-    back.setAttribute('aria-label', 'Back to Training');
+    if (RETURN) { const sp = back.querySelector('span'); if (sp) sp.textContent = 'Chapter'; }
+    back.setAttribute('aria-label', RETURN ? 'Back to the chapter' : 'Back to Training');
     const t = el('div', 'tr-title', title);
     const r = el('div', 'tr-right');
     const v = el('button', 'tr-chip tr-view', B().view() === '2d' ? '3D' : '2D'); v.type = 'button';
@@ -263,7 +264,7 @@
     lg.replaceChildren(...items.map(([k, t]) => { const i = el('span', 'tr-lg ' + k); i.append(el('i'), document.createTextNode(t)); return i; }));
   }
   function openHub() {
-    session++; screen = 'hub';
+    session++; screen = 'hub'; PATH = null; RETURN = null;
     top.hidden = true; panel.hidden = true;
     B().onMove(null); mark({});
     renderHub(); hub.hidden = false;
@@ -303,7 +304,7 @@
     card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
     card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
     card('Saved games', 'Pick up a game where you left it', '★', savedCount ? String(savedCount) : '', () => openSaved());
-    hub.append(head, hero, mini, el('div', 'tr-section', 'Practice'), cards);
+    hub.append(head, hero, mini, pathCard(), el('div', 'tr-section', 'Practice'), cards);
     const info = el('div', 'tr-cards tr-about-row');
     const ab = btn('', 'tr-card', () => openAbout());
     ab.innerHTML = '<span class="tr-card-ico grey" aria-hidden="true">i</span><span class="tr-card-text"><b>About Training</b><span>Ratings, levels and how it all works</span></span><span class="tr-chev" aria-hidden="true">›</span>';
@@ -637,6 +638,7 @@
     ]);
     sec('Endgames', [
       ['Endgame Academy', '12 lessons from check and stalemate to the basic mates and pawn endings. A lesson is mastered when you win its final test.'],
+      ['Your path', '16 chapters that build on each other. Each one: learn the idea (a short read or an Academy lesson), practise it (puzzles on that theme, or a lesson), then prove it (harder puzzles in a row with no hints, or a challenge). Every chapter is open; the first unfinished one is recommended next.'],
       ['Endgame Challenges', 'Win a set ending (basic mates, stalemate traps, pawn endings) against a computer that fights back. Several use exact endgame tables, so only precise play wins.'],
       ['Overall', 'The ring on the Training page averages three things: puzzles solved (up to 100), lessons mastered and challenges won (up to 20).'],
     ]);
@@ -684,9 +686,10 @@
     return BANDS[lv].slice(0, 2);
   }
   async function nextPuzzle() {
-    const cat = CATS.find((c) => c[0] === P.settings.cat) || CATS[0];
+    let cat = CATS.find((c) => c[0] === P.settings.cat) || CATS[0];
     const recent = new Set(P.puzzle.history.slice(-300).map((h) => h.id));
     let [lo, hi] = band();
+    if (PATH && PATH.theme) { const th = PATH.theme, re = new RegExp('\\b' + th + '\\b'); cat = [th, th, (t) => re.test(t), th]; lo = PATH.lo; hi = PATH.hi; }
     const c = api();
     if (c && remotePuzzles && uid !== 'local') {
       try {
@@ -717,6 +720,7 @@
     void startPuzzle();
   }
   function puzzleTop() {
+    if (PATH) { setTop(PATH.ch.title, el('span', 'tr-chip dim', pathPill())); return; }
     const r = el('button', 'tr-chip', Math.round(P.puzzle.rating) + ''); r.type = 'button'; r.title = 'Puzzle rating · settings';
     r.addEventListener('click', puzzleSettings);
     setTop('Puzzles', r);
@@ -844,10 +848,12 @@
     meta.append(el('span', 'tr-pill', 'Puzzle ' + PZ.p.rating), el('span', 'tr-pill', rated ? (delta >= 0 ? '+' : '') + delta + ' → ' + Math.round(P.puzzle.rating) : 'Unrated'), el('span', 'tr-pill', 'Streak ' + P.puzzle.streak));
     const ex = el('div', 'tr-say', th.length ? th.slice(0, 2).map((x) => NAME[x] || x).join(' · ') + ' — ' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]]) : '');
     const row = el('div', 'tr-actions'); row.append(btn('Next puzzle', 'primary', () => void startPuzzle(), 'next'), btn('Retry', 'quiet', () => void startPuzzle(true), 'retry'));
-    panel.append(head, meta, ex, row); puzzleTop();
+    const pathNote = PATH ? pathPuzzleResult(!PZ.failed && !PZ.retry, !PZ.hints, row) : null;
+    panel.append(head, meta, ex); if (pathNote) panel.append(pathNote); panel.append(row); puzzleTop();
   }
   function fail() {
     const first = !PZ.failed; PZ.failed = true;
+    if (first && PATH && PATH.step === 'prove') { pathState(PATH.ch).streak = 0; save(); }
     const { delta, rated } = first ? record(false) : { delta: 0, rated: false };
     say(PZ.msgNode, first && rated ? 'Not the move. ' + delta + ' rating. Try again or see the solution.' : 'Not the move. Try again.', 'bad');
     puzzleTop();
@@ -856,7 +862,7 @@
   async function showSolution() {
     if (!PZ || PZ.done) return;
     const my = session;
-    if (!PZ.failed) { PZ.failed = true; record(false); }
+    if (!PZ.failed) { PZ.failed = true; record(false); if (PATH && PATH.step === 'prove') { pathState(PATH.ch).streak = 0; save(); } }
     PZ.done = true; B().busy(true); say(PZ.msgNode, 'Solution:');
     for (let k = PZ.i; k < PZ.p.moves.length; k++) {
       const u = PZ.p.moves[k];
@@ -1204,7 +1210,7 @@
       const m = l.mastery; const fen = masteryFen(m);
       return void playEnding({ fen, goal: m.goal, kind: m.kind, task: m.task, mode: 'practice', side: m.side || 'w', onDone: (res) => {
         if (res.win) { const st = P.lessons[l.id] || (P.lessons[l.id] = {}); st.mastered = true; st.stage = 5; save(); }
-        const msg = lessonPanel(res.win ? 'Lesson mastered! ' + res.summary : res.summary, [btn(res.win ? 'Back to lessons' : 'Try again', 'primary', res.win ? openAcademy : () => runStage()), btn('New position', 'quiet', () => runStage())]);
+        const msg = lessonPanel(res.win ? 'Lesson mastered! ' + res.summary : res.summary, [btn(res.win ? (RETURN ? 'Back to chapter' : 'Back to lessons') : 'Try again', 'primary', res.win ? (RETURN || openAcademy) : () => runStage()), btn('New position', 'quiet', () => runStage())]);
         msg.classList.add(res.win ? 'good' : 'bad');
       } });
     }
@@ -1464,8 +1470,179 @@
         res.stats.log.forEach((m, i) => { const tag = { mate: 'mate', good: '✓', ok: '·', inefficient: 'slow', lost: '✗ lost win', stalemate: '✗ stalemate', draw: '✗ draw' }[m.kind] || m.kind; rev.append(el('span', 'tr-rev ' + m.kind, (i + 1) + '. ' + m.uci + ' ' + tag)); });
         panel.append(rev);
       }
-      const row = el('div', 'tr-actions'); row.append(btn('New position', 'primary', () => startChallenge(ch), 'next'), btn('All challenges', 'quiet', openChallenges)); panel.append(row);
+      const row = el('div', 'tr-actions'); row.append(btn('New position', 'primary', () => startChallenge(ch), 'next'), btn(RETURN ? 'Back to chapter' : 'All challenges', 'quiet', RETURN || openChallenges)); panel.append(row);
     } });
+  }
+
+  /* ------------------------------------------------------------------ the path
+     One route through everything: each chapter teaches one idea (Learn), drills it (Practise) and tests it
+     (Prove it). Every chapter is open; the first unfinished one is marked "Recommended next". */
+  let PATH = null;   /* { ch, step, theme, lo, hi, count } while a path puzzle set is running */
+  let RETURN = null; /* where Back / Done go while working through a chapter */
+  const learn = (text, look) => ({ text, look });
+  const CHAPTERS = [
+    { id: 'c1', title: 'Checkmate basics', blurb: 'What check, mate and stalemate are, and finishing a game.',
+      learn: { lesson: 'l1' }, practise: { theme: 'mateIn1', lo: 400, hi: 1300, count: 6 }, prove: { challenge: 'stale' } },
+    { id: 'c2', title: 'Free pieces', blurb: 'Spot pieces that are left unprotected, and take them.',
+      learn: learn(['Before every move, ask: what did my opponent just leave undefended?', 'Count attackers and defenders on each piece. If a piece is attacked more times than it is defended, it can be won.'], ['Every capture', 'Pieces with no defender', 'Pieces defended only once']),
+      practise: { theme: 'hangingPiece', lo: 400, hi: 1300, count: 6 }, prove: { theme: 'hangingPiece', lo: 800, hi: 1600, count: 3 } },
+    { id: 'c3', title: 'Forks', blurb: 'One piece attacking two things at once.',
+      learn: learn(['A fork is one move that attacks two targets. They can only save one.', 'Knights are the classic forkers, but queens, pawns and even kings fork too. Look for a square that touches two loose pieces, or the king and a piece.'], ['Knight jumps near the king', 'Two pieces on the same colour square', 'Checks that also attack']),
+      practise: { theme: 'fork', lo: 600, hi: 1400, count: 6 }, prove: { theme: 'fork', lo: 1000, hi: 1700, count: 3 } },
+    { id: 'c4', title: 'King and queen mate', blurb: 'The first mate everyone needs: push the king to the edge.',
+      learn: { lesson: 'l4' }, practise: { lesson: 'l2' }, prove: { challenge: 'kq' } },
+    { id: 'c5', title: 'Pins', blurb: 'Freeze a piece in front of something more valuable.',
+      learn: learn(['A pinned piece cannot move without exposing something bigger behind it — often the king, so it cannot legally move at all.', 'Pile up on a pinned piece: it cannot run, so attack it again and again.'], ['Pieces lined up with the king or queen', 'Bishops and rooks behind them', 'Attacking a piece that cannot move']),
+      practise: { theme: 'pin', lo: 700, hi: 1500, count: 6 }, prove: { theme: 'pin', lo: 1100, hi: 1800, count: 3 } },
+    { id: 'c6', title: 'Back-rank mates', blurb: 'The king trapped behind its own pawns.',
+      learn: learn(['A king that has castled and never moved its pawns has no escape square. A rook or queen landing on the back rank can be mate.', 'Check whether the back rank is guarded. If the only defender can be distracted, the mate works.'], ['Kings with no "luft" (escape square)', 'Rooks and queens on open files', 'The one piece guarding the back rank']),
+      practise: { theme: 'backRankMate', lo: 600, hi: 1500, count: 6 }, prove: { theme: 'backRankMate', lo: 1100, hi: 1900, count: 3 } },
+    { id: 'c7', title: 'Rook mates', blurb: 'Mate with one rook, and the two-rook ladder.',
+      learn: { lesson: 'l5' }, practise: { lesson: 'l3' }, prove: { challenge: 'kr' } },
+    { id: 'c8', title: 'Mate in two', blurb: 'A forcing first move, then mate.',
+      learn: learn(['Most mates in two start with a check or a capture that leaves the king no choice.', 'Try every check first, even ones that give up material. Then ask what the king can do, and whether you have mate after each reply.'], ['Checks, then captures, then threats', 'Squares the king can still reach', 'Sacrifices that open the king']),
+      practise: { theme: 'mateIn2', lo: 800, hi: 1500, count: 6 }, prove: { theme: 'mateIn2', lo: 1300, hi: 2000, count: 3 } },
+    { id: 'c9', title: 'Skewers', blurb: 'Attack a big piece so it moves and exposes the one behind.',
+      learn: learn(['A skewer is a pin in reverse: the valuable piece is in front. When it moves away, you take what was behind it.', 'Look for the king or queen on the same line as another piece, with your bishop, rook or queen able to reach that line.'], ['King and queen on one line', 'Checks along a file, rank or diagonal', 'Long-range pieces']),
+      practise: { theme: 'skewer', lo: 800, hi: 1600, count: 6 }, prove: { theme: 'skewer', lo: 1200, hi: 1900, count: 3 } },
+    { id: 'c10', title: 'Discovered attacks', blurb: 'Move one piece to unleash another behind it.',
+      learn: learn(['When a piece steps out of the way, the piece behind it suddenly attacks. If the moving piece also threatens something, the opponent faces two threats at once.', 'A discovered check is the strongest version: the moving piece can go almost anywhere, even grab material.'], ['Your pieces lined up behind each other', 'Lines toward the enemy king or queen', 'Where the front piece can go with a threat']),
+      practise: { theme: 'discoveredAttack', lo: 900, hi: 1600, count: 6 }, prove: { theme: 'discoveredAttack', lo: 1300, hi: 2000, count: 3 } },
+    { id: 'c11', title: 'King and pawn basics', blurb: 'The opposition and the square rule.',
+      learn: { lesson: 'f3' }, practise: { lesson: 'f4' }, prove: { challenge: 'promo' } },
+    { id: 'c12', title: 'Winning pawn endings', blurb: 'Key squares and turning a pawn into a queen.',
+      learn: { lesson: 'f5' }, practise: { lesson: 'l8' }, prove: { challenge: 'pawns' } },
+    { id: 'c13', title: 'Deflection and sacrifice', blurb: 'Lure a defender away; give material to break through.',
+      learn: learn(['Every defender has a job. If you attack it, or offer it something juicy, it may have to leave that job.', 'A sacrifice is worth it when what you get back — mate, a bigger piece, a queen — is more than you gave.'], ['Pieces doing two jobs', 'What each defender is guarding', 'Forcing moves after a sacrifice']),
+      practise: { theme: 'deflection', lo: 900, hi: 1700, count: 6 }, prove: { theme: 'sacrifice', lo: 1300, hi: 2000, count: 3 } },
+    { id: 'c14', title: 'Defending', blurb: 'Hold the position when you are the one under pressure.',
+      learn: { lesson: 'p2' }, practise: { theme: 'defensiveMove', lo: 900, hi: 1700, count: 6 }, prove: { challenge: 'hold' } },
+    { id: 'c15', title: 'Longer mates', blurb: 'Mate in three and beyond: keep forcing.',
+      learn: learn(['Long mates are a chain of forcing moves. Every move should be a check or a threat the opponent must answer.', 'Picture the final mating net first, then work backwards: which checks drive the king there?'], ['Checks that take away squares', 'Where the king ends up', 'Quiet moves that threaten unstoppable mate']),
+      practise: { theme: 'mateIn3', lo: 1100, hi: 1900, count: 6 }, prove: { theme: 'mateIn3', lo: 1500, hi: 2200, count: 3 } },
+    { id: 'c16', title: 'Two bishops and B + N', blurb: 'The hardest basic mates.',
+      learn: { lesson: 'l6' }, practise: { lesson: 'l7' }, prove: { challenge: 'kbb' } },
+  ];
+  const pathState = (ch) => P.path[ch.id] || (P.path[ch.id] = { learn: false, practise: 0, prove: false, streak: 0 });
+  const lessonById = (id) => LESSONS.find((l) => l.id === id);
+  const challengeById = (id) => CHALLENGES.find((c) => c.id === id);
+  function stepDone(ch, step) {
+    const st = pathState(ch), s = ch[step];
+    if (s.lesson) return !!P.lessons[s.lesson]?.mastered;
+    if (s.challenge) return (P.challenges[s.challenge]?.wins || 0) > 0;
+    if (step === 'learn') return !!st.learn;
+    if (step === 'practise') return (st.practise || 0) >= s.count;
+    return !!st.prove;
+  }
+  const STEPS = ['learn', 'practise', 'prove'];
+  const chapterDone = (ch) => STEPS.every((k) => stepDone(ch, k));
+  const nextStep = (ch) => STEPS.find((k) => !stepDone(ch, k)) || null;
+  const recommended = () => CHAPTERS.find((ch) => !chapterDone(ch)) || null;
+  function stepLabel(ch, step) {
+    const s = ch[step];
+    if (s.lesson) return (step === 'learn' ? 'Lesson: ' : 'Lesson: ') + (lessonById(s.lesson)?.title || 'Lesson');
+    if (s.challenge) return 'Challenge: ' + (challengeById(s.challenge)?.title || 'Challenge');
+    if (step === 'learn') return 'The idea';
+    const name = NAME[s.theme] || s.theme;
+    return step === 'practise' ? 'Solve ' + s.count + ' ' + name.toLowerCase() + ' puzzles' : 'Solve ' + s.count + ' in a row, no hints';
+  }
+  function stepSub(ch, step) {
+    const s = ch[step], st = pathState(ch);
+    if (stepDone(ch, step)) return 'Done';
+    if (s.lesson) return P.lessons[s.lesson]?.stage ? 'In progress' : 'Concept, demo, guided, mastery';
+    if (s.challenge) return (P.challenges[s.challenge]?.attempts ? 'Not won yet' : 'Win it once') + ' · against a defending computer';
+    if (step === 'learn') return 'A short read: what to look for';
+    if (step === 'practise') return (st.practise || 0) + ' of ' + s.count + ' solved without a miss';
+    return (st.streak || 0) + ' of ' + s.count + ' in a row · harder puzzles';
+  }
+  function pathPill() {
+    const st = pathState(PATH.ch), s = PATH.ch[PATH.step];
+    return PATH.step === 'practise' ? Math.min(st.practise || 0, s.count) + '/' + s.count : (st.streak || 0) + '/' + s.count + ' in a row';
+  }
+  /* after a path puzzle: count it, and offer the next step when this one is done */
+  function pathPuzzleResult(clean, noHints, row) {
+    const ch = PATH.ch, st = pathState(ch), s = ch[PATH.step];
+    let done = false;
+    if (PATH.step === 'practise') { if (clean) st.practise = (st.practise || 0) + 1; done = st.practise >= s.count; }
+    else { if (clean && noHints) st.streak = (st.streak || 0) + 1; else st.streak = 0; if (st.streak >= s.count) { st.prove = true; done = true; } }
+    save();
+    const note = el('div', 'tr-say ' + (done ? 'good' : ''), done ? (PATH.step === 'practise' ? 'Practice complete! ' : 'Proven! ') + (chapterDone(ch) ? 'Chapter finished.' : 'Next step is open.')
+      : PATH.step === 'practise' ? (clean ? 'Counts toward the chapter: ' : 'Solve it without a miss to count it: ') + Math.min(st.practise || 0, s.count) + '/' + s.count
+      : (clean && noHints ? 'In a row: ' : 'Streak reset — no misses or hints here: ') + (st.streak || 0) + '/' + s.count);
+    if (done) { row.replaceChildren(btn(chapterDone(ch) ? 'Back to the path' : 'Back to chapter', 'primary', chapterDone(ch) ? openPath : () => openChapter(ch), 'next'), btn('One more', 'quiet', () => void startPuzzle(), 'retry')); }
+    return note;
+  }
+  function pathCard() {
+    const rec = recommended(), done = CHAPTERS.filter(chapterDone).length;
+    const c = btn('', 'tr-path-card', () => openPath());
+    c.innerHTML = '<span class="tr-path-top"><span>Your path</span><em></em></span><b></b><span class="tr-path-sub"></span><span class="tr-path-bar"><i></i></span>';
+    c.querySelector('em').textContent = done + ' of ' + CHAPTERS.length + ' chapters';
+    c.querySelector('b').textContent = rec ? 'Next: ' + rec.title : 'Every chapter finished';
+    c.querySelector('.tr-path-sub').textContent = rec ? stepLabel(rec, nextStep(rec)) : 'Keep sharp with puzzles and challenges below.';
+    c.querySelector('.tr-path-bar i').style.width = Math.round(done / CHAPTERS.length * 100) + '%';
+    return c;
+  }
+  function openPath() {
+    session++; screen = 'path'; PATH = null; RETURN = null; top.hidden = true; panel.hidden = true; B().onMove(null); mark({});
+    hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
+    const rec = recommended();
+    hub.append(subHead('Your path', openHub), el('p', 'tr-note', 'Each chapter: learn the idea, practise it, then prove it. Everything is open — the green one is recommended next.'));
+    const list = el('div', 'tr-path-list');
+    CHAPTERS.forEach((ch, i) => {
+      const b = btn('', 'tr-chap' + (chapterDone(ch) ? ' done' : '') + (ch === rec ? ' next' : ''), () => openChapter(ch));
+      b.innerHTML = '<span class="tr-chap-num"></span><span class="tr-card-text"><b></b><span></span></span><span class="tr-dots"><i></i><i></i><i></i></span>';
+      b.querySelector('.tr-chap-num').textContent = chapterDone(ch) ? '✓' : String(i + 1);
+      b.querySelector('b').textContent = ch.title;
+      b.querySelector('.tr-card-text span').textContent = ch === rec ? 'Recommended next · ' + ch.blurb : ch.blurb;
+      b.querySelectorAll('.tr-dots i').forEach((d, k) => d.classList.toggle('on', stepDone(ch, STEPS[k])));
+      list.append(b);
+    });
+    hub.append(list); hub.hidden = false;
+    hub.querySelector('.tr-chap.next')?.scrollIntoView({ block: 'center' });
+  }
+  function openChapter(ch) {
+    session++; screen = 'chapter'; PATH = null; RETURN = () => openChapter(ch); top.hidden = true; panel.hidden = true; B().onMove(null); mark({});
+    hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
+    const i = CHAPTERS.indexOf(ch), nx = nextStep(ch);
+    hub.append(subHead(ch.title, openPath, 'Path'), el('p', 'tr-note', 'Chapter ' + (i + 1) + ' · ' + ch.blurb));
+    const list = el('div', 'tr-steps');
+    STEPS.forEach((k, j) => {
+      const b = btn('', 'tr-step' + (stepDone(ch, k) ? ' done' : '') + (k === nx ? ' next' : ''), () => runStep(ch, k));
+      b.innerHTML = '<span class="tr-step-num"></span><span class="tr-card-text"><small></small><b></b><span></span></span><span class="tr-chev" aria-hidden="true">›</span>';
+      b.querySelector('.tr-step-num').textContent = stepDone(ch, k) ? '✓' : String(j + 1);
+      b.querySelector('small').textContent = ['Learn', 'Practise', 'Prove it'][j];
+      b.querySelector('b').textContent = stepLabel(ch, k);
+      b.querySelector('.tr-card-text span').textContent = stepSub(ch, k);
+      list.append(b);
+    });
+    hub.append(list);
+    const row = el('div', 'tr-actions tr-chap-actions');
+    if (nx) row.append(btn('Start: ' + ['Learn', 'Practise', 'Prove it'][STEPS.indexOf(nx)], 'primary', () => runStep(ch, nx), 'play'));
+    else { const nc = recommended(); row.append(btn(nc ? 'Next chapter: ' + nc.title : 'Back to the path', 'primary', () => (nc ? openChapter(nc) : openPath()), 'next')); }
+    hub.append(row); hub.hidden = false; hub.scrollTop = 0;
+  }
+  function runStep(ch, step) {
+    const s = ch[step];
+    RETURN = () => openChapter(ch);
+    if (s.lesson) { const l = lessonById(s.lesson); if (l) { PATH = null; return startLesson(l); } }
+    if (s.challenge) { const c = challengeById(s.challenge); if (c) { PATH = null; return void startChallenge(c); } }
+    if (step === 'learn') return openLearn(ch);
+    if (step === 'prove') pathState(ch).streak = 0;
+    PATH = { ch, step, theme: s.theme, lo: s.lo, hi: s.hi, count: s.count };
+    hub.hidden = true; screen = 'puzzle'; void startPuzzle();
+  }
+  function openLearn(ch) {
+    session++; screen = 'learn'; top.hidden = true; panel.hidden = true; B().onMove(null);
+    hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
+    hub.append(subHead('The idea', () => openChapter(ch), ch.title));
+    const card = el('div', 'tr-learn');
+    card.append(el('h3', '', ch.title));
+    for (const t of ch.learn.text) card.append(el('p', '', t));
+    if (ch.learn.look) { card.append(el('span', 'tr-label', 'Look for')); const ul = el('ul'); for (const t of ch.learn.look) ul.append(el('li', '', t)); card.append(ul); }
+    hub.append(card);
+    const row = el('div', 'tr-actions tr-chap-actions');
+    row.append(btn('Got it — practise', 'primary', () => { pathState(ch).learn = true; save(); runStep(ch, 'practise'); }, 'play'));
+    hub.append(row); hub.hidden = false; hub.scrollTop = 0;
   }
 
   /* ------------------------------------------------------------------ toolbar button */
