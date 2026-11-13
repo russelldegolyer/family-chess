@@ -15,6 +15,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ---
 
 ## Unreleased
+- Improved: on desktop the Online sheet is wider with two columns (friends and records left, Live now, My matches and Settings right), so it fits without scrolling. Phones unchanged.
 
 **Improved** (desktop)
 - Name plates are bigger and each clock sits inside its plate; the bottom bar is one bar instead of two boxes.

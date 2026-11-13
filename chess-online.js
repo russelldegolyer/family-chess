@@ -74,7 +74,8 @@
       max-width:calc(100vw - 24px);display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:7px 8px 7px 11px;
       border:1px solid #38443c;border-radius:12px;background:#142019;color:#def4e5;font-size:12px;box-shadow:0 8px 28px #0009}
     #cgSpectatorBar .cgLeave{border:0;border-radius:8px;background:#303b33;color:#fff;padding:8px 11px;min-height:34px;cursor:pointer}
-    @media(max-width:600px){.cgPanel{top:auto;bottom:0;left:0;transform:none;width:100%;border-radius:16px 16px 0 0;max-height:calc(100dvh - 15px);padding-bottom:max(22px,env(safe-area-inset-bottom,0px))}}
+    .cgCols{display:contents}@media(min-width:900px){.cgPanel{width:min(920px,calc(100% - 48px))!important}.cgCols{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;align-items:start}.cgColL,.cgColR{min-width:0}}
+@media(max-width:600px){.cgPanel{top:auto;bottom:0;left:0;transform:none;width:100%;border-radius:16px 16px 0 0;max-height:calc(100dvh - 15px);padding-bottom:max(22px,env(safe-area-inset-bottom,0px))}}
     /* ---- simplified lobby: one sheet, players first, everything else quiet ---- */
     .cgPanel{background:#1c1c1e;border:0;border-radius:22px;padding:8px 16px 18px}
     @media(max-width:600px){.cgPanel{border-radius:22px 22px 0 0;padding-bottom:max(18px,env(safe-area-inset-bottom,0px))}}
@@ -180,6 +181,13 @@
       <button id="cgPractice" class="cgLink cgBack" type="button">Back to playing the computer</button>
     </section>`;
   document.body.appendChild(root);
+  // Desktop: two columns (friends/records left, live + matches right). Phones keep one column.
+  {const panel=root.querySelector('.cgPanel'),cols=document.createElement('div'),L=document.createElement('div'),R=document.createElement('div');
+   cols.className='cgCols';L.className='cgColL';R.className='cgColR';
+   const live=root.querySelector('#cgLiveBlock'),games=root.querySelector('#cgGames')?.closest('.cgBlock');
+   const back=root.querySelector('#cgPractice');
+   [...panel.children].forEach(n=>{if(n.matches('.cgGrab,.cgTop')||n===back)return;(n===live||n===games||n.id==='cgSettings'?R:L).appendChild(n);});
+   cols.append(L,R);panel.insertBefore(cols,back);}
   // Preserve the authenticated sign-out handler by moving the original
   // button into the new Online Games account settings.
   signOut.classList.add('cgAccountSignOut');
