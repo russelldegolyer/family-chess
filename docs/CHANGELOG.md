@@ -15,6 +15,11 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Fixed**
+- Spot the threat and Blunder check now name the tactic from what the move actually does (skewer, pin, fork, free capture, check, mate) and say which pieces are involved. A plain check is no longer called a skewer just because the puzzle is tagged that way.
+
 ## 2026-11-13 — Typed timers, time-out rule, End game, Matches, swipes, landscape (deployed 8:51 PM)
 
 **Added**

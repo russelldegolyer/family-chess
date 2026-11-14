@@ -2084,6 +2084,55 @@
     if (t.includes('promotion') || t.includes('advancedPawn')) return 'a pawn about to queen.';
     return 'it wins material.';
   }
+  /* name the tactic from what the move really does on the board; puzzle tags describe the whole line, not move one */
+  const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+  const PNAME = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+  function moveIdea(fen, uci, themes) {
+    const C = B()?.Chess; let c, mv;
+    try { c = new C(fen); mv = c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined }); } catch { return threatIdea(themes); }
+    if (!mv) return threatIdea(themes);
+    const me = mv.color, you = me === 'w' ? 'b' : 'w', at = mv.to;
+    const xy = (q) => ['abcdefgh'.indexOf(q[0]), +q[1] - 1], sq = (x, y) => (x >= 0 && x < 8 && y >= 0 && y < 8 ? 'abcdefgh'[x] + (y + 1) : null);
+    const guarded = (q, by) => { try { return c.attackers(q, by).length > 0; } catch { return false; } };
+    const mine = (q) => { const pc = c.get(q); return pc && pc.color === you ? pc : null; };
+    if (c.isCheckmate()) return 'checkmate.';
+    /* rays from the moved slider: the first and second pieces it meets */
+    const dirs = { r: [[1,0],[-1,0],[0,1],[0,-1]], b: [[1,1],[1,-1],[-1,1],[-1,-1]] }; dirs.q = dirs.r.concat(dirs.b);
+    const [x0, y0] = xy(at);
+    for (const [dx, dy] of dirs[mv.piece] || []) {
+      let x = x0 + dx, y = y0 + dy, first = null;
+      for (; sq(x, y); x += dx, y += dy) {
+        const pc = c.get(sq(x, y)); if (!pc) continue;
+        if (!first) { if (pc.color !== you) break; first = { q: sq(x, y), pc }; continue; }
+        if (pc.color !== you) break;
+        const front = first.pc, back = pc;
+        if ((front.type === 'k' || VAL[front.type] > VAL[back.type]) && (VAL[back.type] >= 3 || !guarded(sq(x, y), you)))
+          return 'a skewer — your ' + PNAME[front.type] + ' on ' + first.q + ' is attacked, and when it moves your ' + PNAME[back.type] + ' on ' + sq(x, y) + ' behind it falls.';
+        if (back.type === 'k' || VAL[back.type] > VAL[front.type] + 1)
+          return 'a pin — your ' + PNAME[front.type] + ' on ' + first.q + ' can’t move without exposing your ' + PNAME[back.type] + ' on ' + sq(x, y) + '.';
+        break;
+      }
+    }
+    /* fork: the moved piece hits two targets worth having */
+    const hits = [];
+    for (const row of c.board()) for (const pc of row) {
+      if (!pc || pc.color !== you) continue;
+      let by = []; try { by = c.attackers(pc.square, me); } catch { /* old chess.js */ }
+      if (!by.includes(at)) continue;
+      if (pc.type === 'k' || VAL[pc.type] > VAL[mv.piece] || !guarded(pc.square, you)) hits.push(pc);
+    }
+    if (hits.length >= 2) return 'a fork — the ' + PNAME[mv.piece] + ' on ' + at + ' hits your ' + hits.slice(0, 2).map((h) => PNAME[h.type] + ' on ' + h.square).join(' and ') + '.';
+    if (mv.captured) {
+      const free = !guarded(at, you);
+      return free ? 'a free capture — your ' + PNAME[mv.captured] + ' on ' + at + ' isn’t protected.' : 'it takes your ' + PNAME[mv.captured] + ' on ' + at + '.';
+    }
+    if (mv.promotion) return 'the pawn queens.';
+    if (c.inCheck()) {
+      const t = themes || [];
+      return 'a check — your king has to move' + (t.some((x) => /mate/i.test(x)) ? ', and the attack ends in checkmate.' : ', and that sets up the next blow, which wins material.');
+    }
+    return (themes || []).some((x) => /mate/i.test(x)) ? 'it starts an attack that ends in checkmate.' : 'it starts an attack that wins material.';
+  }
   async function threatPosition(theme, given) {
     const C = B().Chess;
     for (let t = 0; t < (given ? 1 : 6); t++) {
@@ -2146,7 +2195,7 @@
     if (!TD || TD.stage !== 'spot') return;
     TD.stage = 'stop'; B().onTap(null);
     const from = TD.threat.slice(0, 2), to = TD.threat.slice(2, 4), san = sanOf(TD.before, TD.threat);
-    TD.idea = threatIdea(themesList(TD.p.themes).concat(TD.p.themes.split(' ')));
+    TD.idea = moveIdea(TD.before, TD.threat, themesList(TD.p.themes).concat(TD.p.themes.split(' ')));
     mark({ arrows: [[from, to, 'rgba(255,69,58,.9)']], rings: [to], legend: [['arrow red', 'Red arrow: the threat']] });
     say(TD.msg, prefix + ' The threat is ' + san + ' — ' + TD.idea + ' Now stop it: play a move that defends.', 'idea');
     B().busy(false); const my = TD.my; B().onMove((uci) => void threatDefend(uci, my));
@@ -2233,7 +2282,7 @@
     mark({}); B().play(BD.cand); await sleep(500); if (my !== session || !BD) return;
     if (BD.unsafe) {
       const pun = p.moves[1], punFen = B().fen(), punSan = sanOf(punFen, pun);
-      BD.idea = threatIdea(themesList(p.themes).concat(p.themes.split(' ')));
+      BD.idea = moveIdea(punFen, pun, themesList(p.themes).concat(p.themes.split(' ')));
       if (right) {
         say(BD.msg, 'Right — ' + candSan + ' loses something. Now show why: tap the enemy piece that punishes it.', 'good');
         B().onTap((sq) => {
