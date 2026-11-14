@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-13 | 21 |
+| 2026-11-13 | 27 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
@@ -15,7 +15,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-13 — Chess-clock look, Play online polish, Now Playing fix (deployed 10:47 PM)
 
 **Improved**
 - New look across the app ("chess clock"): matte warm-charcoal panels, ivory text, buttons that press like clock keys, headings in Apple's book serif, sentence-case labels, and your own piece colour as the only accent. Gone: glossy red gradient tiles, glows, frosted glass and letterspaced capitals. Home screen strength is now five keys instead of a slider. Settings matches too: ivory selected options and switches, and the timer note lines up with its row. All in `chess-skin.css`.
