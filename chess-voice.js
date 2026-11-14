@@ -266,7 +266,7 @@
     try { S.pc?.close(); } catch { /* closed */ }
     S.pc = null; S.pendingIce = [];
     for (const t of S.local?.getTracks() || []) t.stop();
-    S.local = null; S.remote = null; if (audio) audio.srcObject = null;
+    S.local = null; S.remote = null; if (audio) { try { audio.pause(); } catch { /* not playing */ } audio.srcObject = null; }
     stopMeter(); S.needTap = false; S.state = 'idle'; S.muted = false; S.callId = null;
     if (lastView !== undefined) update(lastView); else paint();
   }
@@ -336,11 +336,14 @@
   const boot = () => { if (!api()) return void setTimeout(boot, 800); build(); void loadFriends(); api().auth.onAuthStateChange?.(() => void loadFriends()); setInterval(() => void loadFriends(), 120000); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   /* leaving the app ends the call: closing it, or (phones) switching away from it */
-  window.addEventListener('pagehide', () => hangUp(true));
+  /* no call going: close the ring's sound engine so iPhone doesn't list the page under Now Playing */
+  const quiet = () => { if (S.state !== 'idle') return; stopRingSound(); try { audio?.pause(); } catch { /* idle */ } const c = actx; actx = null; try { c && c.close(); } catch { /* closed */ } };
+  window.addEventListener('pagehide', () => { hangUp(true); quiet(); });
   let awayTimer = 0;
   document.addEventListener('visibilitychange', () => {
     clearTimeout(awayTimer);
-    if (document.visibilityState === 'hidden' && matchMedia('(pointer: coarse)').matches) awayTimer = setTimeout(() => { if (document.visibilityState === 'hidden') hangUp(true); }, 4000);
+    if (document.visibilityState === 'hidden') quiet();
+    if (document.visibilityState === 'hidden' && matchMedia('(pointer: coarse)').matches) awayTimer = setTimeout(() => { if (document.visibilityState === 'hidden') { hangUp(true); quiet(); } }, 4000);
   });
   window.familyChessVoice = { update, hangUp: () => hangUp(true), state: () => S.state };
 })();

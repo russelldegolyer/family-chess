@@ -50,7 +50,7 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="./chess-clock.js?v=15"></script>
 <script defer src="./chess-online.js?v=28"></script>
 <script defer src="./chess-chat.js?v=8"></script>
-<script defer src="./chess-voice.js?v=4"></script>
+<script defer src="./chess-voice.js?v=5"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=6">
 <script defer src="./chess-social.js?v=23"></script>
@@ -3323,6 +3323,14 @@ const Sound = {
     if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
     return this.ctx;
   },
+  /* leaving the app: close the sound engine and hand the audio session back, so iPhone doesn't keep the
+     page in Now Playing (lock screen / Dynamic Island). The next tap after coming back starts it again. */
+  sleep() {
+    const c = this.ctx; this.ctx = null;
+    try { c && c.close(); } catch { /* already closed */ }
+    try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch { /* older Safari */ }
+    try { if (navigator.mediaSession) { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; } } catch { /* no media session */ }
+  },
   /* Glass voices: a muted contact thud plus short inharmonic partials, like crystal set down on glass. */
   play(kind) {
     if (!this.on || !this.ctx || this.ctx.state !== 'running') return;
@@ -3360,7 +3368,8 @@ const Sound = {
 /* unlock audio on any tap or key anywhere (2D board, the side chooser, toolbar), not only the 3D canvas;
    touchend/click count as a user gesture on iPhone where pointerdown sometimes does not */
 for (const ev of ['pointerdown', 'touchend', 'click', 'keydown']) document.addEventListener(ev, () => Sound.ensure(), { capture: true, passive: true });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && Sound.ctx) Sound.ensure(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) Sound.sleep(); });
+window.addEventListener('pagehide', () => Sound.sleep());
 function fxForMove(mv, landMs, remote) {
   if (!mv) return;
   setTimeout(() => {

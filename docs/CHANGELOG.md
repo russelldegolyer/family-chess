@@ -21,6 +21,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Play online sheet polish: one clean name field (Save lights up only when you change it), a colour for each friend's avatar, "In game" in green, friend-code row matching the cards, each of your games shows Your turn / Their turn / pawn choice / Paused and when the last move was, small link and cancel icons instead of pills, and Record & past matches as a proper row.
 
 **Fixed**
+- Leaving or closing the app no longer leaves it stuck in iPhone's Now Playing bar: the sound engines close and the audio session is handed back; sound starts again on your next tap.
 - Watch live no longer shows abandoned games. Paused games and games waiting on a pawn choice drop off after an hour without a move; other games after 20 minutes.
 
 ## 2026-11-13 — Accurate threat explanations, Stockfish-checked Blunder check (deployed 10:07 PM)
