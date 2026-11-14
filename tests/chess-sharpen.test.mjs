@@ -49,8 +49,9 @@ test('practice and drills never write game state; the plan read stays on the dev
 
 test('threat text names the tactic from the board, not the puzzle tag (a plain check is not a skewer)',()=>{
  const tr=readFileSync(new URL('../chess-training.js',import.meta.url),'utf8');
- assert.match(tr,/function moveIdea\(fen, uci, themes\)/);
- assert.match(tr,/TD\.idea = moveIdea\(TD\.before, TD\.threat/);
- assert.match(tr,/BD\.idea = moveIdea\(punFen, pun/);
+ assert.match(tr,/function moveIdea\(fen, uci, themes, line = null\)/);
+ assert.match(tr,/TD\.idea = moveIdea\(TD\.before, TD\.threat, [^;]*TD\.p\.moves\.slice\(1\)\)/);
+ assert.match(tr,/BD\.idea = moveIdea\(punFen, pun, [^;]*p\.moves\.slice\(1\)\)/);
+ assert.match(tr,/&& wins\(\[bq\]\)\)/);   // a skewer is only named when the solution wins the piece behind
  assert.match(tr,/return 'a skewer — your ' \+ PNAME\[front\.type\]/);
 });
