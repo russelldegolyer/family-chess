@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-13 | 15 |
+| 2026-11-13 | 21 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
@@ -15,7 +15,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-13 — Accurate threat explanations, Stockfish-checked Blunder check (deployed 10:07 PM)
 
 **Fixed**
 - Blunder check answers are now checked by Stockfish (depth 18) instead of the quick in-browser engine, which got about 1 in 8 "safe" moves wrong. Puzzles whose first move isn't really a mistake are skipped, and "their best reply" is Stockfish's. Old review cards are re-checked against the verified answer. Answers ship in `chess-blunder-check.json` (no database change).
