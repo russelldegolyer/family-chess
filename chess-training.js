@@ -526,9 +526,60 @@
 
       const thumb = el('span', 'tr-saved-thumb'); thumb.innerHTML = miniBoard(g);
       go.append(thumb, txt, el('span', 'tr-chev', '›'));
-      row.append(go); box.append(row);
+      const canSend = g.source === 'online' && !!g.opponent_id;
+      const under = el('div', 'tr-swipe-under');
+      under.append(el('span', 'tr-swipe-send', canSend ? '↗ Send to ' + oppName(g) : 'Online games only'), el('span', 'tr-swipe-del', 'Delete 🗑'));
+      row.append(under, go); box.append(row);
+      swipeRow(row, go, { canSend, onDelete: () => swipeDelete(row, g), onSend: () => swipeSend(row, g) });
     }
-    hub.append(box, el('p', 'tr-about-foot', 'Picked-up games disappear unless kept ★'));
+    hub.append(box, el('p', 'tr-about-foot', 'Swipe left to delete · right to send back · ★ kept games stay'));
+  }
+  /* swipe a saved game: left (red) deletes, right (green) re-sends it exactly as it was to the same opponent */
+  function swipeRow(row, go, { canSend, onDelete, onSend }) {
+    let d = null;
+    const W = () => row.getBoundingClientRect().width || 300;
+    const set = (x, anim) => { go.style.transition = anim ? 'transform .22s ease' : 'none'; go.style.transform = x ? 'translateX(' + x + 'px)' : ''; row.dataset.dir = x < 0 ? 'del' : x > 0 ? 'send' : ''; row.classList.toggle('armed', Math.abs(x) > W() * 0.35); };
+    row.addEventListener('pointerdown', (e) => { if (e.button > 0 || row.dataset.busy) return; d = { x: e.clientX, y: e.clientY, id: e.pointerId, on: false, dx: 0 }; });
+    row.addEventListener('pointermove', (e) => {
+      if (!d || e.pointerId !== d.id) return;
+      const dx = e.clientX - d.x, dy = e.clientY - d.y;
+      if (!d.on) { if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { d = null; return; } if (Math.abs(dx) < 12) return; d.on = true; try { row.setPointerCapture(e.pointerId); } catch { } }
+      d.dx = dx > 0 && !canSend ? Math.min(dx, 60) * 0.5 : dx; set(d.dx);
+    });
+    const end = (e) => {
+      if (!d || (e && e.pointerId !== d.id)) return;
+      const was = d; d = null; if (!was.on) return;
+      go.dataset.swiped = '1'; setTimeout(() => delete go.dataset.swiped, 50);
+      if (was.dx < -W() * 0.35) { set(-W(), true); setTimeout(onDelete, 200); return; }
+      if (was.dx > W() * 0.35 && canSend) { set(0, true); onSend(); return; }
+      set(0, true);
+    };
+    row.addEventListener('pointerup', end); row.addEventListener('pointercancel', () => { d = null; set(0, true); });
+    go.addEventListener('click', (e) => { if (go.dataset.swiped) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  }
+  function swipeDelete(row, g) {
+    row.dataset.busy = '1'; row.replaceChildren();
+    const bar = el('div', 'tr-swipe-undo'); bar.append(el('span', '', 'Deleted ' + savedTitle(g)));
+    let undone = false;
+    bar.append(btn('Undo', 'tr-chip', () => { undone = true; openSaved(); }));
+    row.append(bar);
+    setTimeout(async () => {
+      if (undone) return;
+      const { error } = await api().from('chess_saved_games').delete().eq('id', g.id);
+      if (error) { window.familyChessToast?.('Could not delete: ' + error.message); if (screen === 'saved' || hub.contains(row)) openSaved(); return; }
+      savedCount = Math.max(0, savedCount - 1);
+      row.classList.add('gone'); setTimeout(() => row.remove(), 260);
+    }, 3500);
+  }
+  function swipeSend(row, g) {
+    row.dataset.busy = '1'; row.classList.add('sending');
+    const t = row.querySelector('.tr-saved-meta span'); const old = t ? t.textContent : '';
+    if (t) t.textContent = 'Sending to ' + oppName(g) + '…';
+    void sendSaved(g, g.opponent_id, g.owner_side, oppName(g), (msg, bad) => {
+      if (!bad) return;
+      delete row.dataset.busy; row.classList.remove('sending'); if (t) t.textContent = old;
+      window.familyChessToast?.(msg);
+    });
   }
   function openSavedGame(g) {
     session++; hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren(); hub.append(subHead(savedTitle(g), () => openSaved(), 'Saved games'));

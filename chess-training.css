@@ -514,3 +514,19 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-acc-trend b { font-size: 22px; font-variant-numeric: tabular-nums; }
 .tr-acc-trend span { font-size: 13px; color: var(--tr-dim); }
 .tr-actions .tr-choice ~ .tr-btn { flex: 0 0 76px; min-width: 76px; }
+
+/* saved games: swipe left to delete (red), right to send back (green) */
+.tr-saved-row { overflow: hidden; touch-action: pan-y; }
+.tr-saved-go { position: relative; z-index: 1; background: #151517; }
+.tr-swipe-under { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font: 650 15px/1 inherit; color: #fff; }
+.tr-saved-row[data-dir="send"] .tr-swipe-under { background: #1f8f45; }
+.tr-saved-row[data-dir="del"] .tr-swipe-under { background: #d93025; }
+.tr-saved-row[data-dir="send"] .tr-swipe-del, .tr-saved-row[data-dir="del"] .tr-swipe-send, .tr-saved-row:not([data-dir]) .tr-swipe-under, .tr-saved-row[data-dir=""] .tr-swipe-under { visibility: hidden; }
+.tr-saved-row.armed .tr-swipe-under span { transform: scale(1.08); }
+.tr-swipe-under span { transition: transform .15s; }
+.tr-swipe-undo { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 76px; padding: 0 16px; background: rgba(217,48,37,.16); color: #ff8a83; font-size: 14px; }
+.tr-swipe-undo span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-saved-row.gone { max-height: 0; transition: max-height .25s ease; }
+.tr-saved-row.sending .tr-saved-go { opacity: .6; }
+.tr-saved-row .tr-saved-go, .tr-saved-row .tr-saved-go:active { background: #151517; }
+.tr-saved-row .tr-saved-go:active { background: #1b1b1e; }

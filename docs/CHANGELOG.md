@@ -15,6 +15,15 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Added**
+- Saved games: swipe left (red) to delete, with a few seconds to undo; swipe right (green) to send an online game straight back to the same opponent, same position and sides.
+
+**Fixed**
+- The captured-pieces line no longer runs under the mic button; when it is too long it moves above your name plate.
+- Voice chat: the mic is asked for immediately on tap, retried with plainer settings if the phone refuses, and errors now say why (blocked, busy, no mic, connection) instead of "could not start".
+
 ## 2026-11-13 — Pattern training: review, drills, new lessons, plan read (deployed 6:43 PM)
 
 **Added** (training: see the patterns, both yours and the ones aimed at you)

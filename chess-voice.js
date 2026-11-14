@@ -108,6 +108,9 @@
       box.style.right = 'max(16px, env(safe-area-inset-right, 0px))';
       box.style.bottom = card && card.height ? Math.round(window.innerHeight - card.top + 12) + 'px' : 'calc(env(safe-area-inset-bottom, 0px) + 96px)';
     }
+    /* tell the board layout (captured-pieces line) where the mic is, so it never sits underneath it */
+    const on = box.classList.contains('show') && !box.classList.contains('inline');
+    if (document.body.classList.contains('voice-on') !== on) document.body.classList.toggle('voice-on', on);
   }
   function paint() {
     if (!box) return;
@@ -172,8 +175,18 @@
 
   /* ---------------- the call ---------------- */
   async function mic() {
-    if (S.local) return S.local;
-    S.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    if (S.local && S.local.getAudioTracks().some((t) => t.readyState === 'live')) return S.local;
+    S.local = null;
+    if (!supported()) { const e = new Error('unsupported'); e.name = 'NotSupportedError'; throw e; }
+    try { S.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
+    catch (e) {
+      if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) throw e;
+      /* some phones refuse the tuned settings or a busy audio session: try once more with the plainest request */
+      console.warn('voice mic (tuned)', e && e.name, e && e.message);
+      try { await actx?.suspend?.(); } catch { /* no shared audio */ }
+      S.local = await navigator.mediaDevices.getUserMedia({ audio: true });
+      try { await actx?.resume?.(); } catch { /* ignore */ }
+    }
     return S.local;
   }
   function makePc() {
@@ -195,7 +208,7 @@
       const pc = makePc(); for (const t of (await mic()).getTracks()) pc.addTrack(t, S.local);
       const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
       send('offer', { sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp } });
-    } catch (e) { console.warn('voice offer', e); micError(e); }
+    } catch (e) { console.warn('voice offer', e); S.local ? linkError(e) : micError(e); }
   }
   async function onOffer(sdp) {
     try {
@@ -206,12 +219,13 @@
       const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
       send('answer', { sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp } });
       S.state = 'connecting'; paint();
-    } catch (e) { micError(e); }
+    } catch (e) { console.warn('voice answer', e); S.local ? linkError(e) : micError(e); }
   }
   async function call() {
     if (!S.opp) return;
-    if (!chans.get(S.opp)) { await listen(S.opp); await new Promise((r) => setTimeout(r, 400)); }
-    try { await mic(); } catch (e) { return micError(e); }   /* ask for the mic now, while the tap counts as a gesture */
+    try { await mic(); } catch (e) { return micError(e); }   /* first thing after the tap, while it still counts as a gesture */
+    if (!chans.get(S.opp)) { try { await listen(S.opp); } catch (e) { console.warn('voice listen', e); } await new Promise((r) => setTimeout(r, 400)); }
+    if (!chans.get(S.opp)) { toast('Voice chat needs a connection — check your internet and try again.'); return reset(); }
     void audio.play().catch(() => {});
     S.callId = Math.random().toString(36).slice(2, 10); S.state = 'calling'; paint();
     send('ring', { name: S.myName });
@@ -233,9 +247,19 @@
   function hangUp(tell) { if (tell && S.state !== 'idle') send(S.state === 'calling' ? 'cancel' : 'end'); reset(); }
   function fail() { if (S.state === 'idle') return; toast("Couldn't keep the voice chat connected. Try again."); send('end'); reset(); }
   function micError(e) {
-    const denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
-    toast(denied ? 'Microphone is blocked. Allow it in your browser settings to talk.' : 'Voice chat could not start on this device.');
+    const n = (e && e.name) || 'Error';
+    console.warn('voice mic', n, e && e.message);
+    toast(n === 'NotAllowedError' || n === 'SecurityError' ? 'Microphone is blocked. Allow it for this site in Settings to talk.'
+      : n === 'NotFoundError' ? 'No microphone found on this device.'
+      : n === 'NotReadableError' || n === 'AbortError' ? 'The microphone is busy — close other apps using it (calls, recordings) and try again.'
+      : n === 'NotSupportedError' ? 'This browser can’t do voice chat. Try Safari or Chrome.'
+      : 'Voice chat could not start (' + n + '). Try again.');
+    if (S.state !== 'idle') send(S.state === 'calling' ? 'cancel' : 'end');
     reset();
+  }
+  function linkError(e) {
+    toast('Couldn’t connect the call (' + ((e && e.name) || 'error') + '). Try again.');
+    send('end'); reset();
   }
   function reset() {
     clearTimeout(S.ringTimer); clearInterval(S.ringTick); hideRing();
