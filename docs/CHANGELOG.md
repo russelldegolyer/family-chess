@@ -6,6 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
+| 2026-11-14 | 2 |
 | 2026-11-13 | 27 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
@@ -15,7 +16,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-14 — New fonts, roomier spacing, Settings and review bar fixes (deployed 8:29 AM)
 
 **Improved**
 - New fonts, served from the site itself: Newsreader (book serif) for headings and Instrument Sans for everything else, so the app looks the same on iPhone, Android and desktop. Small text is now at least 13.5px, and list rows and settings rows have more room.
