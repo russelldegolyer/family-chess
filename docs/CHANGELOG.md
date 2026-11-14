@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-14 | 5 |
+| 2026-11-14 | 8 |
 | 2026-11-13 | 27 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
@@ -16,7 +16,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-14 — Swipe to close, green Online outline, timer at the bottom of Settings (deployed 12:24 PM)
 
 **Added**
 - Pull the Play online sheet down to close it (phones).
