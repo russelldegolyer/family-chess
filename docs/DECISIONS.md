@@ -69,3 +69,7 @@ engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
 - `clock_expiry` per profile and game: `end` | `sec60` | `pawn` (default). Pawn trade only on minutes clocks, at ≤10 s (+1:30); time-out penalty pawn gives +3:00.
 - "End" (online) finishes the game with end_reason `ended`, no result; `chess_end_game` deletes such games. Ended/replaced games never count or show in Matches.
 - Records live in Challenges → Matches, not in the Play online sheet.
+
+## D-34 Verified drill answers (2026-11-13)
+- Blunder check "safe"/"blunder" answers come from an offline Stockfish check shipped as `chess-blunder-check.json`, not the quick in-browser engine.
+- Threat and blunder explanations name a skewer/pin/fork only when the puzzle's solution wins the piece named; otherwise they describe the move as it is (check, capture, mate).

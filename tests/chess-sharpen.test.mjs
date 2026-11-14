@@ -55,3 +55,19 @@ test('threat text names the tactic from the board, not the puzzle tag (a plain c
  assert.match(tr,/&& wins\(\[bq\]\)\)/);   // a skewer is only named when the solution wins the piece behind
  assert.match(tr,/return 'a skewer — your ' \+ PNAME\[front\.type\]/);
 });
+
+test('Blunder check uses Stockfish-verified answers, re-checks old review cards, falls back to the engine only if unchecked',()=>{
+ const tr=readFileSync(new URL('../chess-training.js',import.meta.url),'utf8');
+ assert.match(tr,/async function blunderFacts\(p\)/);
+ assert.match(tr,/fetch\('chess-blunder-check\.json\?v=\d+'\)/);
+ assert.match(tr,/if \(v && v\.bad === false\) continue;/);
+ assert.match(tr,/cand: unsafe \? p\.moves\[0\] : v\.safe\[0\]/);
+ assert.match(tr,/const e = BD\.reply \? \{ move: BD\.reply \} : await engine/);
+ const V=JSON.parse(readFileSync(new URL('../chess-blunder-check.json',import.meta.url),'utf8'));
+ assert.ok(Object.keys(V.safe).length>4000&&V.lost.length&&V.notBad.length);
+ for(const m of Object.values(V.safe))assert.match(m,/^[a-h][1-8][a-h][1-8][qrbn]? [a-h][1-8][a-h][1-8][qrbn]?$/);
+ const dev=JSON.parse(readFileSync(new URL('../chess-puzzles-dev.json',import.meta.url),'utf8'));
+ const TH=/\b(hangingPiece|fork|pin|skewer|mateIn1|mateIn2|backRankMate|discoveredAttack|trappedPiece)\b/;
+ const ids=new Set([...Object.keys(V.safe),...V.lost,...V.notBad]);
+ for(const p of dev.puzzles)if(TH.test(p[4]))assert.ok(ids.has(p[0]),'built-in drill puzzle '+p[0]+' has a verdict');
+});

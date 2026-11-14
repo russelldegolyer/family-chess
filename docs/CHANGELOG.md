@@ -18,6 +18,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Fixed**
+- Blunder check answers are now checked by Stockfish (depth 18) instead of the quick in-browser engine, which got about 1 in 8 "safe" moves wrong. Puzzles whose first move isn't really a mistake are skipped, and "their best reply" is Stockfish's. Old review cards are re-checked against the verified answer. Answers ship in `chess-blunder-check.json` (no database change).
 - Spot the threat and Blunder check now name the tactic from what the move actually does (skewer, pin, fork, free capture, check, mate) and say which pieces are involved. A plain check is no longer called a skewer just because the puzzle is tagged that way. A skewer, pin or fork is only named when the puzzle's solution really wins the piece it names (checked on all 5,627 drill puzzles: 100% match); a check that can be blocked or captured says "you have to answer the check" instead of "your king has to move".
 
 ## 2026-11-13 — Typed timers, time-out rule, End game, Matches, swipes, landscape (deployed 8:51 PM)

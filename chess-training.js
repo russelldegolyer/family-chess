@@ -2264,14 +2264,36 @@
   }
 
   /* ---------------- blunder check: is the move you're about to play safe? ---------------- */
+  /* Blunder check answers are checked offline by Stockfish 16.1 at depth 18 (tools/verify-blunder-check.py):
+     bad = the puzzle's first move really loses 1.5+ pawns; safe = [the best move, their best reply]. */
+  let blunderSet = null;
+  async function blunderFacts(p) {
+    if (!blunderSet) {
+      try { const j = await (await fetch('chess-blunder-check.json?v=1')).json(); blunderSet = { safe: j.safe, lost: new Set(j.lost), notBad: new Set(j.notBad) }; }
+      catch { return null; }   /* offline: the quick engine decides, as before */
+    }
+    const S = blunderSet;
+    if (S.safe[p.id]) return { bad: true, safe: S.safe[p.id].split(' ') };
+    if (S.lost.has(p.id)) return { bad: true, safe: null };
+    if (S.notBad.has(p.id)) return { bad: false, safe: null };
+    return null;
+  }
   async function blunderPosition(theme, given) {
     const C = B().Chess;
-    for (let t = 0; t < (given ? 1 : 6); t++) {
+    for (let t = 0; t < (given ? 1 : 10); t++) {
       const p = given || await nextPuzzle({ theme: theme || THREAT_THEMES, ...drillBand() });
       if (!p) return null;
       try {
         const c0 = new C(p.fen); if (c0.isGameOver()) continue;
-        if (given) return { p, cand: p.cand, unsafe: !!p.unsafe, mover: c0.turn() };
+        const v = await blunderFacts(p);
+        if (given) {   /* old review cards were set up by the quick engine: re-check them against the verified answer */
+          if (v && v.bad === false) return null;
+          if (v && !p.unsafe) { if (!v.safe) return null; return { p, cand: v.safe[0], reply: v.safe[1] || null, unsafe: false, mover: c0.turn() }; }
+          return { p, cand: p.cand, unsafe: !!p.unsafe, mover: c0.turn() };
+        }
+        if (v && v.bad === false) continue;   /* its first move isn't really a mistake */
+        if (v) { const unsafe = !v.safe || Math.random() < 0.55; return { p, cand: unsafe ? p.moves[0] : v.safe[0], reply: unsafe ? null : v.safe[1] || null, unsafe, mover: c0.turn() }; }
+        /* not checked offline: fall back to the quick in-browser engine */
         const unsafe = Math.random() < 0.55;
         const e = await engine(p.fen, 5, 800, p.moves[0]);
         if (!e || !e.move || e.playedScore == null || e.bestScore == null) continue;
@@ -2323,7 +2345,7 @@
       }
       return void blunderShow(false, 'It loses: ' + punSan + ' — ' + BD.idea + ' Before every move, check what your opponent can do next.');
     }
-    const e = await engine(B().fen(), 5, 700); if (my !== session || !BD) return;
+    const e = BD.reply ? { move: BD.reply } : await engine(B().fen(), 5, 700); if (my !== session || !BD) return;
     if (e && e.move) mark({ arrows: [[e.move.slice(0, 2), e.move.slice(2, 4), 'rgba(170,170,180,.7)']], legend: [['arrow grey', 'Grey arrow: their best reply']] });
     blunderDone(right, right ? 'Right — ' + candSan + ' is safe. Their best reply' + (e && e.move ? ', ' + sanOf(B().fen(), e.move) + ',' : '') + ' doesn’t win anything.'
       : 'Actually it’s safe: their best reply' + (e && e.move ? ', ' + sanOf(B().fen(), e.move) + ',' : '') + ' wins nothing. Not every move is a trap — check, then trust it.');

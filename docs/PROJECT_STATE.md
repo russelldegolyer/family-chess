@@ -101,3 +101,4 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - Clock state lives in `chess-clock.js`; local timeouts call back into `index.html`; online timeouts are settled only by the server.
 - Shared Supabase project: any SQL must target `public.chess_*` only.
 - Deploy contents: `.vercelignore` keeps database/, docs/, supabase/, tests/, tools/, .github/, README.md and CLAUDE.md out of Vercel deploys. A new runtime file must live at the repo root (or a folder not listed there).
+- Blunder check answers: `chess-blunder-check.json` (Stockfish 16.1, depth 18; rebuild with `tools/verify-blunder-check.py` when drill puzzles change). Puzzles not in it fall back to the in-browser engine.
