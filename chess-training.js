@@ -218,6 +218,8 @@
   const hub = el('section', 'tr-sheet'); hub.hidden = true;
   const top = el('div', 'tr-top'); top.hidden = true;
   const panel = el('div', 'tr-panel'); panel.hidden = true;
+  /* the board re-fits around the lesson panel whenever it opens, closes or changes height */
+  { let last = -1; new ResizeObserver(() => { const h = panel.hidden ? 0 : panel.offsetHeight; if (h !== last) { last = h; window.dispatchEvent(new Event('resize')); } }).observe(panel); }
   root.append(hub, top, panel);
   document.addEventListener('DOMContentLoaded', () => document.body.append(root));
   if (document.body) document.body.append(root);

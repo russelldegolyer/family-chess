@@ -24,6 +24,12 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 **Removed**
 - The chess-clock skin and the Newsreader / Instrument Sans fonts (ivory buttons, serif headings, strength keys).
 
+**Fixed**
+- Your name plate no longer sits on top of pop-ups (Settings, Boards, colour picker, End this game?).
+- Your path: chapter rows grow to fit their text (the highlighted chapter's title was cut off).
+- Lessons: the board fits above the lesson panel instead of running under it (the A–H letters were hidden), on phone and desktop.
+- Chat panel and Boards sheet now match the near-black of the other sheets.
+
 **Kept**
 - Settings: "When time runs out" on its own full-width row. Review bar: the empty status capsule stays hidden.
 

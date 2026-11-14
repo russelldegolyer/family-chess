@@ -27,3 +27,19 @@ html body .set-row.set-row-stack .set-label { align-self: flex-start; }
 html body .set-row.set-row-stack .set-seg { width: 100%; }
 html body .set-row.set-row-stack .set-seg button { flex: 1 1 0 !important; white-space: nowrap; }
 html body .set-list .set-note { padding: 0 14px 12px !important; margin: 0 !important; }
+
+/* fix: while any pop-up is open, the floating name plate, captured pieces and clock step back
+   (they sat on top of Settings, Boards, the colour picker and "End this game?") */
+html body:has(#ui > .overlay) #plateBottom.plate-floating, html body:has(#ui > .overlay) .cap-strip, html body:has(#ui > .overlay) #chessClockHud,
+html body:has(#collection:not([hidden])) #plateBottom.plate-floating, html body:has(#collection:not([hidden])) .cap-strip { visibility: hidden !important; }
+
+/* fix: list rows never shrink (a long Your path list cropped the highlighted chapter's title) */
+html body .tr-root .tr-chap, html body .tr-root .tr-step, html body .tr-root .tr-list > *, html body .tr-root .tr-path-list > *, html body .tr-root .tr-steps > * { flex: none !important; height: auto !important; }
+html body .tr-root .tr-chap, html body .tr-root .tr-step { padding-top: 12px !important; padding-bottom: 12px !important; }
+
+/* Boards / colour sheet: same near-black as the other sheets */
+html body .col-shell { background: var(--ios-sheet) !important; }
+
+/* chat panel (desktop side panel and phone sheet) in the same near-black */
+html body #panel { background: var(--ios-sheet) !important; }
+html body #panel .chat-empty, html body #panel .msg-empty { background: var(--ios-card) !important; }
