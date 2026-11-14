@@ -48,12 +48,12 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=15"></script>
-<script defer src="./chess-online.js?v=28"></script>
+<script defer src="./chess-online.js?v=29"></script>
 <script defer src="./chess-chat.js?v=8"></script>
 <script defer src="./chess-voice.js?v=5"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=6">
-<script defer src="./chess-social.js?v=23"></script>
+<script defer src="./chess-social.js?v=24"></script>
 <link rel="stylesheet" href="./chess-training.css?v=25">
 <link rel="stylesheet" href="./chess-plan.css?v=1">
 <link rel="stylesheet" href="./chess-stats.css?v=3">
@@ -1467,7 +1467,7 @@ body.clock-in-chat #plateTop .chess-clock, body.clock-in-plate #plateTop .chess-
 body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
 </style>
 
-<link rel="stylesheet" href="./chess-skin.css?v=6">
+<link rel="stylesheet" href="./chess-skin.css?v=7">
 </head>
 <body>
 <canvas id="stage" role="img" aria-label="Three-dimensional chess board"></canvas>
@@ -6963,27 +6963,29 @@ function openSettings() {
       box.append(inp, unit); timer.append(box);
     }
     row('Timer', timer);
-    if (kind !== 'off') {
-      const exp = kind === 's' ? null : (C.getExpiry?.() || 'pawn');
-      if (exp) row('When time runs out', seg([['end', 'Game ends'], ['sec60', '60s a move'], ['pawn', 'Pawn trade']], exp, (v) => {
-        C.setExpiry(v);
-        window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(C.getPreference(), v));
-        if (G.onlineProvider === 'supabase' && G.status === 'active' && mySeat && G.gid) Promise.resolve(window.familyChessChangeClock?.(G.gid, C.getPreference(), v)).catch((e) => toast(e?.message || 'Could not change the rule', 4200));
-      }, 'When time runs out'));
-      if (exp) body.lastChild.classList.add('set-row-stack');   /* three choices need the full width */
-      const note = el('p', 'set-note');
-      note.textContent = kind === 's' ? 'Run out of seconds on a move and the game ends.'
-        : exp === 'end' ? 'Run out of time and you lose.'
-        : exp === 'sec60' ? 'Run out of time and both of you switch to 60 seconds per move.'
-        : 'At 10 seconds you can trade one of your pawns for +1:30. Let it run out and your opponent removes any pawn of yours; your clock goes back to 3:00.';
-      body.append(note);
-    }
+    body.lastChild.classList.add('set-row-stack', 'set-timer-row');   /* label on top, choices and amount full width */
+    if (kind === 's') { const note = el('p', 'set-note'); note.textContent = 'Run out of seconds on a move and the game ends.'; body.append(note); }
     row('Computer speed', seg([['instant', 'Instant'], ['regular', '2.5s'], ['slow', '4.4s'], ['delayed', '10s']], cpuSpeed(), setCpuSpeed, 'Computer move speed'));
     row('Moving pieces', seg([['preview', 'Two taps'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), 'Moving pieces'));
     row('2D pieces', seg([['classic', 'Pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v }), '2D pieces'));
     row('Show last move', toggle(showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }, "Show opponent's last move"));
     { const b = el('button', 'set-pick'); b.type = 'button'; b.textContent = (BOARD[THEME]?.name || 'Default') + '  ›'; b.addEventListener('click', () => { d.close(); $('btnCollection').click(); }); row('Board', b); }
     row('Sound', toggle(Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) { Sound.ensure(); Sound.play('move'); } }, 'Sound'));
+    /* last: what happens when a minutes clock runs out */
+    if (kind === 'm') {
+      const exp = C.getExpiry?.() || 'pawn';
+      row('When time runs out', seg([['end', 'Game ends'], ['sec60', '60s a move'], ['pawn', 'Pawn trade']], exp, (v) => {
+        C.setExpiry(v);
+        window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(C.getPreference(), v));
+        if (G.onlineProvider === 'supabase' && G.status === 'active' && mySeat && G.gid) Promise.resolve(window.familyChessChangeClock?.(G.gid, C.getPreference(), v)).catch((e) => toast(e?.message || 'Could not change the rule', 4200));
+      }, 'When time runs out'));
+      body.lastChild.classList.add('set-row-stack');   /* three choices need the full width */
+      const note = el('p', 'set-note');
+      note.textContent = exp === 'end' ? 'Run out of time and you lose.'
+        : exp === 'sec60' ? 'Run out of time and both of you switch to 60 seconds per move.'
+        : 'At 10 seconds you can trade one of your pawns for +1:30. Let it run out and your opponent removes any pawn of yours; your clock goes back to 3:00.';
+      body.append(note);
+    }
   }
   render();
 }

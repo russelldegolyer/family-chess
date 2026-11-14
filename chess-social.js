@@ -106,6 +106,7 @@
   others.sort((a,b)=>Number(online(b.id))-Number(online(a.id))||a.display_name.localeCompare(b.display_name));
   const on=others.filter(p=>online(p.id)).length;
   $('cgOnlineCount').textContent=on?on+' online':'';
+  document.body.classList.toggle('friends-online',on>0);   /* Online button outline: green when a friend is online, red when none */
   if(!others.length){empty(list,'No friends yet. Share your friend code below, or add someone else’s.');return;}
   for(const p of others){
    const game=activeGames.find(g=>g.white_player_id===p.id||g.black_player_id===p.id);

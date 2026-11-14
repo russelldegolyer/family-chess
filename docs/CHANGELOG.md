@@ -16,6 +16,15 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Added**
+- Pull the Play online sheet down to close it (phones).
+- The Online button's outline turns green when any friend is online (red when none).
+
+**Improved**
+- Settings: the timer row is laid out like the others (label on top, None / Seconds / Minutes full width, the amount on its own line), and "When time runs out" is now the last setting.
+
 ## 2026-11-14 — Back to the iOS look on black, overlap sweep (deployed 10:10 AM)
 
 **Improved**

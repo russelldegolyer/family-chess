@@ -43,3 +43,17 @@ html body .col-shell { background: var(--ios-sheet) !important; }
 /* chat panel (desktop side panel and phone sheet) in the same near-black */
 html body #panel { background: var(--ios-sheet) !important; }
 html body #panel .chat-empty, html body #panel .msg-empty { background: var(--ios-card) !important; }
+
+/* timer row: label on top, None / Seconds / Minutes full width, amount on its own line */
+html body .set-row.set-timer-row .set-timer { display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 10px !important; width: 100%; }
+html body .set-row.set-timer-row .set-seg { width: 100%; }
+html body .set-row.set-timer-row .set-seg button { flex: 1 1 0 !important; }
+html body .set-row.set-timer-row .set-amount { display: flex !important; align-items: center !important; justify-content: flex-start !important; gap: 10px !important; }
+html body .set-row.set-timer-row .set-amount input { width: 76px !important; height: 38px !important; text-align: center; border-radius: 10px !important; font-size: 17px !important; }
+html body .set-row.set-timer-row .set-amount span { font-size: 15px; color: #8e8e93; }
+html body .set-note + .set-row, html body .set-row + .set-note { border-top: 0 !important; }
+
+/* Online button: green outline while any friend is online (red otherwise) */
+html body.friends-online .auth-account #cgLaunch { border-color: rgba(48, 209, 88, .7) !important; color: #30d158 !important; }
+html body.friends-online .auth-account-toggle { border-color: rgba(48, 209, 88, .7) !important; }
+html body.friends-online:not(.pregame) .auth-account-toggle { color: #30d158 !important; }

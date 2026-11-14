@@ -575,6 +575,32 @@
 
   launch.addEventListener('click', show);
   $('cgClose').addEventListener('click', close);
+  /* phones: pull the sheet down from the top to close it (only when it's scrolled to the top, so scrolling still works) */
+  {
+    const panel = document.querySelector('#cgLobby .cgPanel');
+    let y0 = null, dy = 0, t0 = 0, dragging = false;
+    panel.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1 || panel.scrollTop > 0 || matchMedia('(min-width:601px)').matches) { y0 = null; return; }
+      if (e.target.closest('input,textarea,select') === document.activeElement && document.activeElement !== document.body) { y0 = null; return; }   /* typing: leave it alone */
+      y0 = e.touches[0].clientY; dy = 0; t0 = Date.now(); dragging = false;
+    }, { passive: true });
+    panel.addEventListener('touchmove', (e) => {
+      if (y0 == null) return;
+      dy = e.touches[0].clientY - y0;
+      if (!dragging && (dy < 6 || panel.scrollTop > 0)) { if (dy < -6) y0 = null; return; }
+      dragging = true; e.preventDefault();
+      panel.style.transition = 'none'; panel.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
+    }, { passive: false });
+    const end = () => {
+      if (y0 == null) return; y0 = null;
+      if (!dragging) return; dragging = false;
+      const fast = dy > 60 && Date.now() - t0 < 250;
+      panel.style.transition = 'transform .22s ease';
+      if (dy > 120 || fast) { panel.style.transform = 'translateY(100%)'; setTimeout(() => { close(); panel.style.transition = ''; panel.style.transform = ''; }, 200); }
+      else { panel.style.transform = ''; setTimeout(() => { panel.style.transition = ''; }, 230); }
+    };
+    panel.addEventListener('touchend', end); panel.addEventListener('touchcancel', end);
+  }
   root.querySelector('.cgShade').addEventListener('click', close);
   document.addEventListener('keydown', ev => { if(ev.key==='Escape'&&!root.hidden)close(); });
   async function ensureProfile() {
