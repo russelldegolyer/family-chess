@@ -281,7 +281,7 @@
    if(pr.error&&hasLastSeen&&/last_seen_at/.test(pr.error.message||'')){hasLastSeen=false;loading=false;return refreshData({offerLobby});}
    if(pr.error||gm.error||ch.error)throw(pr.error||gm.error||ch.error);
    /* only games two people are really playing right now (moved in the last 20 minutes) */
-   profiles=pr.data||[];activeGames=(gm.data||[]).filter(g=>g.white_player_id&&g.black_player_id&&(Date.now()-Date.parse(g.updated_at)<20*60000||g.clock_state==='paused'||g.clock_state==='penalty'));challenges=ch.data||[];
+   profiles=pr.data||[];activeGames=(gm.data||[]).filter(g=>g.white_player_id&&g.black_player_id&&Date.now()-Date.parse(g.updated_at)<((g.clock_state==='paused'||g.clock_state==='penalty')?60:20)*60000);challenges=ch.data||[];
    friendships=fr.error?[]:(fr.data||[]);
    friendIds=new Set(friendships.filter(f=>f.status==='accepted').map(f=>f.user_a===uid?f.user_b:f.user_a));
    if(!myCode)void Promise.resolve(api.rpc('chess_my_friend_code')).then(r=>{if(r?.data){myCode=r.data;$('cgMyCodeText').textContent=r.data.slice(0,3)+'-'+r.data.slice(3);}}).catch(()=>{});

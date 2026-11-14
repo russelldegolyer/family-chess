@@ -15,6 +15,11 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Fixed**
+- Watch live no longer shows abandoned games. Paused games and games waiting on a pawn choice drop off after an hour without a move; other games after 20 minutes.
+
 ## 2026-11-13 — Accurate threat explanations, Stockfish-checked Blunder check (deployed 10:07 PM)
 
 **Fixed**
