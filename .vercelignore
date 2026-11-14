@@ -1,0 +1,9 @@
+# Only the app itself is deployed. Source-only folders and notes stay in the repo.
+database/
+docs/
+supabase/
+tests/
+tools/
+.github/
+README.md
+CLAUDE.md

@@ -1,7 +1,7 @@
 name: Family Chess verification
 on:
   push:
-    branches: [main, "feat/direct-challenges-push-on-live-spectator"]
+    branches: [main]
   pull_request:
     branches: [main]
 jobs:
@@ -14,9 +14,6 @@ jobs:
           node-version: '22'
       - name: Check external JavaScript syntax
         run: |
-          node --check auth-gate.js
-          node --check chess-online.js
-          node --check chess-social.js
-          node --check chess-sw.js
+          for f in *.js; do node --check "$f"; done
       - name: Test shared player colors and mobile chat layout
         run: node --test tests/*.test.mjs

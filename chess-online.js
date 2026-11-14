@@ -752,31 +752,6 @@
     }
   }
   let showAllGames=false;
-  /* win rate, W-L-D and a coloured bar; tap for the full stats */
-  const fmtRec=(w,l,d)=>{const n=w+l+d,f=(v,c)=>'<i class="'+c+'" style="flex-grow:'+(n?v:(c==='d'?1:0))+'"></i>';
-    return '<span class="cgRecMain"><b>'+(n?Math.round(w/n*100)+'%':'–')+'</b><small>'+(n?'won':'no games')+'</small></span>'+
-      '<span class="cgRecWdl"><i class="w">'+w+'W</i> · <i class="l">'+l+'L</i> · <i class="d">'+d+'D</i></span>'+
-      '<span class="st-wdl">'+f(w,'w')+f(d,'d')+f(l,'l')+'</span>';};
-  /* average accuracy across games that have one */
-  const fmtAcc=(list)=>list.length?'<span class="cgRecAcc"><b>'+(list.reduce((a,b)=>a+b,0)/list.length).toFixed(1)+'</b> avg accuracy</span>':'';
-  async function renderRecord(pid){
-    if(!$('cgRecCpu'))return;
-    const c=window.familyChessCpuRecord?.()||{w:0,l:0,d:0};
-    $('cgRecCpu').innerHTML=fmtRec(c.w,c.l,c.d);
-    const cg=window.familyChessCpuGames?.()||[],ca=cg.map(x=>x.acc).filter(v=>typeof v==='number');
-    $('cgRecCpu').innerHTML+=fmtAcc(ca);
-    const {data}=await api.from('chess_games').select('id,result,white_player_id,end_reason,accuracy_white,accuracy_black')
-      .eq('status','finished').or('white_player_id.eq.'+pid+',black_player_id.eq.'+pid).limit(1000);
-    let w=0,l=0,d=0;const accs=[];
-    for(const g of data||[]){
-      if(g.end_reason==='replaced'||g.end_reason==='ended'||!g.result)continue;
-      if(g.result==='1/2-1/2')d++;else if((g.result==='1-0')===(g.white_player_id===pid))w++;else l++;
-      const me=g.white_player_id===pid?'w':'b';
-      const v=(me==='w'?g.accuracy_white:g.accuracy_black)??window.familyChessAccuracy?.cached?.('g:'+g.id)?.[me];
-      if(v!=null)accs.push(Number(v));
-    }
-    $('cgRecOnline').innerHTML=fmtRec(w,l,d)+fmtAcc(accs);
-  }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
   $('cgMatchesLink').addEventListener('click',()=>{close();window.familyChessTraining?.openMatches?.();});
   let creating = false, openInviteId = null;

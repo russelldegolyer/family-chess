@@ -28,6 +28,10 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Play online sheet is simpler: your name is at the top, then friends, your current games and spectating. Records and past matches moved to Challenges → Matches.
 - Watch live only lists games between two people that are still being played (one friend in the game is enough to watch). Paused games and games waiting on a pawn choice stay listed.
 
+**Removed**
+- Leftover code from the old record cards on the Play online sheet, and unused styles.
+- Deploys now ship only the app: database scripts, tests, tools, docs and server source stay in the repo (`.vercelignore`).
+
 **Fixed**
 - Pawn trade works with the new typed minute clocks on the server too.
 - Online clocks wait for the first move: nobody loses time before a move is played (database change, already live). Pausing or changing the clock before the first move keeps it stopped.

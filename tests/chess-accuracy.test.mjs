@@ -11,13 +11,13 @@ test('accuracy uses the win-chance formula and blends mean with harmonic mean',(
  assert.match(stats,/window\.familyChessAccuracy = Object\.freeze\(\{ forGame: accFor, cached: accCached \}\)/);
 });
 
-test('accuracy shows on the end card, My matches and record cards, and is saved through an RPC',()=>{
+test('accuracy shows on the end card, Your games and Matches, and is saved through an RPC',()=>{
  assert.match(page,/id="endAcc"/);
  assert.match(page,/fillEndAccuracy\(me\)/);
  assert.match(page,/rpc\('chess_set_game_accuracy'/);
  assert.match(online,/accuracy_white,accuracy_black/);
  assert.match(online,/className='cgAcc'/);
- assert.match(online,/avg accuracy/);
+ assert.match(readFileSync(new URL('../chess-training.js',import.meta.url),'utf8'),/average accuracy/);
  assert.match(sql,/security definer/);
  assert.match(sql,/coalesce\(accuracy_white, round\(p_white, 1\)\)/);
  assert.match(sql,/g\.status <> 'finished'/);

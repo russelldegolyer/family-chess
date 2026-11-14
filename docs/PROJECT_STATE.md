@@ -100,3 +100,4 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - `fitCamera` handles both the opening screen (`PG.on`) and normal play; `viewYShift` must interpolate when it changes.
 - Clock state lives in `chess-clock.js`; local timeouts call back into `index.html`; online timeouts are settled only by the server.
 - Shared Supabase project: any SQL must target `public.chess_*` only.
+- Deploy contents: `.vercelignore` keeps database/, docs/, supabase/, tests/, tools/, .github/, README.md and CLAUDE.md out of Vercel deploys. A new runtime file must live at the repo root (or a folder not listed there).

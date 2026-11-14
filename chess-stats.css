@@ -1,16 +1,4 @@
-/* Record cards on Play online + the stats sheets behind them */
-.cgRecord { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 0; }
-.cgRecCard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 11px; border: 0; border-radius: 14px; text-align: left; cursor: pointer;
-  background: linear-gradient(145deg, #222226, #1a1a1d); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); color: #f2f2f7; font: inherit; min-width: 0; }
-.cgRecCard:active { filter: brightness(1.15); }
-.cgRecHead { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.cgRecHead span { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #8e8e93; }
-.cgRecHead em { font-style: normal; color: #636366; font-size: 16px; line-height: 1; }
-.cgRecMain { display: flex; align-items: baseline; gap: 6px; }
-.cgRecMain b { font-size: 22px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.cgRecMain small { font-size: 12px; color: #8e8e93; }
-.cgRecWdl { font-size: 12px; color: #c7c7cc; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.cgRecWdl i { font-style: normal; } .cgRecWdl .w { color: #30d158; } .cgRecWdl .l { color: #ff6961; } .cgRecWdl .d { color: #aeaeb2; }
+/* Stats sheets (Challenges → Matches → Full stats) */
 .st-wdl { display: flex; height: 5px; border-radius: 3px; overflow: hidden; background: #2c2c30; gap: 1px; min-width: 0; }
 .st-wdl i { display: block; flex-basis: 0; } .st-wdl .w { background: #30d158; } .st-wdl .d { background: #636366; } .st-wdl .l { background: #ff453a; }
 
@@ -77,5 +65,3 @@
 .st-level { padding: 5px 4px; }
 .st-alllv { align-self: flex-start; border: 0; background: rgba(10,132,255,.14); color: #64b5ff; border-radius: 999px; padding: 6px 12px; font: 600 13px/1 inherit; cursor: pointer; }
 
-.cgRecAcc { font-size: 12px; color: #8e8e93; white-space: nowrap; }
-.cgRecAcc b { color: #7ee99a; font-weight: 700; font-variant-numeric: tabular-nums; }

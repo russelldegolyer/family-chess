@@ -48,15 +48,15 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=15"></script>
-<script defer src="./chess-online.js?v=25"></script>
+<script defer src="./chess-online.js?v=26"></script>
 <script defer src="./chess-chat.js?v=8"></script>
 <script defer src="./chess-voice.js?v=4"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
 <script defer src="./chess-social.js?v=21"></script>
-<link rel="stylesheet" href="./chess-training.css?v=24">
+<link rel="stylesheet" href="./chess-training.css?v=25">
 <link rel="stylesheet" href="./chess-plan.css?v=1">
-<link rel="stylesheet" href="./chess-stats.css?v=2">
+<link rel="stylesheet" href="./chess-stats.css?v=3">
 <script defer src="./chess-stats.js?v=5"></script>
 <script defer src="./chess-plan.js?v=1"></script>
 <script defer src="./chess-training.js?v=28"></script>
@@ -122,7 +122,6 @@ body.tight .brand, body.compact .brand { display: none; }
 .picker .set-warn { grid-column: 1 / -1; }
 @media (max-width: 520px) { .picker { grid-template-columns: 1fr; justify-items: center; } }
 .set-group { margin-bottom: 14px; }
-.set-group .opt-label { margin: 0 0 7px; font: 500 15px/1.3 var(--body); color: var(--ink); }
 .set-group .opt { padding: 10px 12px; }
 .settings-card h2 { margin-bottom: 12px; }
 .settings-card { max-height: min(86vh, 900px); overflow-y: auto; width: min(600px, 100%); padding-left: 28px; padding-right: 28px; }
@@ -303,7 +302,6 @@ body.compact .review-move-scroll{max-height:18dvh}
 .card { display: flex; flex-direction: column; width: min(440px, 100%); max-height: calc(100% - 8px); overflow-y: auto; text-align: center; }
 .card h2 { margin: 0; text-wrap: balance; }
 .card p { margin: 0; text-wrap: pretty; }
-.eyebrow { font: 500 12px/1.2 var(--body); letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-3); }
 .promo-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .promo { width: 76px; height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; color: var(--gold-hi); cursor: pointer; }
 .promo.white { color: var(--silver); }
@@ -317,7 +315,6 @@ body.compact .review-move-scroll{max-height:18dvh}
 .opt { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 10px 14px; border-radius: 11px; background: rgba(255, 255, 255, 0.03); color: var(--ink-2); font: 500 17px/1.2 var(--body); text-align: left; cursor: pointer; }
 .opt:hover { color: var(--ink); border-color: var(--gold); }
 .opt .orb { width: 16px; height: 16px; }
-.opt-label { margin-top: 4px; font: 500 12px/1 var(--body); letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-3); }
 
 .fab, .exit-focus { position: absolute; display: none; align-items: center; justify-content: center; gap: 8px; cursor: pointer; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .fab { right: var(--gr); bottom: var(--gb); width: 54px; height: 54px; border-radius: 50%; }
@@ -590,7 +587,6 @@ body.compact .bottom-bar .ctl, body.compact .bottom-bar .icon-btn.round { border
 .card p { font: 400 16px/1.4 var(--body); color: var(--ink-2); }
 .card.setup h2, .settings-card h2 { font-size: 24px; }
 .card.picker-card.quick { border-radius: 28px 28px 0 0; }
-.eyebrow, .opt-label{ margin-top: 6px; padding-left: 4px; font: 400 13px/1.2 var(--body); letter-spacing: 0; text-transform: uppercase; color: var(--ink-3); text-align: left; }
 .card.quick h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
 
 /* segmented control for two-choice rows */
@@ -654,7 +650,6 @@ body.compact .panel { border-radius: 22px 22px 0 0; background: var(--mat-thick)
 .promo { border: 0; background: var(--fill-2); }
 .section-title, .hist h3 { font-family: var(--display); letter-spacing: -0.02em; text-transform: none; }
 
-.eyebrow { padding-left: 0; text-align: center; font-size: 12px; }
 body.compact .bottom-bar { padding: 4px; border-radius: 999px; background: var(--mat); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); align-items: center; }
 body.compact .bottom-bar .ctl, body.compact .bottom-bar .icon-btn.round { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 body.compact .bottom-bar .ctl:hover:not(:disabled) { background: var(--fill-2); }
@@ -1005,7 +1000,6 @@ body.compact.chat-keyboard #btnChatPause{display:none!important}
 .pregame.dragging { cursor: grabbing; }
 /* title: clear of the profile button, compact three-line stack */
 .pg-top { padding: calc(env(safe-area-inset-top, 0px) + 104px) 28px 0; text-align: center; pointer-events: none; }
-.pg-eyebrow { font: 600 12px/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
 .pg-top h1 { margin: 10px 0 6px; font: 700 32px/1.08 var(--display); letter-spacing: -0.025em; color: var(--ink); }
 .pg-top p { margin: 0 auto; max-width: 320px; font: 400 15px/1.4 var(--body); color: var(--ink-2); text-wrap: balance; }
 .auth-account-toggle:focus:not(:focus-visible) { outline: none; box-shadow: none; }
