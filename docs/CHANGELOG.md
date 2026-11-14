@@ -21,12 +21,12 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Settings → Timer is now **None / Seconds / Minutes** with a box to type any amount (5–600 seconds per move, or 1–180 minutes each).
 - Settings → **When time runs out**: Game ends, Switch to 60 seconds a move, or Pawn trade (minutes clocks only). In Pawn trade you can give up a pawn of your choice for +1:30 once you're at 10 seconds or less; if the clock hits zero, your opponent removes any pawn and you get +3:00.
 - **End** button for online games (was Leave): it truly ends the game for both players, and ended games are deleted and never count or show up anywhere.
-- Challenges → **Matches**: your W/L/D record with All / Humans / Computer buttons, plus every finished game.
+- Challenges → **Matches**: your W/L/D record with All / Humans / Computer buttons, plus every finished game. Tapping a computer game opens its plan read (what you aimed for and what to fix).
 - Saved games: swipe left (red) to delete, with a few seconds to undo; swipe right (green) to send an online game straight back to the same opponent, same position and sides.
 
 **Improved**
 - Play online sheet is simpler: your name is at the top, then friends, your current games and spectating. Records and past matches moved to Challenges → Matches.
-- Watch live only lists games between two people that are still being played (one friend in the game is enough to watch).
+- Watch live only lists games between two people that are still being played (one friend in the game is enough to watch). Paused games and games waiting on a pawn choice stay listed.
 
 **Fixed**
 - Pawn trade works with the new typed minute clocks on the server too.

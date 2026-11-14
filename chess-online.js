@@ -618,7 +618,7 @@
     if(!uid)return;
     const container=$('cgLiveGames'),counter=$('cgLiveCount');
     const {data,error}=await api.from('chess_games')
-      .select('id,status,white_player_id,black_player_id,updated_at')
+      .select('id,status,white_player_id,black_player_id,updated_at,clock_state')
       .eq('status','active').not('black_player_id','is',null)
       .order('updated_at',{ascending:false}).limit(20);
     if(player?.id!==uid)return;
@@ -627,7 +627,7 @@
       return;
     }
     /* live = two people in a game that has moved in the last 20 minutes (abandoned games don't count) */
-    const matches=(data||[]).filter(g=>g.white_player_id&&g.black_player_id&&Date.now()-Date.parse(g.updated_at)<20*60000);
+    const matches=(data||[]).filter(g=>g.white_player_id&&g.black_player_id&&(Date.now()-Date.parse(g.updated_at)<20*60000||g.clock_state==='paused'||g.clock_state==='penalty'));
     const others=matches.filter(g=>g.white_player_id!==uid&&g.black_player_id!==uid);
     const ids=[...new Set(matches.flatMap(g=>[g.white_player_id,g.black_player_id]))];
     let names={};

@@ -2618,7 +2618,7 @@
   }
   function computerMatches() {
     return (window.familyChessCpuGames?.() || []).filter((g) => ['w', 'l', 'd'].includes(g.result)).map((g) => ({
-      kind: 'cpu', id: g.id, title: 'vs Computer · Level ' + g.level, side: g.color, res: g.result, reason: g.reason || '', at: g.at || 0, acc: typeof g.acc === 'number' ? g.acc : null,
+      kind: 'cpu', id: g.id, fens: g.fens, title: 'vs Computer · Level ' + g.level, side: g.color, res: g.result, reason: g.reason || '', at: g.at || 0, acc: typeof g.acc === 'number' ? g.acc : null,
     }));
   }
   async function openMatchesPage(filter) {
@@ -2658,7 +2658,7 @@
     for (const g of list.slice(0, 100)) {
       const row = btn('', 'tr-item tr-match', () => {
         if (g.kind === 'human') { close(); setTimeout(() => window.familyChessOpenMatch?.(g.id, 'play'), 60); }
-        else window.familyChessStats?.openComputer(0);
+        else openCpuRead(g);
       });
       row.innerHTML = '<span class="tr-match-badge"></span><span class="tr-card-text"><b></b><span></span></span><span class="tr-match-acc"></span><span class="tr-chev" aria-hidden="true">›</span>';
       const bdg = row.querySelector('.tr-match-badge'); bdg.textContent = g.res.toUpperCase(); bdg.classList.add(g.res);
@@ -2670,10 +2670,24 @@
     }
     body.append(box);
   }
+  /* a computer game is kept as its positions: rebuild the moves and open the plan read for it */
+  function openCpuRead(g) {
+    const PL = window.familyChessPlan, C = B()?.Chess, f = Array.isArray(g.fens) ? g.fens : [];
+    const key = (x) => x.split(' ').slice(0, 2).join(' ');
+    const moves = [];
+    if (PL && C) for (let i = 1; i < f.length; i++) {
+      let c; try { c = new C(f[i - 1]); } catch { break; }
+      const hit = c.moves({ verbose: true }).find((m) => { c.move(m); const same = key(c.fen()) === key(f[i]); c.undo(); return same; });
+      if (!hit) break; moves.push(hit.from + hit.to + (hit.promotion || ''));
+    }
+    let R = null;
+    try { if (moves.length) R = PL.read({ Chess: C, moves, side: g.side, result: { w: 'win', l: 'loss', d: 'draw' }[g.res], fens: f.slice(0, moves.length) }); } catch { R = null; }
+    if (!R) { window.familyChessStats?.openComputer(0); return; }
+    PL.open(R, { title: g.title, onPractise: (tip) => { if (tip.chapter) openChapterId(tip.chapter); else if (tip.lesson) openLessonId(tip.lesson); } });
+  }
   function openMatches(filter) {
     if (!B()) return;
-    if (root.hidden) { root.hidden = false; document.body.classList.add('training-open'); B().enter(); }
-    void loadProfile().then(() => { if (screen === 'matches') void openMatchesPage(); });
+    if (root.hidden) open();   // same entry as the Challenges button, so the board stays covered
     void openMatchesPage(filter);
   }
 

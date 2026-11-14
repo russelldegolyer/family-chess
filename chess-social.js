@@ -269,7 +269,7 @@
   try{
    const [pr,gm,ch,fr]=await Promise.all([
     api.from('chess_profiles').select(hasLastSeen?'id,display_name,last_seen_at':'id,display_name').order('display_name'),
-    api.from('chess_games').select('id,white_player_id,black_player_id,updated_at,status')
+    api.from('chess_games').select('id,white_player_id,black_player_id,updated_at,status,clock_state')
       .eq('status','active').not('black_player_id','is',null).order('updated_at',{ascending:false}).limit(30),
     api.from('chess_challenges')
       .select('id,challenger_id,target_id,status,created_at,expires_at,game_id,kind,responded_at')
@@ -281,7 +281,7 @@
    if(pr.error&&hasLastSeen&&/last_seen_at/.test(pr.error.message||'')){hasLastSeen=false;loading=false;return refreshData({offerLobby});}
    if(pr.error||gm.error||ch.error)throw(pr.error||gm.error||ch.error);
    /* only games two people are really playing right now (moved in the last 20 minutes) */
-   profiles=pr.data||[];activeGames=(gm.data||[]).filter(g=>g.white_player_id&&g.black_player_id&&Date.now()-Date.parse(g.updated_at)<20*60000);challenges=ch.data||[];
+   profiles=pr.data||[];activeGames=(gm.data||[]).filter(g=>g.white_player_id&&g.black_player_id&&(Date.now()-Date.parse(g.updated_at)<20*60000||g.clock_state==='paused'||g.clock_state==='penalty'));challenges=ch.data||[];
    friendships=fr.error?[]:(fr.data||[]);
    friendIds=new Set(friendships.filter(f=>f.status==='accepted').map(f=>f.user_a===uid?f.user_b:f.user_a));
    if(!myCode)void Promise.resolve(api.rpc('chess_my_friend_code')).then(r=>{if(r?.data){myCode=r.data;$('cgMyCodeText').textContent=r.data.slice(0,3)+'-'+r.data.slice(3);}}).catch(()=>{});
