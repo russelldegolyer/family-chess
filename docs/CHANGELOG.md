@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-13 | 8 |
+| 2026-11-13 | 9 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
@@ -15,7 +15,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-13 — Pattern training: review, drills, new lessons, plan read (deployed 6:43 PM)
 
 **Added** (training: see the patterns, both yours and the ones aimed at you)
 - **Review**: every missed puzzle, drill or game move comes back after 1, 3 and 7 days; three right in a row and it is learned.
