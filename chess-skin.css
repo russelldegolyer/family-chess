@@ -59,4 +59,8 @@ html body.friends-online .auth-account-toggle { border-color: rgba(48, 209, 88, 
 html body.friends-online:not(.pregame) .auth-account-toggle { color: #30d158 !important; }
 
 /* Settings: pinned near the top so choosing a timer option only grows the bottom (it used to re-centre and jump) */
-html body #ui > .overlay:has(> .settings-card) { align-items: start !important; padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 12px)) !important; }
+html body #ui > .overlay:has(> .settings-card) { align-items: start !important; padding-top: calc(var(--gt, 12px) + 56px) !important; padding-bottom: 16px !important; }
+html body #ui > .overlay:has(> .settings-card) > .settings-card { max-height: calc(100dvh - var(--gt, 12px) - 76px) !important; }
+
+/* while a pop-up is open, the top controls (Challenges, Online, the opponent's plate) step back too; they sat over the Settings title */
+html body:has(#ui > .overlay) .train-top, html body:has(#ui > .overlay) .auth-account, html body:has(#ui > .overlay) #plateTop { visibility: hidden !important; }
