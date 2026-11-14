@@ -103,3 +103,4 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - Deploy contents: `.vercelignore` keeps database/, docs/, supabase/, tests/, tools/, .github/, README.md and CLAUDE.md out of Vercel deploys. A new runtime file must live at the repo root (or a folder not listed there).
 - Blunder check answers: `chess-blunder-check.json` (Stockfish 16.1, depth 18; rebuild with `tools/verify-blunder-check.py` when drill puzzles change). Puzzles not in it fall back to the in-browser engine.
 - Visual system: `chess-skin.css` (loaded last) restyles the shared UI — tokens `--sk-*`, accent = player's piece colour (`--orbW`). Put new visual changes there rather than adding more layered overrides.
+- Fonts: `fonts/` (Newsreader, Instrument Sans; OFL licences alongside), declared in `chess-skin.css` and preloaded in `index.html`.

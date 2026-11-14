@@ -15,6 +15,15 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Improved**
+- New fonts, served from the site itself: Newsreader (book serif) for headings and Instrument Sans for everything else, so the app looks the same on iPhone, Android and desktop. Small text is now at least 13.5px, and list rows and settings rows have more room.
+
+**Fixed**
+- Settings: "When time runs out" choices no longer get cut off; they sit on their own full-width row.
+- Review bar: the empty status capsule no longer sits on top of "Full review".
+
 ## 2026-11-13 — Chess-clock look, Play online polish, Now Playing fix (deployed 10:47 PM)
 
 **Improved**
