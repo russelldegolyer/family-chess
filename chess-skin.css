@@ -192,3 +192,23 @@ html body #plateTop .orb, html body #plateBottom .orb { background: var(--plate-
 
 /* keyboard focus: keep it visible, in ivory */
 html body :focus-visible, html body #cgLobby :focus-visible { outline: 2px solid var(--sk-ivory) !important; outline-offset: 2px !important; }
+
+/* ------------------------------------------------------------------ settings and other dialogs */
+html body .card h2, html body .card .title, html body .settings-card h2 { font-family: var(--sk-serif) !important; font-weight: 600 !important; letter-spacing: -0.01em !important; color: var(--sk-ivory) !important; }
+html body .set-list { background: #26241f !important; border-radius: 16px !important; }
+html body .set-row + .set-row { box-shadow: inset 0 1px 0 var(--sk-edge) !important; }
+html body .set-label { color: var(--sk-ivory) !important; font-weight: 500 !important; }
+html body .set-seg { background: #171512 !important; padding: 3px !important; border-radius: 11px !important; gap: 2px !important; }
+html body .set-seg button { color: var(--sk-ash) !important; border-radius: 8px !important; }
+html body .set-seg button[aria-checked="true"] { background: var(--sk-ivory) !important; color: #1a1815 !important; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .18) !important; }
+/* switches: ivory when on, matte when off */
+html body .set-switch { background: #171512 !important; box-shadow: inset 0 0 0 1px var(--sk-edge) !important; }
+html body .set-switch::after { background: var(--sk-ash) !important; box-shadow: 0 1px 3px rgba(0, 0, 0, .4) !important; }
+html body .set-switch[aria-checked="true"] { background: var(--sk-ivory) !important; }
+html body .set-switch[aria-checked="true"]::after { background: #1f1d1a !important; }
+html body .set-pick { background: var(--sk-key) !important; color: var(--sk-ivory) !important; box-shadow: var(--sk-keyshadow) !important; }
+html body .set-amount { color: var(--sk-ash) !important; }
+html body .set-amount input { background: #171512 !important; color: var(--sk-ivory) !important; box-shadow: inset 0 0 0 1px var(--sk-edge) !important; border: 0 !important; }
+html body .set-amount input:focus { box-shadow: inset 0 0 0 1.5px var(--sk-ivory) !important; outline: none !important; }
+html body .set-list .set-note, html body .set-note { padding: 0 14px 12px !important; margin: 0 !important; font: 400 13px/1.4 var(--sk-sans) !important; font-style: normal !important; color: var(--sk-ash) !important; }
+html body .set-note + .set-row { box-shadow: inset 0 1px 0 var(--sk-edge) !important; }
