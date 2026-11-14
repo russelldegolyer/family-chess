@@ -3,7 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="color-scheme" content="dark">
-<style>html,body{background:#000;color-scheme:dark}</style>
+<style>html,body{background:#000;color-scheme:dark}
+/* ---- phones in landscape ("short"): controls stack in a left column between the two name plates; board uses the full height ---- */
+body.short .bottom-bar { position: fixed !important; left: max(12px, env(safe-area-inset-left, 0px)) !important; right: auto !important; top: var(--short-top, 80px) !important; bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+  width: 196px !important; display: flex !important; flex-direction: column !important; justify-content: flex-end !important; align-items: stretch !important; gap: 6px !important; padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+body.short .bottom-bar::before, body.short .bottom-bar::after { display: none !important; }
+body.short .bottom-bar .controls { order: 1; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px !important; padding: 5px !important; border-radius: 14px !important; background: rgba(14,12,10,.7) !important; border: 1px solid rgba(255,255,255,.08) !important; margin: 0 !important; }
+body.short .bottom-bar .controls .ctl:not([hidden]) { display: inline-flex !important; width: 100% !important; min-width: 0 !important; height: 36px !important; min-height: 36px !important; padding: 0 4px !important; justify-content: center; font-size: 13px !important; }
+body.short .bottom-bar .controls .ctl[hidden] { display: none !important; }
+body.short .bottom-bar .mine { order: 2; display: flex !important; flex-wrap: wrap !important; align-items: center; justify-content: space-between; gap: 6px !important; padding: 5px !important; border-radius: 14px !important; background: rgba(14,12,10,.7) !important; border: 1px solid rgba(255,255,255,.08) !important; margin: 0 !important; }
+body.short .bottom-bar .mine > #plateBottom { order: 9; flex: 1 1 100% !important; width: 100% !important; max-width: none !important; margin: 0 !important; box-sizing: border-box; }
+body.short .bottom-bar .mine > :not(#plateBottom) { flex: none; }
+body.short .bottom-bar .icon-btn.round, body.short .bottom-bar .board-chip { width: 38px !important; height: 38px !important; min-width: 0 !important; }
+body.short .bottom-bar .view2d-btn { width: 52px !important; height: 38px !important; min-width: 0 !important; }
+body.short .bottom-bar .board-chip .chip-text { display: none !important; }
+body.short .bottom-bar .board-chip { padding: 2px !important; overflow: hidden; border-left: 0 !important; margin: 0 !important; }
+body.short .bottom-bar .board-chip img { width: 100% !important; height: 100% !important; object-fit: cover; border-radius: 9px; }
+body.short .bottom-bar .mine, body.short .bottom-bar .controls { border-left: 1px solid rgba(255,255,255,.08) !important; }
+body.short .bottom-bar .controls::before, body.short .bottom-bar .mine::before, body.short .bottom-bar .mine::after { display: none !important; }
+body.short .plate .pcap { display: none !important; }
+body.short .panel { top: calc(var(--gt, 12px) + 52px) !important; width: min(var(--panel-w), 300px) !important; }
+body.short #plateBottom .pname { max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.short .banner:not([hidden]) { left: max(12px, env(safe-area-inset-left, 0px)) !important; right: auto !important; top: var(--short-top, 80px) !important; width: 196px; max-width: 196px !important; margin: 0 !important; transform: none !important; font-size: 13px; padding: 8px 10px; box-sizing: border-box; flex-wrap: wrap; }
+body.short .banner .banner-actions { flex-wrap: wrap; }
+body.short .exit-focus { top: calc(var(--gt, 12px) + 58px) !important; bottom: auto !important; }
+body.short .side-pick { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2) !important; right: auto !important; top: 50% !important; bottom: auto !important; transform: translate(-50%, -50%) !important; max-width: min(420px, calc(100vw - 230px - var(--area-r, 0px))) !important; }
+body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2) !important; right: auto !important; transform: translateX(-50%) !important; margin: 0 !important; }
+</style>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="description" content="Private chess, practice and online games.">
@@ -3560,7 +3586,7 @@ function renderSidePick() {
 function updateCapStrips() {
   const top = capStrip('capTop'), bot = capStrip('capBottom');
   const b = document.body.classList;
-  const show = compact && !b.contains('landscape') && !b.contains('pregame') && !b.contains('training') && !review && G.mode !== 'connecting' && $('endCard')?.hidden !== false;
+  const show = ((compact && !b.contains('landscape')) || b.contains('short')) && !b.contains('pregame') && !b.contains('training') && !review && G.mode !== 'connecting' && $('endCard')?.hidden !== false;
   if (!show) { top.hidden = bot.hidden = true; placeMyPlate(); return; }
   const pos = displayPos();
   const tHas = fillCapStrip(top, other(viewSide), pos), bHas = fillCapStrip(bot, viewSide, pos);
@@ -3570,7 +3596,10 @@ function updateCapStrips() {
     const rb = document.querySelector('.resume-banner'), rr = rb && !rb.hidden && rb.getClientRects().length ? rb.getBoundingClientRect() : null;
     const chat = b.contains('chat2d') ? $('panel')?.getBoundingClientRect() : null;
     const mine = placeMyPlate(), mp = mine && !document.body.classList.contains('pregame') ? mine.getBoundingClientRect() : null;
-    if (chat) {                       /* chat open: just above the chat sheet */
+    const rail = b.contains('short') ? document.querySelector('.bottom-bar .controls')?.getBoundingClientRect() : null;
+    if (rail && rail.height) {        /* phone landscape: just above the control column */
+      bot.style.left = Math.round(rail.left) + 'px'; bot.style.bottom = Math.round(window.innerHeight - rail.top + 6) + 'px';
+    } else if (chat) {                       /* chat open: just above the chat sheet */
       bot.style.left = Math.round(bar.left + 10) + 'px'; bot.style.bottom = Math.round(window.innerHeight - chat.top + 8) + 'px';
     } else if (mp && mp.width) {      /* beside your plate, or above it when there is no room */
       const sw = bot.getBoundingClientRect().width || 120;
@@ -3596,7 +3625,13 @@ function updateBanner() {
     const sans = sanList(review.moves);
     msg = `${review.title} · ${review.ply ? moveLabel(review.ply, sans[review.ply - 1]) : 'starting position'}` +
       (review.alternative ? ' · recommended alternative' : '');
-    acts.append(iconBtn('prev', 'Previous move', () => reviewStep(-1)), iconBtn('next', 'Next move', () => reviewStep(1)), button(G.status === 'over' ? 'Exit review' : 'Back to game', 'gold small', endReview));
+    acts.append(iconBtn('prev', 'Previous move', () => reviewStep(-1)), iconBtn('next', 'Next move', () => reviewStep(1)));
+    /* the full breakdown lives in the panel: if it was closed, one tap brings it back */
+    if (!fullReviewVisible()) acts.append(button('Full review', 'small', openFullReview));
+    acts.append(button(G.status === 'over' ? 'Exit review' : 'Back to game', 'gold small', endReview));
+  } else if (G.status === 'over' && G.moves.length && $('endCard')?.hidden !== false && !PG.on && G.mode !== 'train') {
+    msg = 'Game over';
+    acts.append(button('Full review', 'gold small', () => { endDismissed = endKey(); beginGameReview(); }), button('Result', 'small', showEndCard));
   } else if (G.onlineProvider==='supabase' && !mySeat && bothSeated()) {
     msg=`Spectating ${seatName('w')} vs ${seatName('b')} · read-only`;
   } else if (G.mode === 'live' && mySeat && !bothSeated() && G.status !== 'over') {
@@ -4413,7 +4448,7 @@ function layout2D() {
   const split = chat2d && compact && !document.body.classList.contains('landscape');
   const topCard = $('plateTop')?.getBoundingClientRect();
   let top = split ? Math.max(72, Math.ceil(topCard?.bottom || 90) + 6)
-    : compact ? Math.max(84, Math.ceil(topCard?.bottom || 80) + 8) : 44;
+    : compact ? Math.max(84, Math.ceil(topCard?.bottom || 80) + 8) : document.body.classList.contains('short') ? 10 : 44;
   // Timed games reserve a row for both clocks above the 2D board.
   const clocksShown = document.body.classList.contains('clock-timed') && !review;
   if(compact && clocksShown && !split){
@@ -4425,7 +4460,8 @@ function layout2D() {
   if (notice?.classList.contains('notice') && getComputedStyle(notice).display !== 'none') {
     top = Math.max(top, Math.ceil(notice.getBoundingClientRect().bottom) + 8);
   }
-  const left = split ? 5 : compact ? 6 : 230;
+  const short = document.body.classList.contains('short');
+  const left = split ? 5 : compact ? 6 : short ? areaLeft + 6 : 230;
   const right = areaRight + (split ? 5 : compact ? 6 : 16);
   const box = $('board2d');
 
@@ -4443,7 +4479,7 @@ function layout2D() {
     document.body.style.setProperty('--chat-panel-h', ph + 'px');
   } else document.body.style.removeProperty('--chat-panel-h');
   const panelHeight = split ? ($('panel')?.offsetHeight || Math.min(400, H * .4)) : 0;
-  const bottom = split ? Math.max(panelHeight, H - ($('panel')?.offsetTop || H)) + 8 : compact ? 80 : 64;
+  const bottom = split ? Math.max(panelHeight, H - ($('panel')?.offsetTop || H)) + 8 : compact ? 80 : short ? 10 : 64;
   const freeHeight = Math.max(40, H - top - bottom);
   const s = Math.max(3, Math.min((W - left - right) / 10.04, freeHeight / 11.72));
   const w = s * 10.04, height = s * 11.72;
@@ -4490,7 +4526,8 @@ let userCam = false;
 const CAM_VIEWS = [['play', 'Play view'], ['close', 'Close view'], ['show', 'Showcase']];
 let camView = 0;
 let camTween = null;
-let areaRight = 0;
+let areaRight = 0, areaLeft = 0;
+const SHORT_RAIL = 196;   /* width of the left control column on phones in landscape */
 controls.addEventListener('start', () => { userCam = true; if (camTween) { tweens.delete(camTween); camTween = null; } });
 /* keep the focus over the board (a little beyond its edges, so corners can be studied) and the camera
    above the table; when the focus is pulled back, the camera moves with it, so nothing jumps */
@@ -4592,7 +4629,7 @@ function applyProjection() {
   const W = window.innerWidth, H = window.innerHeight;
   camera.fov = compact ? 40 : 33;
   camera.aspect = W / H;
-  if (areaRight > 0 || viewYShift) camera.setViewOffset(W, H, areaRight / 2, viewYShift, W, H); else camera.clearViewOffset();
+  if (areaRight > 0 || areaLeft > 0 || viewYShift) camera.setViewOffset(W, H, (areaRight - areaLeft) / 2, viewYShift, W, H); else camera.clearViewOffset();
   camera.updateProjectionMatrix();
 }
 function boundsPts() {
@@ -4616,6 +4653,7 @@ function fitCamera(animate) {
   /* portrait phones: centre the board in the free band between the top and bottom UI */
   let topR = landscapePhone ? 12 : compact ? 88 : 104, botR = landscapePhone ? 10 : compact ? 76 : 84;
   if (compact && !landscapePhone) { const r = uiReserve(); topR = r.top; botR = r.bottom; }
+  if (document.body.classList.contains('short') && !PG.on) { topR = 12; botR = 12; }
   if (PG.on) { const r = pregameReserve(); topR = r.top; botR = r.bottom; }
   const shiftFrom = viewYShift;
   viewYShift = (compact && !landscapePhone) || PG.on ? -Math.round((topR - botR) / 2) : 0;   /* opening screen: centre in the band above the card on desktop too */
@@ -4624,13 +4662,13 @@ function fitCamera(animate) {
   /* the play view is high and readable, like looking down at a real board; the close view is lower and
      nearer; the showcase view is each board's reference-photo angle */
   const cv = CAM_VIEWS[camView][0], show = cv === 'show';
-  const playPolar = trayMode === 'chips' ? 0.4 : trayMode === 'ends' ? 0.36 : landscapePhone ? 0.58 : 0.44;
+  const playPolar = trayMode === 'chips' ? 0.4 : trayMode === 'ends' ? 0.36 : landscapePhone || document.body.classList.contains('short') ? 0.58 : 0.44;
   /* play: from behind your pieces, the whole board in view. close: lower and nearer, still straight behind you */
   const polar = PG.on ? PG.polar : show ? (THEMES[THEME].camPolar || 0.62) : cv === 'close' ? Math.min(0.78, playPolar + 0.26) : playPolar;
   const az = PG.on ? PG.az : (viewSide === 'w' ? 0 : Math.PI) + (show ? THEMES[THEME].camAz || 0.35 : 0);
   const pts = boundsPts();
   const side = compact ? (landscapePhone ? 12 : 8) : 40;
-  const xMin = -1 + (2 * side) / W, xMax = 1 - (2 * areaRight) / W - (2 * side) / W;
+  const xMin = -1 + (2 * (side + areaLeft)) / W, xMax = 1 - (2 * areaRight) / W - (2 * side) / W;
   /* landscape phones move the plates and controls to the sides, so the board can use the full height */
   const yMax = 1 - (topR / H) * 2, yMin = -1 + (botR / H) * 2;
   const start = camera.position.clone(), startQ = camera.quaternion.clone();
@@ -4681,18 +4719,24 @@ function layout() {
   if(document.body.classList.contains('chat-keyboard'))return;
   const W = window.innerWidth, H = window.innerHeight;
   const wasCompact = compact;
-  compact = W < 900 || W / H < 0.95;
+  /* phones turned sideways get the desktop layout in "short" form: controls in a left column, board full height */
+  const short = W > H && H <= 540 && W >= 640;
+  compact = (W < 900 || W / H < 0.95) && !short;
   document.body.classList.toggle('compact', compact);
+  document.body.classList.toggle('short', short);
+  areaLeft = short ? SHORT_RAIL + 26 : 0;
+  if (short) { const pt = $('plateTop')?.getBoundingClientRect(); document.documentElement.style.setProperty('--short-top', Math.round((pt && pt.height ? pt.bottom : 70) + 8) + 'px'); }
   document.body.classList.toggle('landscape', compact && W > H);
   if (!compact && sheetOpen) setSheet(false);
   $('exitFocus').hidden = !focusMode || compact;
   renderer.setSize(W, H, false);
   let aR = 0;
   if (!compact && !focusMode) { const r = $('panel').getBoundingClientRect(); aR = Math.max(0, W - r.left) + 6; }
+  if (short) aR = Math.max(aR, 150);   /* keep the Challenges / Online / Show chat / mic column clear of the board */
   areaRight = aR;
   document.documentElement.style.setProperty('--area-r', aR + 'px');
   document.body.classList.toggle('tight', W - aR < 900);
-  const newTray = (W - aR) / H >= 1.02 ? 'side' : compact ? 'chips' : 'ends';
+  const newTray = short ? 'chips' : (W - aR) / H >= 1.02 ? 'side' : compact ? 'chips' : 'ends';
   const trayChanged = newTray !== trayMode;
   trayMode = newTray;
   if (!userCam || wasCompact !== compact || trayChanged) fitCamera(false); else applyProjection();
@@ -5181,6 +5225,13 @@ function toggleTeachingMove() {
   updateAll();
 }
 
+function fullReviewVisible() { return historyOpen && (compact ? sheetOpen : !$('panel').hidden && getComputedStyle($('panel')).display !== 'none' && !focusMode); }
+function openFullReview() {
+  if (focusMode && !compact) setFocus(false);
+  if (!historyOpen) { const r = review; historyOpen = true; $('btnHistory').setAttribute('aria-pressed', 'true'); $('historyView').hidden = false; $('chatList').hidden = true; $('chatForm').hidden = true; $('typing').hidden = true; review = r; }
+  if (compact) setSheet(true);
+  renderHistory(); updateBanner();
+}
 function beginGameReview() {
   if (!G.moves.length) return;
   if (focusMode && !compact) setFocus(false);
@@ -6038,6 +6089,7 @@ function setFocus(on) {
   closeMenu();
   layout();
   if (!on) markChatRead();
+  if (typeof updateBanner === 'function') updateBanner();
 }
 $('btnFocus').addEventListener('click', () => setFocus(true));
 $('btnChatClose').addEventListener('click', () => setFocus(true));
@@ -6143,6 +6195,7 @@ function setSheet(open) {
   }
   /* closing the chat keeps the flat board up, full size; a tap on the empty space around it goes back to 3D */
   else if (was) { zoom2D(null); applyView('2d', false); }
+  if (typeof updateBanner === 'function') updateBanner();
 }
 // Recalculate when the mobile sheet has actually finished sliding in.
 // CSS keeps the board confined even during the transition.

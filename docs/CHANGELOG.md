@@ -21,6 +21,9 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Saved games: swipe left (red) to delete, with a few seconds to undo; swipe right (green) to send an online game straight back to the same opponent, same position and sides.
 
 **Fixed**
+- Online clocks wait for the first move: nobody loses time before a move is played (database change, already live). Pausing or changing the clock before the first move keeps it stopped.
+- After a game you can always get back into the full review: a **Full review** button appears when the breakdown panel is closed, and after leaving review the banner offers **Full review** and **Result**.
+- Phones turned sideways: controls sit in a column on the left between the two name plates, the board uses the full height, captured pieces sit beside the plates, and chat opens as a side panel below the Challenges/Online buttons. Nothing runs off the screen or under the board.
 - The captured-pieces line no longer runs under the mic button; when it is too long it moves above your name plate.
 - Voice chat: the mic is asked for immediately on tap, retried with plainer settings if the phone refuses, and errors now say why (blocked, busy, no mic, connection) instead of "could not start".
 
