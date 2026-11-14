@@ -315,6 +315,7 @@
     card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
     card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
     card('Saved games', 'Pick up a game where you left it', '★', savedCount ? String(savedCount) : '', () => openSaved());
+    card('Matches', 'Your record vs humans and the computer', '⚔', '', () => void openMatchesPage());
     const you = el('div', 'tr-cards');
     const ng = (P.games || []).length;
     card('Your style', ng >= 3 ? 'What you go for, what costs you, what to fix' : 'Builds up from your games', '◎', ng ? String(Math.min(ng, 20)) + (ng === 1 ? ' game' : ' games') : '', () => openStyle()); you.append(cards.lastChild);
@@ -2606,6 +2607,76 @@
     hub.hidden = false; hub.scrollTop = 0;
   }
 
+
+  /* ================================================================== matches: your W/L/D record and every finished game
+     Humans = online games that ended with a result (ended/abandoned games never count); Computer = games on this device. */
+  let MATCH_FILTER = 'all';
+  async function loadHumanMatches() {
+    // The online-game query lives in chess-online.js (training never touches online game tables).
+    if (uid === 'local' || !window.familyChessFinishedMatches) return [];
+    return (await window.familyChessFinishedMatches(uid)).map((g) => ({ ...g, acc: g.acc ?? window.familyChessAccuracy?.cached?.('g:' + g.id)?.[g.side] ?? null }));
+  }
+  function computerMatches() {
+    return (window.familyChessCpuGames?.() || []).filter((g) => ['w', 'l', 'd'].includes(g.result)).map((g) => ({
+      kind: 'cpu', id: g.id, title: 'vs Computer · Level ' + g.level, side: g.color, res: g.result, reason: g.reason || '', at: g.at || 0, acc: typeof g.acc === 'number' ? g.acc : null,
+    }));
+  }
+  async function openMatchesPage(filter) {
+    if (filter) MATCH_FILTER = filter;
+    session++; const my = session; screen = 'matches'; PATH = null; RETURN = null; top.hidden = true; panel.hidden = true; B().onMove(null); B().onTap(null); mark({});
+    hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
+    hub.append(backHead('Matches', openHub), el('p', 'tr-note', 'Every game that finished with a win, loss or draw. Games that were ended early never count.'));
+    const segRow = el('div', 'tr-seg tr-match-seg');
+    for (const [v, label] of [['all', 'All'], ['human', 'Humans'], ['cpu', 'Computer']]) segRow.append(btn(label, MATCH_FILTER === v ? 'on' : '', () => openMatchesPage(v)));
+    hub.append(segRow);
+    const body = el('div'); body.append(el('p', 'tr-about-foot', 'Loading…')); hub.append(body); hub.hidden = false; hub.scrollTop = 0;
+    let human = [], err = null;
+    if (MATCH_FILTER !== 'cpu') { try { human = await loadHumanMatches(); } catch (e) { err = e; } }
+    if (my !== session) return;
+    const cpu = MATCH_FILTER !== 'human' ? computerMatches() : [];
+    const list = (MATCH_FILTER === 'human' ? human : MATCH_FILTER === 'cpu' ? cpu : human.concat(cpu)).sort((a, b) => b.at - a.at);
+    body.replaceChildren();
+    if (err) body.append(el('p', 'tr-note', 'Could not load online games: ' + (err.message || err)));
+    const w = list.filter((g) => g.res === 'w').length, l = list.filter((g) => g.res === 'l').length, d = list.filter((g) => g.res === 'd').length, n = w + l + d;
+    const accs = list.map((g) => g.acc).filter((v) => Number.isFinite(v));
+    const rec = el('div', 'tr-record');
+    const big = el('div', 'tr-record-big'); big.append(el('b', '', n ? Math.round(w / n * 100) + '%' : '–'), el('span', '', n ? 'won' : 'no games yet'));
+    const nums = el('div', 'tr-record-nums');
+    for (const [v, k, c] of [[w, 'Won', 'w'], [l, 'Lost', 'l'], [d, 'Drawn', 'd']]) { const x = el('div', c); x.append(el('b', '', String(v)), el('span', '', k)); nums.append(x); }
+    const bar = el('div', 'tr-record-bar'); for (const [v, c] of [[w, 'w'], [d, 'd'], [l, 'l']]) { const i = el('i', c); i.style.flexGrow = String(n ? v : c === 'd' ? 1 : 0); bar.append(i); }
+    const top2 = el('div', 'tr-record-top'); top2.append(big, nums);
+    rec.append(el('span', 'tr-label', { all: 'All matches', human: 'vs Humans', cpu: 'vs Computer' }[MATCH_FILTER] + ' · ' + n + (n === 1 ? ' game' : ' games')), top2, bar);
+    if (accs.length) rec.append(el('span', 'tr-record-acc', (accs.reduce((a, b) => a + b, 0) / accs.length).toFixed(1) + ' average accuracy'));
+    const more = el('div', 'tr-record-more');
+    if (MATCH_FILTER !== 'cpu') more.append(btn('Full stats vs humans ›', 'tr-chip', () => { if (uid !== 'local') void window.familyChessStats?.openPlayers(api(), uid); }));
+    if (MATCH_FILTER !== 'human') more.append(btn('Full stats vs computer ›', 'tr-chip', () => window.familyChessStats?.openComputer(0)));
+    rec.append(more);
+    body.append(rec);
+    if (!list.length) { body.append(el('div', 'tr-empty', MATCH_FILTER === 'cpu' ? 'Finish a game against the computer and it shows up here.' : 'Finish a game against a friend and it shows up here.')); return; }
+    const REASON = { checkmate: 'Checkmate', resignation: 'Resigned', timeout: 'On time', stalemate: 'Stalemate', agreement: 'Agreed draw', repetition: 'Repetition', 'insufficient material': 'Insufficient material' };
+    const box = el('div', 'tr-list tr-matches');
+    for (const g of list.slice(0, 100)) {
+      const row = btn('', 'tr-item tr-match', () => {
+        if (g.kind === 'human') { close(); setTimeout(() => window.familyChessOpenMatch?.(g.id, 'play'), 60); }
+        else window.familyChessStats?.openComputer(0);
+      });
+      row.innerHTML = '<span class="tr-match-badge"></span><span class="tr-card-text"><b></b><span></span></span><span class="tr-match-acc"></span><span class="tr-chev" aria-hidden="true">›</span>';
+      const bdg = row.querySelector('.tr-match-badge'); bdg.textContent = g.res.toUpperCase(); bdg.classList.add(g.res);
+      row.querySelector('b').textContent = g.title;
+      const dt = g.at ? new Date(g.at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+      row.querySelector('.tr-card-text span').textContent = [g.side === 'b' ? 'Black' : 'White', { w: 'Won', l: 'Lost', d: 'Draw' }[g.res] + (REASON[g.reason] ? ' · ' + REASON[g.reason] : ''), dt].filter(Boolean).join(' · ');
+      if (g.acc != null) row.querySelector('.tr-match-acc').textContent = g.acc.toFixed(1);
+      box.append(row);
+    }
+    body.append(box);
+  }
+  function openMatches(filter) {
+    if (!B()) return;
+    if (root.hidden) { root.hidden = false; document.body.classList.add('training-open'); B().enter(); }
+    void loadProfile().then(() => { if (screen === 'matches') void openMatchesPage(); });
+    void openMatchesPage(filter);
+  }
+
   /* ------------------------------------------------------------------ toolbar button */
   function mountButton() {
     if (document.getElementById('btnTrain') || !document.body) return;
@@ -2629,5 +2700,5 @@
     void loadProfile().then(() => { if (screen === 'lesson' && LS && LS.l === l && LS.stage === 0) startLesson(l); });
     RETURN = null; startLesson(l);
   }
-  window.familyChessTraining = { open, close, openChapterId, openLessonId, recordGame, _test: { reviewDue, reviewAdd, startThreat, startBlunder, startSpeed, openStyle, styleStats, transform, varyLine, LUCENA, PHILIDOR, SERIES, CHAPTERS, defenceOptions, genDefence, genQvP, openReview, openSpeed, startLesson, lessonById, td: () => TD, bd: () => BD, suggest, keepers, probe, genTable, loadTables, genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
+  window.familyChessTraining = { open, close, openChapterId, openLessonId, recordGame, openMatches, _test: { reviewDue, reviewAdd, startThreat, startBlunder, startSpeed, openStyle, styleStats, transform, varyLine, LUCENA, PHILIDOR, SERIES, CHAPTERS, defenceOptions, genDefence, genQvP, openReview, openSpeed, startLesson, lessonById, td: () => TD, bd: () => BD, suggest, keepers, probe, genTable, loadTables, genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
 })();

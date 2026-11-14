@@ -81,7 +81,7 @@
     const { data: games, error } = await api.from('chess_games').select('id,result,end_reason,white_player_id,black_player_id,updated_at,status')
       .eq('status', 'finished').or('white_player_id.eq.' + pid + ',black_player_id.eq.' + pid).order('updated_at', { ascending: false }).limit(200);
     if (error) throw error;
-    const kept = (games || []).filter((g) => g.end_reason !== 'replaced' && g.result && g.black_player_id && g.white_player_id);
+    const kept = (games || []).filter((g) => g.end_reason !== 'replaced' && g.end_reason !== 'ended' && g.result && g.black_player_id && g.white_player_id);
     if (!kept.length) return [];
     const { data: moves, error: e2 } = await api.from('chess_moves').select('game_id,ply,fen_after').in('game_id', kept.map((g) => g.id)).order('ply', { ascending: true }).limit(20000);
     if (e2) throw e2;
@@ -103,7 +103,7 @@
   function header(title, sub) {
     const h = el('div', 'st-head');
     const back = el('button', 'st-back'); back.type = 'button'; back.setAttribute('aria-label', 'Back');
-    back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Play online</span>';
+    back.innerHTML = '<svg width="11" height="18" viewBox="0 0 11 18" aria-hidden="true"><path d="M9 2L2 9l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back</span>';
     back.addEventListener('click', close);
     const t = el('div', 'st-title'); t.append(el('h2', '', title), el('span', '', sub));
     h.append(back, t); return h;

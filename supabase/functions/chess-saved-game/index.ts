@@ -89,9 +89,13 @@ Deno.serve(async (req) => {
     if (gErr) throw gErr;
     // Pick up with the time each side had when the game was saved (not fresh clocks).
     const ck = s.clock && typeof s.clock === 'object' ? s.clock : null;
-    if (ck && ['off', '10m', '12m', '15m', 'move60'].includes(ck.mode)) {
-      const ms = (v: unknown) => Math.max(0, Math.min(3600000, Math.floor(Number(v) || 0)));
-      await db.from('chess_games').update({ clock_mode: ck.mode, clock_white_ms: ms(ck.w), clock_black_ms: ms(ck.b) }).eq('id', game.id);
+    // Modes: off, legacy 10m/12m/15m/move60, m<minutes> (1-180), s<seconds per move> (5-600).
+    const validMode = (m: unknown) => typeof m === 'string' && /^(off|10m|12m|15m|move60|m([1-9]|[1-9][0-9]|1[0-7][0-9]|180)|s([5-9]|[1-9][0-9]|[1-5][0-9][0-9]|600))$/.test(m);
+    if (ck && validMode(ck.mode)) {
+      const ms = (v: unknown) => Math.max(0, Math.min(10800000, Math.floor(Number(v) || 0)));
+      const upd: Record<string, unknown> = { clock_mode: ck.mode, clock_white_ms: ms(ck.w), clock_black_ms: ms(ck.b) };
+      if (['end', 'sec60', 'pawn'].includes(ck.expiry)) upd.clock_expiry = ck.expiry;
+      await db.from('chess_games').update(upd).eq('id', game.id);
     }
     const other = target_id;
     const { error: mErr } = !rows.length ? { error: null } : await db.from('chess_moves').insert(rows.map((r) => ({

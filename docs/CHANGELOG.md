@@ -18,9 +18,18 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Added**
+- Settings → Timer is now **None / Seconds / Minutes** with a box to type any amount (5–600 seconds per move, or 1–180 minutes each).
+- Settings → **When time runs out**: Game ends, Switch to 60 seconds a move, or Pawn trade (minutes clocks only). In Pawn trade you can give up a pawn of your choice for +1:30 once you're at 10 seconds or less; if the clock hits zero, your opponent removes any pawn and you get +3:00.
+- **End** button for online games (was Leave): it truly ends the game for both players, and ended games are deleted and never count or show up anywhere.
+- Challenges → **Matches**: your W/L/D record with All / Humans / Computer buttons, plus every finished game.
 - Saved games: swipe left (red) to delete, with a few seconds to undo; swipe right (green) to send an online game straight back to the same opponent, same position and sides.
 
+**Improved**
+- Play online sheet is simpler: your name is at the top, then friends, your current games and spectating. Records and past matches moved to Challenges → Matches.
+- Watch live only lists games between two people that are still being played (one friend in the game is enough to watch).
+
 **Fixed**
+- Pawn trade works with the new typed minute clocks on the server too.
 - Online clocks wait for the first move: nobody loses time before a move is played (database change, already live). Pausing or changing the clock before the first move keeps it stopped.
 - After a game you can always get back into the full review: a **Full review** button appears when the breakdown panel is closed, and after leaving review the banner offers **Full review** and **Result**.
 - Phones turned sideways: controls sit in a column on the left between the two name plates, the board uses the full height, captured pieces sit beside the plates, and chat opens as a side panel below the Challenges/Online buttons. Nothing runs off the screen or under the board.

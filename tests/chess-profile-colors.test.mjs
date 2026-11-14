@@ -75,7 +75,7 @@ test('Black pieces are always black; the player colour paints only White',()=>{
 
 test('the White colour is persisted through signed-in events',()=>{
  assert.match(page,/familyChessPieceColorChanged/);
- assert.match(online,/select\('display_name,piece_color,clock_preference'\)/);
+ assert.match(online,/select\('display_name,piece_color,clock_preference,clock_expiry'\)/);
  assert.doesNotMatch(online,/practice_opponent_color|getPracticeOpponentColor/);
  assert.match(online,/savePendingColor\(kind,id\)/);
  assert.match(online,/localStorage\.setItem\(colorPendingKey\(kind,id\)/);

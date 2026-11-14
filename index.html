@@ -29,6 +29,10 @@ body.short .banner .banner-actions { flex-wrap: wrap; }
 body.short .exit-focus { top: calc(var(--gt, 12px) + 58px) !important; bottom: auto !important; }
 body.short .side-pick { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2) !important; right: auto !important; top: 50% !important; bottom: auto !important; transform: translate(-50%, -50%) !important; max-width: min(420px, calc(100vw - 230px - var(--area-r, 0px))) !important; }
 body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2) !important; right: auto !important; transform: translateX(-50%) !important; margin: 0 !important; }
+.set-timer { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.set-amount { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #c7c7cc; }
+.set-amount input { width: 72px; height: 34px; padding: 0 10px; border: 0; border-radius: 10px; background: rgba(255,255,255,.1); color: #fff; font: 600 16px/1 var(--body); text-align: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.set-note { margin: -2px 0 6px; font: 400 12.5px/1.4 var(--body); color: #8e8e93; text-align: left; }
 </style>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
@@ -43,19 +47,19 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=14"></script>
-<script defer src="./chess-online.js?v=23"></script>
+<script defer src="./chess-clock.js?v=15"></script>
+<script defer src="./chess-online.js?v=24"></script>
 <script defer src="./chess-chat.js?v=8"></script>
 <script defer src="./chess-voice.js?v=4"></script>
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
-<script defer src="./chess-social.js?v=19"></script>
-<link rel="stylesheet" href="./chess-training.css?v=23">
+<script defer src="./chess-social.js?v=20"></script>
+<link rel="stylesheet" href="./chess-training.css?v=24">
 <link rel="stylesheet" href="./chess-plan.css?v=1">
 <link rel="stylesheet" href="./chess-stats.css?v=2">
-<script defer src="./chess-stats.js?v=4"></script>
+<script defer src="./chess-stats.js?v=5"></script>
 <script defer src="./chess-plan.js?v=1"></script>
-<script defer src="./chess-training.js?v=26"></script>
+<script defer src="./chess-training.js?v=27"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -5615,9 +5619,10 @@ function resetLocalGame(mode, n) {
   G.version++;
   G.clockActions=[]; G.resumePlies=0; START_FEN=null; G.pos=positionFrom([]);
   if(mode==='cpu'||mode==='local')
-    window.ChessClock?.startLocal(window.ChessClock.getPreference(), (expiredSide)=>{
+    window.ChessClock?.startLocal(window.ChessClock.getPreference(), (expiredSide,outcome)=>{
       if(G.mode!==mode||G.status!=='active')return;
-      if(window.ChessClock?.snapshot?.().mode==='move60'){
+      if(outcome==='switched'){ toast('Time ran out · 60 seconds per move from now on', 3200); updateAll(); return; }
+      if(outcome==='timeout'||window.ChessClock?.snapshot?.().status==='over'){
         finishGame({status:'over',result:expiredSide==='w'?'0-1':'1-0',
           reason:'timeout',drawOffer:null,endedAt:Date.now()});
         return;
@@ -5675,9 +5680,22 @@ function goHome() {
     requestAnimationFrame(() => requestAnimationFrame(() => veil.classList.remove('on')));
   }, reduce ? 0 : 260);
 }
+let endingByMe = false;
+async function endOnlineGame() {
+  endingByMe = true;
+  try { await window.familyChessEndGame?.(G.gid); }
+  catch (e) { endingByMe = false; toast(e?.message || 'Could not end the game', 4200); return; }
+  endDismissed = endKey(); goHome();
+}
 function newGame() {
   if (PG.on) return;
   if (G.onlineProvider === 'supabase' && !mySeat) { leaveWatching(); return; }   // spectating: just leave
+  /* online: End stops the game for both players; it won't count and disappears from matches */
+  if (G.onlineProvider === 'supabase' && mySeat && G.gid && (G.status === 'active' || G.status === 'waiting')) {
+    dialog('End this game?', ['It ends for both of you and won’t count as a win, loss or draw. It won’t show up in your matches.'],
+      [['Keep playing', 'quiet', null], ['End game', 'gold', () => void endOnlineGame()]]);
+    return;
+  }
   const playing = G.moves.length > 0 && G.status === 'active';
   if (!playing) { goHome(); return; }
   const online = G.onlineProvider === 'supabase';
@@ -5704,7 +5722,7 @@ function localClockNow() {
   const sn = C.snapshot(); if (!sn || sn.source !== 'local') return null;
   if (sn.mode === 'off') return { mode: 'off', w: 0, b: 0 };
   const now = Date.now();
-  return { mode: sn.mode, w: Math.round(C.remaining('w', now)), b: Math.round(C.remaining('b', now)) };
+  return { mode: sn.mode, w: Math.round(C.remaining('w', now)), b: Math.round(C.remaining('b', now)), expiry: sn.expiry || 'pawn' };
 }
 let saving = false;
 const lastSave = {};   // game key -> id of this player's most recent save of it
@@ -5765,7 +5783,7 @@ function loadSavedGame(row, { mode = 'cpu', level = 2, side = 'w' } = {}) {
   START_FEN = row.start_fen || null;
   G.moves = row.moves.slice(); G.clockActions = actions; G.pos = positionFrom(G.moves, G.moves.length, actions); G.version++;
   G.resumePlies = G.moves.length;
-  if (row.clock && row.clock.mode) window.ChessClock?.resumeLocal?.(row.clock.mode, row.clock.w, row.clock.b, G.pos.chess.turn(), G.moves.length);
+  if (row.clock && row.clock.mode) window.ChessClock?.resumeLocal?.(row.clock.mode, row.clock.w, row.clock.b, G.pos.chess.turn(), G.moves.length, row.clock.expiry);
   const want = wantedSide(); if (want !== viewSide) { viewSide = want; requestRender(); }
   syncBoard(G.pos, { animate: false }); updateAll(); fitCamera(true);
   if (G.mode === 'cpu' && G.pos.chess.turn() !== cpu.human) setTimeout(requestComputer, 900);
@@ -5832,6 +5850,7 @@ $('btnView2d').addEventListener('click', () => {
 const DRAW_TITLE = { stalemate: 'Stalemate — Draw', 'insufficient material': 'Draw — Insufficient Material', 'threefold repetition': 'Draw — Threefold Repetition', 'the fifty-move rule': 'Draw — Fifty-Move Rule', agreement: 'Draw — Agreed' };
 function describeResult() {
   if (G.reason === 'replaced') return {title:'Game ended',line:'A player started a new game. This match has been closed.'};
+  if (G.reason === 'ended') return {title:'Game ended',line:'The game was ended. It doesn’t count for anyone.'};
   const winner = G.result === '1-0' ? 'w' : G.result === '0-1' ? 'b' : null;
   if (!winner) return { title: DRAW_TITLE[G.reason] || 'Draw', line: G.reason === 'agreement' ? 'Both sides called it even.' : '' };
   const loser = other(winner);
@@ -5884,6 +5903,12 @@ function recordCpuResult() {
 window.familyChessCpuGames = () => store.get('chess.cpuGames', []);
 window.familyChessCpuRecord = () => store.get('chess.cpuRecord', { w: 0, l: 0, d: 0 });
 function maybeShowEndCard() {
+  /* an ended online game never counts: no result card, just a note and back home */
+  if (G.status === 'over' && G.reason === 'ended') {
+    $('endCard').hidden = true;
+    if (endDismissed !== endKey()) { endDismissed = endKey(); if (!endingByMe) toast((G.names?.[other(mySeat || 'w')] || 'Your opponent') + ' ended the game. It doesn’t count.', 3800); endingByMe = false; setTimeout(() => { if (G.reason === 'ended') goHome(); }, 600); }
+    return;
+  }
   if (G.status === 'over') { processFinishedGame(); recordCpuResult(); }
   const card = $('endCard');
   if (G.status !== 'over' || review || endDismissed === endKey()) { card.hidden = true; return; }
@@ -6166,9 +6191,9 @@ function updateResignBtn() {
   $('btnChatResign').hidden = !playing;
   // Online games and spectating say "Leave" so the way back to the start screen is obvious.
   const onlineNow = G.onlineProvider === 'supabase', watching = onlineNow && !mySeat;
-  const word = onlineNow ? 'Leave' : 'Home';
+  const word = watching ? 'Leave' : onlineNow && G.status !== 'over' ? 'End' : 'Home';
   if ($('btnNew').firstChild?.textContent !== word) { $('btnNew').firstChild.textContent = word; $('btnChatNew').textContent = word; }
-  $('btnNew').setAttribute('aria-label', onlineNow ? 'Leave match' : 'New game');
+  $('btnNew').setAttribute('aria-label', watching ? 'Stop watching' : onlineNow && G.status !== 'over' ? 'End this game' : 'Home');
   $('watchBar').hidden = !watching || !!review;
   if (watching) { const t = document.querySelector('#cgSpectatorBar strong')?.textContent; if (t) $('watchBar').firstChild.lastChild.textContent = t; }
   const canSave = G.status === 'active' && G.moves.length > 0 && G.mode !== 'train';
@@ -6662,7 +6687,7 @@ async function toggleChessPause(){
 async function applyPawnTimeAction(kind,square){
   const clock=window.ChessClock?.snapshot();
   if(!clock||G.status!=='active'||G.onlineBusy)return;
-  if(!['10m','12m','15m'].includes(clock.mode))return;
+  if(!window.ChessClock?.pawnRule?.())return;
   if(G.onlineProvider==='supabase'){
     if(!mySeat){toast('Spectators cannot choose pawns.');return;}
     G.onlineBusy=true;
@@ -6831,7 +6856,7 @@ function pickPawnSquare(sq){
 function promptPawnTimeChoice(kind){
   if(G.status!=='active')return;
   const clock=window.ChessClock?.snapshot();
-  if(!clock||!['10m','12m','15m'].includes(clock.mode))return;
+  if(!clock||!window.ChessClock?.pawnRule?.())return;
   const victim=kind==='penalty'?clock.penaltySide:clock.turn;
   if(!victim)return;
   if(kind==='penalty'&&clock.clockState!=='penalty')return;
@@ -6903,12 +6928,45 @@ function openSettings() {
   };
   function render() {
     body.replaceChildren();
-    row('Chess clock', seg([['off', 'Off'], ['10m', '10'], ['12m', '12'], ['15m', '15'], ['move60', '60s']], window.ChessClock?.getPreference?.() || 'off', (v) => {
-      window.ChessClock?.setPreference(v);
-      applyClockChange(v);
-      window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(v));
+    /* Timer: none, seconds per move, or minutes per game. Tap Seconds/Minutes, then type the amount. */
+    const C = window.ChessClock, cur = C?.getPreference?.() || 'off';
+    const kind = cur === 'off' ? 'off' : cur[0] === 's' ? 's' : 'm';
+    const amount = kind === 's' ? (C.moveMs(cur) / 1000) : kind === 'm' ? (C.totalMs(cur) / 60000) : 0;
+    const commit = (mode) => {
+      if (!C) return; C.setPreference(mode); applyClockChange(mode);
+      window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(mode, C.getExpiry()));
       window.familyChessClockSavePromise.catch((e) => toast('Clock preference could not sync: ' + (e?.message || 'Try again'), 4200));
-    }, 'Chess clock: off, 10, 12 or 15 minutes each, or 60 seconds per move'));
+    };
+    const timer = el('div', 'set-timer');
+    timer.append(seg([['off', 'None'], ['s', 'Seconds'], ['m', 'Minutes']], kind, (v) => commit(v === 'off' ? 'off' : v === 's' ? 's' + (kind === 's' ? amount : 60) : 'm' + (kind === 'm' ? amount : 10)), 'Timer'));
+    if (kind !== 'off') {
+      const box = el('label', 'set-amount');
+      const inp = el('input'); inp.type = 'number'; inp.inputMode = 'numeric'; inp.min = kind === 's' ? '5' : '1'; inp.max = kind === 's' ? '600' : '180'; inp.value = String(amount);
+      inp.setAttribute('aria-label', kind === 's' ? 'Seconds per move' : 'Minutes per player');
+      const unit = el('span'); unit.textContent = kind === 's' ? 'seconds per move' : 'minutes each';
+      const apply = () => {
+        let n = Math.round(Number(inp.value)); const lo = kind === 's' ? 5 : 1, hi = kind === 's' ? 600 : 180;
+        if (!Number.isFinite(n) || n < lo) n = lo; if (n > hi) n = hi; inp.value = String(n);
+        if (n !== amount) { commit(kind + n); render(); }
+      };
+      inp.addEventListener('change', apply); inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+      box.append(inp, unit); timer.append(box);
+    }
+    row('Timer', timer);
+    if (kind !== 'off') {
+      const exp = kind === 's' ? null : (C.getExpiry?.() || 'pawn');
+      if (exp) row('When time runs out', seg([['end', 'Game ends'], ['sec60', '60s a move'], ['pawn', 'Pawn trade']], exp, (v) => {
+        C.setExpiry(v);
+        window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(C.getPreference(), v));
+        if (G.onlineProvider === 'supabase' && G.status === 'active' && mySeat && G.gid) Promise.resolve(window.familyChessChangeClock?.(G.gid, C.getPreference(), v)).catch((e) => toast(e?.message || 'Could not change the rule', 4200));
+      }, 'When time runs out'));
+      const note = el('p', 'set-note');
+      note.textContent = kind === 's' ? 'Run out of seconds on a move and the game ends.'
+        : exp === 'end' ? 'Run out of time and you lose.'
+        : exp === 'sec60' ? 'Run out of time and both of you switch to 60 seconds per move.'
+        : 'At 10 seconds you can trade one of your pawns for +1:30. Let it run out and your opponent removes any pawn of yours; your clock goes back to 3:00.';
+      body.append(note);
+    }
     row('Computer speed', seg([['instant', 'Instant'], ['regular', '2.5s'], ['slow', '4.4s'], ['delayed', '10s']], cpuSpeed(), setCpuSpeed, 'Computer move speed'));
     row('Moving pieces', seg([['preview', 'Two taps'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), 'Moving pieces'));
     row('2D pieces', seg([['classic', 'Pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v }), '2D pieces'));
@@ -7157,7 +7215,7 @@ window.familyChessNative = {
     G.status = game.status === 'finished' ? 'over' : game.status;
     G.result = game.result || null;
     G.reason = G.status === 'over' ?
-      (game.end_reason==='replaced'?'replaced':game.end_reason==='resignation'?'resignation':
+      (game.end_reason==='replaced'?'replaced':game.end_reason==='ended'?'ended':game.end_reason==='resignation'?'resignation':
        game.end_reason==='timeout'?'timeout':
        pos.chess.isCheckmate()?'checkmate':
        pos.chess.isStalemate()?'stalemate':pos.chess.isInsufficientMaterial()?'insufficient material':

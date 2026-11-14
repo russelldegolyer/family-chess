@@ -2,11 +2,19 @@
    Only Supabase may finalize online timeouts. The client merely displays time and requests settlement. */
 (() => {
   'use strict';
-  const MODES = Object.freeze({ off:0, '10m':600000, '12m':720000, '15m':900000, move60:60000 });
-  const VALID = new Set(Object.keys(MODES));
-  const prefKey = 'sg.chessClock';
-  let preference = 'off';
-  try { const saved = JSON.parse(localStorage.getItem(prefKey) || '"off"'); if (VALID.has(saved)) preference = saved; else if(saved==='move3')preference='move60'; } catch {}
+  /* Modes: 'off', 'm<N>' = N minutes each (1-180), 's<N>' = N seconds per move (5-600).
+     Legacy '10m','12m','15m','move60' are still understood (old games and saves). Same rules as the database. */
+  const MODE_RE = /^(off|10m|12m|15m|move60|m([1-9]|[1-9][0-9]|1[0-7][0-9]|180)|s([5-9]|[1-9][0-9]|[1-5][0-9][0-9]|600))$/;
+  const totalMs = (m) => /^(10|12|15)m$/.test(m) ? parseInt(m, 10) * 60000 : /^m\d+$/.test(m) ? +m.slice(1) * 60000 : null;
+  const moveMs = (m) => m === 'move60' ? 60000 : /^s\d+$/.test(m) ? +m.slice(1) * 1000 : null;
+  const tidy = (m) => m === 'move60' ? 's60' : /^(10|12|15)m$/.test(m) ? 'm' + parseInt(m, 10) : m;
+  const MODES = Object.freeze({ off:0, m10:600000, s60:60000 });
+  const EXPIRY = new Set(['end','sec60','pawn']);
+  const prefKey = 'sg.chessClock', expKey = 'sg.clockExpiry';
+  const PAWN_AT = 10000;   /* the pawn trade (+1:30) opens at 10 seconds left */
+  let preference = 'off', expiryPref = 'pawn';
+  try { const saved = JSON.parse(localStorage.getItem(prefKey) || '"off"'); if (MODE_RE.test(saved)) preference = tidy(saved); else if(saved==='move3')preference='s60'; } catch {}
+  try { const e = JSON.parse(localStorage.getItem(expKey) || '"pawn"'); if (EXPIRY.has(e)) expiryPref = e; } catch {}
   const hud = document.createElement('div');
   hud.id = 'chessClockHud';
   hud.hidden = true;
@@ -97,9 +105,10 @@
   const state = { source:null, mode:'off', status:'waiting', turn:'w', gameId:null,
     w:0,b:0,startedAt:0,history:[],onLocalTimeout:null,onOnlineTimeout:null,
     claimedAt:0, claimInFlight:false,clockState:'running',penaltySide:null,
-    decided:{w:false,b:false},actorSide:null,viewSide:'w',bonusW:0,bonusB:0 };
+    decided:{w:false,b:false},actorSide:null,viewSide:'w',bonusW:0,bonusB:0,expiry:'pawn' };
   const parseDate = v => v ? new Date(v).getTime() || 0 : 0;
-  const normalized = mode => VALID.has(mode) ? mode : 'off';
+  const normalized = mode => MODE_RE.test(mode||'') ? tidy(mode) : 'off';
+  const pawnRule = () => totalMs(state.mode) != null && state.expiry === 'pawn';
   const active = () => state.mode!=='off' && state.status==='active'
     && state.clockState==='running' && state.startedAt>0;
   const remaining = (side,at=Date.now()) => Math.max(0, state[side] -
@@ -158,11 +167,11 @@
     pauseBtn.textContent=state.clockState==='paused'?'▶ Resume':'⏸ Pause';
     const remainingNow=remaining(state.turn,at);
     tradeBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState!=='running'
-      ||!['10m','12m','15m'].includes(state.mode)
-      ||state.actorSide!==state.turn||remainingNow<=0||remainingNow>=30000;
+      ||!pawnRule()
+      ||state.actorSide!==state.turn||remainingNow<=0||remainingNow>PAWN_AT;
     tradeBtn.textContent='♟ Pawn +1:30';
     chooseBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState!=='penalty'
-      ||!['10m','12m','15m'].includes(state.mode)||state.actorSide===state.penaltySide;
+      ||!pawnRule()||state.actorSide===state.penaltySide;
     chooseBtn.textContent='♟ Choose pawn';
     // Compute positions only after visibility is updated: a hidden Pawn button
     // must not reserve space, and neither button may cover the timer or exit
@@ -201,11 +210,12 @@
       n.node.setAttribute('aria-label',(side==='w'?'White':'Black')+' '+t+(selected?' to move':''));
     }
   }
-  /* practice: at 0:30 the clock stops once so the player can pick: pawn for +1:30, or play on to 3:00 */
+  /* practice: at 0:10 the clock stops once so the player can pick: their own pawn for +1:30, or let it run out
+     (then the opponent takes any pawn and the clock goes back to 3:00) */
   function checkDecision(){
-    if(state.source!=='local'||!active()||!['10m','12m','15m'].includes(state.mode))return;
+    if(state.source!=='local'||!active()||!pawnRule())return;
     const side=state.turn,left=remaining(side);
-    if(left>30000){state.decided[side]=false;return;}
+    if(left>PAWN_AT){state.decided[side]=false;return;}
     if(left<=0||state.decided[side]||state.actorSide!==side)return;
     state.decided[side]=true;
     state[side]=left;state.startedAt=0;state.clockState='decision';
@@ -220,15 +230,20 @@
     redraw();
     if (!active() || remaining(state.turn)>0) return;
     if (state.source==='local') {
-      state[state.turn]=0;
+      const side=state.turn;
+      state[side]=0;
       state.startedAt=0;
-      if(state.mode==='move60'){
-        state.status='over';state.clockState='running';state.penaltySide=null;
+      let outcome='penalty';
+      if(moveMs(state.mode)!=null||state.expiry==='end'){
+        state.status='over';state.clockState='running';state.penaltySide=null;outcome='timeout';
+      }else if(state.expiry==='sec60'){
+        /* time ran out: from now on both sides get 60 seconds per move */
+        state.mode='s60';state.w=60000;state.b=60000;state.startedAt=Date.now();state.clockState='running';outcome='switched';
       }else{
-        state.clockState='penalty';state.penaltySide=state.turn;
+        state.clockState='penalty';state.penaltySide=side;
       }
       redraw();
-      state.onLocalTimeout?.(state.turn);
+      state.onLocalTimeout?.(side,outcome);
     } else if(state.source==='online' && state.onOnlineTimeout && state.gameId &&
       !state.claimInFlight && Date.now()-state.claimedAt>4000) {
       state.claimedAt=Date.now();
@@ -247,10 +262,18 @@
     try { localStorage.setItem(prefKey,JSON.stringify(mode)); } catch {}
     return mode;
   }
+  function getExpiry(){return expiryPref;}
+  function setExpiry(e){
+    if(!EXPIRY.has(e))return expiryPref;
+    expiryPref=e;
+    try { localStorage.setItem(expKey,JSON.stringify(e)); } catch {}
+    if(state.source==='local'){state.expiry=e;redraw();}
+    return e;
+  }
   function startLocal(mode,onTimeout) {
     mode=normalized(mode);
-    const limit=MODES[mode];
-    Object.assign(state,{source:'local',mode,status:'active',turn:'w',gameId:null,
+    const limit=totalMs(mode)??moveMs(mode)??0;
+    Object.assign(state,{source:'local',mode,status:'active',turn:'w',gameId:null,expiry:expiryPref,
       clockState:'running',penaltySide:null,bonusW:0,bonusB:0,
       /* a practice clock waits for the game's first move before it starts counting */
       w:limit,b:limit,startedAt:0,
@@ -259,10 +282,11 @@
     tick();
   }
   /* A saved game picks up with the time each side had when it was saved; the side to move's clock runs at once. */
-  function resumeLocal(mode,w,b,turn,ply) {
+  function resumeLocal(mode,w,b,turn,ply,expiry) {
     if(state.source!=='local')return;
     mode=normalized(mode);
-    const cap=v=>Math.max(0,Math.min(3600000,Math.floor(Number(v)||0)));
+    if(EXPIRY.has(expiry))state.expiry=expiry;
+    const cap=v=>Math.max(0,Math.min(10800000,Math.floor(Number(v)||0)));
     state.mode=mode; state.w=mode==='off'?0:cap(w); state.b=mode==='off'?0:cap(b); state.turn=turn==='b'?'b':'w';
     state.status='active'; state.clockState='running'; state.penaltySide=null;
     state.startedAt=mode==='off'?0:Date.now();
@@ -275,8 +299,8 @@
     const mover=state.turn;
     state[mover]=remaining(mover,now);
     if(state[mover]<=0) {tick();return;}
-    if(state.mode==='move60') {
-      state[nextTurn]=60000;
+    if(moveMs(state.mode)!=null) {
+      state[nextTurn]=moveMs(state.mode);
     }
     state.turn=nextTurn;
     state.status=ended?'over':'active';
@@ -306,7 +330,7 @@
     if(!game)return;
     const mode=normalized(game.clock_mode);
     const first=state.source!=='online'||state.gameId!==game.id;
-    Object.assign(state,{source:'online',mode,gameId:game.id,turn:turn==='b'?'b':'w',
+    Object.assign(state,{source:'online',mode,gameId:game.id,turn:turn==='b'?'b':'w',expiry:EXPIRY.has(game.clock_expiry)?game.clock_expiry:'pawn',
       status:game.status==='active'?'active':game.status==='finished'?'over':'waiting',
       clockState:game.clock_state||'running',penaltySide:game.clock_penalty_side||null,
       w:Math.max(0,Number(game.clock_white_ms)||0),
@@ -329,21 +353,20 @@
   }
   /* change the time control of the game in progress (practice): total-time to total-time shifts both clocks
      by the difference; switching to or from 60 s per move starts the new mode fresh. Never resumes a pause. */
-  const TOTAL=new Set(['10m','12m','15m']);
   function changeLocalMode(next){
     next=normalized(next);
     if(state.source!=='local'||state.status!=='active'||next===state.mode)return false;
     const old=state.mode,now=Date.now(),running=active();
     if(old!=='off')state[state.turn]=remaining(state.turn,now);
-    if(TOTAL.has(old)&&TOTAL.has(next)){
-      const d=MODES[next]-MODES[old];
-      state.w=Math.max(0,state.w+d);state.b=Math.max(0,state.b+d);
-    }else if(next==='move60'){state.w=60000;state.b=60000;}
-    else if(next!=='off'){state.w=MODES[next];state.b=MODES[next];}
+    if(totalMs(old)!=null&&totalMs(next)!=null){
+      const d=totalMs(next)-totalMs(old);
+      state.w=Math.max(1000,state.w+d);state.b=Math.max(1000,state.b+d);
+    }else if(moveMs(next)!=null){state.w=moveMs(next);state.b=moveMs(next);}
+    else if(next!=='off'){state.w=totalMs(next);state.b=totalMs(next);}
     state.mode=next;state.decided={w:false,b:false};
     if(next==='off'){state.startedAt=0;if(state.clockState==='penalty'||state.clockState==='decision')state.clockState='running';state.penaltySide=null;}
     else if(state.clockState==='running')state.startedAt=running||state.history.length>1?now:0;
-    if(state.clockState==='decision'&&!TOTAL.has(next))state.clockState='running',state.startedAt=state.history.length>1?now:0;
+    if(state.clockState==='decision'&&totalMs(next)==null)state.clockState='running',state.startedAt=state.history.length>1?now:0;
     state.history=state.history.map(()=>({w:state.w,b:state.b,turn:state.turn}));
     tick();return true;
   }
@@ -354,26 +377,26 @@
     const now=Date.now();
     if(state.clockState==='running'){
       if(state.mode!=='off')state[state.turn]=remaining(state.turn,now);
-      if(state.mode!=='off'&&state[state.turn]<=0){tick();return state.mode==='move60'?'timeout':'penalty';}
+      if(state.mode!=='off'&&state[state.turn]<=0){tick();return state.status==='over'?'timeout':state.clockState==='penalty'?'penalty':'running';}
       state.clockState='paused';state.startedAt=0;
     }else {state.clockState='running';state.startedAt=state.mode==='off'||(state.source==='local'&&state.history.length<2)?0:now;}
     redraw();return state.clockState;
   }
   function resolveLocalPenalty(){
-    if(state.source!=='local'||state.clockState!=='penalty'||!['10m','12m','15m'].includes(state.mode))return false;
+    if(state.source!=='local'||state.clockState!=='penalty'||!pawnRule())return false;
     state[state.penaltySide]=180000;state.decided[state.penaltySide]=false;
     state.clockState='running';state.penaltySide=null;state.startedAt=Date.now();tick();return true;
   }
   function sacrificeLocal(nextTurn,ply){
-    if(state.source!=='local'||state.clockState!=='running'||!['10m','12m','15m'].includes(state.mode)
-      ||remaining(state.turn)<=0||remaining(state.turn)>30000)return false;
+    if(state.source!=='local'||state.clockState!=='running'||!pawnRule()
+      ||remaining(state.turn)<=0||remaining(state.turn)>PAWN_AT)return false;
     const actor=state.turn,rem=remaining(actor);
     state[actor]=rem+90000;
     state.turn=nextTurn;state.startedAt=Date.now();
     if(Number.isInteger(ply))state.history[ply]={w:state.w,b:state.b,turn:state.turn};
     tick();return true;
   }
-  window.ChessClock=Object.freeze({relayout:()=>{if(!hud.hidden)redraw();},MODES,getPreference,setPreference,startLocal,resumeLocal,moveLocal,
+  window.ChessClock=Object.freeze({relayout:()=>{if(!hud.hidden)redraw();},MODES,MODE_RE,totalMs,moveMs,pawnRule,getPreference,setPreference,getExpiry,setExpiry,startLocal,resumeLocal,moveLocal,
     undoLocal,stopLocal,showOnline,reset,remaining,check:tick,setPerspective,setHandlers,
     pauseLocal,resolveLocalPenalty,sacrificeLocal,endDecision,changeLocalMode,
     snapshot:()=>({...state,history:state.history.slice()})});

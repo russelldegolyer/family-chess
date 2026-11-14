@@ -66,15 +66,17 @@ test('a practice clock waits for the first move before counting down',()=>{
   assert.equal(a.clock.snapshot().b,595_000);
 });
 
-test('normal timed chess retains pawn +1:30 below 30 seconds',()=>{
+test('normal timed chess allows pawn +1:30 only at 10 seconds or less',()=>{
   const a=makeClock();
   a.clock.startLocal('10m',()=>{});
   a.clock.moveLocal('b',1);a.clock.moveLocal('w',2);
   a.clock.setPerspective('w','w');
   a.advance(575_000);
+  assert.equal(a.clock.sacrificeLocal('b',1),false);
+  a.advance(16_000);
   assert.equal(a.clock.sacrificeLocal('b',1),true);
   assert.equal(a.clock.snapshot().turn,'b');
-  assert.ok(a.clock.snapshot().w>=110_000);
+  assert.ok(a.clock.snapshot().w>=95_000);
 });
 
 test('a normal time-out still requests a pawn penalty',()=>{
@@ -97,9 +99,9 @@ test('Pause is available in the main board and chat header, not as a floating cl
 });
 
 test('pawn exchange is rejected outside standard timed games on all layers',()=>{
-  assert.match(clock,/\['10m','12m','15m'\]\.includes\(state\.mode\)/);
-  assert.match(page,/\['10m','12m','15m'\]\.includes\(clock\.mode\)/);
-  assert.match(pawnEdge,/\['10m','12m','15m'\]\.includes\(g\.clock_mode\)/);
+  assert.match(clock,/const pawnRule = \(\) =>/);
+  assert.match(page,/ChessClock\?\.pawnRule\?\.\(\)/);
+  assert.match(pawnEdge,/\^\(10m\|12m\|15m\|m\[0-9\]\{1,3\}\)\$/);
   assert.match(sql,/Pawn exchanges require a normal timed game/);
   assert.match(sql,/end_reason='timeout'/);
   assert.match(submitEdge,/g\.clock_mode==='move60'/);

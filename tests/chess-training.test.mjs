@@ -22,8 +22,8 @@ test('puzzles: five rating bands, adaptive, hints make a solve unrated, dev set 
  for(const p of dev.puzzles){assert.match(p[1],/^[1-8pnbrqkPNBRQK\/]+ [wb] /);assert.ok(p[2].split(' ').length>=2);}
 });
 test('live clock changes shift total-time clocks by the difference and keep pauses',()=>{
- assert.match(clock,/const d=MODES\[next\]-MODES\[old\];\s*state\.w=Math\.max\(0,state\.w\+d\);state\.b=Math\.max\(0,state\.b\+d\);/);
- assert.match(clock,/else if\(next==='move60'\)\{state\.w=60000;state\.b=60000;\}/);
+ assert.match(clock,/const d=totalMs\(next\)-totalMs\(old\);/);
+ assert.match(clock,/else if\(next!=='off'\)\{state\.w=totalMs\(next\);state\.b=totalMs\(next\);\}/);
  assert.match(sql,/create or replace function public\.chess_change_clock[\s\S]*for update/);
  assert.match(sql,/alter table public\.chess_profiles add column if not exists last_seen_at/);
  assert.doesNotMatch(sql,/(table|function|on) public\.(?!chess_)/);

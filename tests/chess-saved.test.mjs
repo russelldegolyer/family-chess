@@ -25,7 +25,7 @@ test('saved games keep clock times and pawn-for-time changes',()=>{
  assert.match(page,/p_clock: localClockNow\(\)/);
  assert.match(page,/p_actions: \(G\.clockActions \|\| \[\]\)/);
  assert.match(page,/ChessClock\?\.resumeLocal\?\.\(row\.clock\.mode, row\.clock\.w, row\.clock\.b/);
- assert.match(clock,/function resumeLocal\(mode,w,b,turn,ply\)/);
+ assert.match(clock,/function resumeLocal\(mode,w,b,turn,ply,expiry\)/);
  assert.match(clock,/startLocal,resumeLocal,moveLocal/);
  assert.match(edge,/clock_white_ms: ms\(ck\.w\), clock_black_ms: ms\(ck\.b\)/);
  assert.match(sql,/Limit 30 saved games per player/);

@@ -63,3 +63,9 @@ are rule-based on the device (`chess-plan.js`), plus the accuracy pass; no outsi
 costly habit in 30%+ of games, its chapter becomes the recommended next. Rook-ending lessons are scripted lines (the
 engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
 
+
+## D-33 Typed clocks, time-out rule, End (2026-11-13)
+- Clock modes: `off`, `m<N>` (minutes each, 1–180), `s<N>` (seconds per move, 5–600); legacy 10m/12m/15m/move60 still valid.
+- `clock_expiry` per profile and game: `end` | `sec60` | `pawn` (default). Pawn trade only on minutes clocks, at ≤10 s (+1:30); time-out penalty pawn gives +3:00.
+- "End" (online) finishes the game with end_reason `ended`, no result; `chess_end_game` deletes such games. Ended/replaced games never count or show in Matches.
+- Records live in Challenges → Matches, not in the Play online sheet.

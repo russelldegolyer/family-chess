@@ -530,3 +530,24 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-saved-row.sending .tr-saved-go { opacity: .6; }
 .tr-saved-row .tr-saved-go, .tr-saved-row .tr-saved-go:active { background: #151517; }
 .tr-saved-row .tr-saved-go:active { background: #1b1b1e; }
+
+/* Matches: record + finished games (humans / computer / all) */
+.tr-match-seg { margin-top: 12px; }
+.tr-record { margin-top: 12px; padding: 14px; border-radius: 16px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); display: flex; flex-direction: column; gap: 10px; }
+.tr-record-top { display: flex; align-items: center; gap: 16px; }
+.tr-record-big { display: flex; flex-direction: column; }
+.tr-record-big b { font-size: 34px; font-weight: 750; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.tr-record-big span { font-size: 12px; color: var(--tr-dim); }
+.tr-record-nums { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tr-record-nums div { display: flex; flex-direction: column; align-items: center; padding: 6px 0; border-radius: 10px; background: #26262a; }
+.tr-record-nums b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.tr-record-nums span { font-size: 11px; color: var(--tr-dim); }
+.tr-record-nums .w b { color: #30d158; } .tr-record-nums .l b { color: #ff6b63; } .tr-record-nums .d b { color: #c7c7cc; }
+.tr-record-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #2c2c30; }
+.tr-record-bar i { display: block; } .tr-record-bar .w { background: #30d158; } .tr-record-bar .l { background: #ff453a; } .tr-record-bar .d { background: #8e8e93; }
+.tr-record-acc { font-size: 13px; color: #c7c7cc; }
+.tr-record-more { display: flex; flex-wrap: wrap; gap: 8px; }
+.tr-match-badge { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 15px; background: #2c2c30; }
+.tr-match-badge.w { background: rgba(48,209,88,.18); color: #30d158; } .tr-match-badge.l { background: rgba(255,69,58,.18); color: #ff6b63; } .tr-match-badge.d { background: rgba(142,142,147,.2); color: #d1d1d6; }
+.tr-match-acc { flex: none; font-size: 14px; font-weight: 650; color: #c7c7cc; font-variant-numeric: tabular-nums; }
+.tr-match-acc:empty { display: none; }

@@ -107,6 +107,7 @@
     .cgSettings>summary::-webkit-details-marker{display:none}
     .cgSettings>summary::after{content:"›";color:#636366;font-size:20px;transition:transform .2s}
     .cgSettings[open]>summary::after{transform:rotate(90deg)}
+    .cgNameTop{margin:2px 0 12px}.cgNameTop .cgLabel{display:block;margin-bottom:6px}.cgMatchesLink{display:block;margin:8px auto 0;font-size:13px}
     .cgSettingsName{margin-left:auto;color:#8e8e93;font-size:15px;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .cgSettingsBody{display:flex;flex-direction:column;gap:16px;padding:4px 0 16px;border-top:.5px solid #3a3a3c}
     .cgSettingsBody .cgLabel{margin:12px 0 7px;color:#8e8e93;font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:11px}
@@ -131,6 +132,10 @@
       <div class="cgGrab" aria-hidden="true"></div>
       <div class="cgTop"><h2>Play online</h2>
         <button class="cgX" id="cgClose" type="button" aria-label="Close"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button></div>
+      <form id="cgProfileForm" class="cgNameTop"><label class="cgLabel" for="cgDisplayName">Your name</label>
+        <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" autocomplete="nickname"
+          autocapitalize="words" required minlength="2" maxlength="40" placeholder="What friends see">
+        <button class="cgButton" type="submit">Save</button></div></form>
       <div id="cgSocialMount"></div>
       <div id="cgLobbyActions" class="cgQuick" aria-label="More ways to play">
         <button id="cgGoLink" class="cgSmallLink" type="button">or share an invite link</button>
@@ -150,26 +155,19 @@
         </div>
         <button id="cgCancelInvite" class="cgLink cgCancelInvite" type="button">Cancel invite</button>
       </div>
-      <div class="cgRecord" id="cgRecord" aria-label="Your record">
-        <button class="cgRecCard" id="cgRecOnlineCard" type="button" aria-label="Stats vs players"><span class="cgRecHead"><span>vs Players</span><em>›</em></span><span id="cgRecOnline"></span></button>
-        <button class="cgRecCard" id="cgRecCpuCard" type="button" aria-label="Stats vs the computer"><span class="cgRecHead"><span>vs Computer</span><em>›</em></span><span id="cgRecCpu"></span></button>
-      </div>
       <div id="cgMessage" role="status" aria-live="polite"></div>
       <div class="cgBlock" id="cgLiveBlock">
         <div class="cgSection"><span>Live now</span><span id="cgLiveCount" class="cgLiveCount" aria-live="polite"></span></div>
         <div id="cgLiveGames" class="cgLiveList"><span class="cgMuted">Checking for live matches…</span></div>
       </div>
       <div class="cgBlock">
-        <div class="cgSection"><span>My matches</span><button class="cgLink" id="cgRefresh" type="button">Refresh</button></div>
-        <div id="cgGames" class="cgMuted">No matches yet.</div>
+        <div class="cgSection"><span>Your games</span><button class="cgLink" id="cgRefresh" type="button">Refresh</button></div>
+        <div id="cgGames" class="cgMuted">No games in progress.</div>
+        <button class="cgLink cgMatchesLink" id="cgMatchesLink" type="button">Your record and past matches are in Challenges → Matches ›</button>
       </div>
       <details class="cgSettings" id="cgSettings">
-        <summary>Settings<span class="cgSettingsName" id="cgNameValue">Loading…</span></summary>
+        <summary>Settings<span class="cgSettingsName" id="cgNameValue" hidden>Loading…</span></summary>
         <div class="cgSettingsBody">
-          <form id="cgProfileForm"><label class="cgLabel" for="cgDisplayName">Chess name</label>
-            <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" autocomplete="nickname"
-              autocapitalize="words" required minlength="2" maxlength="40">
-            <button class="cgButton" type="submit">Save</button></div></form>
           <div id="cgNotifySlot"><span class="cgLabel">Challenge notifications</span></div>
           <form id="cgJoinForm"><label class="cgLabel" for="cgJoinId">Join with a link</label>
             <div class="cgRow"><input id="cgJoinId" class="cgInput" type="text" placeholder="Paste a game link" required>
@@ -370,7 +368,7 @@
     const id=matchId, uid=player.id, epoch=syncToken;
     try {
       const {data:g,error:gameError}=await api.from('chess_games')
-        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_white_ms,clock_black_ms,clock_turn_started_at,clock_state,clock_penalty_side,clock_paused_by,resumed_plies,start_fen')
+        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_expiry,clock_white_ms,clock_black_ms,clock_turn_started_at,clock_state,clock_penalty_side,clock_paused_by,resumed_plies,start_fen')
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) {
@@ -478,17 +476,25 @@
     await syncMatch();return data;
   };
   /* change the clock of the open online match; the server shifts both clocks and realtime syncs the opponent */
-  window.familyChessChangeClock = async (id,mode) => {
+  window.familyChessChangeClock = async (id,mode,expiry) => {
     if(!player||matchId!==id||matchMode!=='play')throw new Error('Only a player can change this clock');
-    const {data,error}=await api.rpc('chess_change_clock',{p_game_id:id,p_mode:mode});
+    const {data,error}=await api.rpc('chess_change_clock',{p_game_id:id,p_mode:mode,...(expiry?{p_expiry:expiry}:{})});
     if(error)throw new Error(/function|schema cache/i.test(error.message||'')?'Live clock changes need the new database update.':(error.message||'Could not change the clock'));
     await syncMatch();return data;
   };
-  window.familyChessSaveClockPreference = async mode => {
-    if(!['off','10m','12m','15m','move60'].includes(mode))throw new Error('Invalid clock selection');
+  window.familyChessSaveClockPreference = async (mode,expiry) => {
+    if(!(window.ChessClock?.MODE_RE||/^off$/).test(mode))throw new Error('Invalid clock selection');
     if(!player)return false;
-    const {error}=await api.from('chess_profiles').update({clock_preference:mode}).eq('id',player.id);
+    const upd={clock_preference:mode}; if(['end','sec60','pawn'].includes(expiry))upd.clock_expiry=expiry;
+    const {error}=await api.from('chess_profiles').update(upd).eq('id',player.id);
     if(error)throw new Error(error.message||'Could not save clock preference');
+    return true;
+  };
+  /* End: the game stops for both players, never counts, and is deleted shortly after */
+  window.familyChessEndGame = async id => {
+    const {error}=await api.rpc('chess_end_game',{p_game_id:id});
+    if(error)throw new Error(/function|schema cache/i.test(error.message||'')?'Ending games needs the new database update.':(error.message||'Could not end the game'));
+    void refresh();
     return true;
   };
   window.familyChessCurrentMatch = () => matchId;
@@ -547,13 +553,14 @@
     if(player?.id!==id)return;
     native.activateColorProfile?.(id);
     const {data,error}=await api.from('chess_profiles')
-      .select('display_name,piece_color,clock_preference')
+      .select('display_name,piece_color,clock_preference,clock_expiry')
       .eq('id',id).maybeSingle();
     if(player?.id!==id)return;
     if(error){status('Could not load chess profile: '+error.message,true);return;}
     if(data){
       if(window.ChessClock&&data.clock_preference)
         window.ChessClock.setPreference(data.clock_preference);
+      if(window.ChessClock&&data.clock_expiry)window.ChessClock.setExpiry?.(data.clock_expiry);
       $('cgDisplayName').value=data.display_name;
       $('cgNameValue').textContent=data.display_name;
       const hydrate=[
@@ -580,7 +587,8 @@
     const created=await api.from('chess_profiles').insert({
       id,display_name,
       piece_color:native.getAccountColor?.()||'#c60018',
-      clock_preference:window.ChessClock?.getPreference?.()||'off'
+      clock_preference:window.ChessClock?.getPreference?.()||'off',
+      clock_expiry:window.ChessClock?.getExpiry?.()||'pawn'
     });
     if(created.error && created.error.code!=='23505'){
       status('Could not create chess profile: '+created.error.message,true);return;
@@ -618,7 +626,8 @@
       if(!root.hidden)container.textContent='Could not load live matches: '+error.message;
       return;
     }
-    const matches=(data||[]).filter(g=>g.white_player_id&&g.black_player_id);
+    /* live = two people in a game that has moved in the last 20 minutes (abandoned games don't count) */
+    const matches=(data||[]).filter(g=>g.white_player_id&&g.black_player_id&&Date.now()-Date.parse(g.updated_at)<20*60000);
     const others=matches.filter(g=>g.white_player_id!==uid&&g.black_player_id!==uid);
     const ids=[...new Set(matches.flatMap(g=>[g.white_player_id,g.black_player_id]))];
     let names={};
@@ -675,9 +684,9 @@
     if (error) { games.textContent = 'Could not load matches: ' + error.message; return; }
     games.replaceChildren();
     /* abandoned matches (closed by a newer invite) are not kept */
-    const kept=(data||[]).filter(g=>g.end_reason!=='replaced');
-    renderRecord(player.id);
-    if (!kept.length) { games.textContent='No matches yet.'; return; }
+    /* Online shows only games you can get back into; finished matches (W/L/D) live in Challenges → Matches */
+    const kept=(data||[]).filter(g=>(g.status==='waiting'||g.status==='active')&&g.end_reason!=='replaced'&&g.end_reason!=='ended');
+    if (!kept.length) { games.textContent='No games in progress. Invite a friend above.'; return; }
     const players=[...new Set(kept.flatMap(g=>[g.white_player_id,g.black_player_id]).filter(Boolean))];
     const {data:profiles}=await api.from('chess_profiles').select('id,display_name').in('id',players);
     if(!player)return;
@@ -751,6 +760,7 @@
   /* average accuracy across games that have one */
   const fmtAcc=(list)=>list.length?'<span class="cgRecAcc"><b>'+(list.reduce((a,b)=>a+b,0)/list.length).toFixed(1)+'</b> avg accuracy</span>':'';
   async function renderRecord(pid){
+    if(!$('cgRecCpu'))return;
     const c=window.familyChessCpuRecord?.()||{w:0,l:0,d:0};
     $('cgRecCpu').innerHTML=fmtRec(c.w,c.l,c.d);
     const cg=window.familyChessCpuGames?.()||[],ca=cg.map(x=>x.acc).filter(v=>typeof v==='number');
@@ -759,7 +769,7 @@
       .eq('status','finished').or('white_player_id.eq.'+pid+',black_player_id.eq.'+pid).limit(1000);
     let w=0,l=0,d=0;const accs=[];
     for(const g of data||[]){
-      if(g.end_reason==='replaced'||!g.result)continue;
+      if(g.end_reason==='replaced'||g.end_reason==='ended'||!g.result)continue;
       if(g.result==='1/2-1/2')d++;else if((g.result==='1-0')===(g.white_player_id===pid))w++;else l++;
       const me=g.white_player_id===pid?'w':'b';
       const v=(me==='w'?g.accuracy_white:g.accuracy_black)??window.familyChessAccuracy?.cached?.('g:'+g.id)?.[me];
@@ -768,8 +778,7 @@
     $('cgRecOnline').innerHTML=fmtRec(w,l,d)+fmtAcc(accs);
   }
   $('cgRefresh').addEventListener('click',()=>{void refresh();});
-  $('cgRecOnlineCard').addEventListener('click',()=>{if(player)void window.familyChessStats?.openPlayers(api,player.id);});
-  $('cgRecCpuCard').addEventListener('click',()=>{window.familyChessStats?.openComputer(0);});
+  $('cgMatchesLink').addEventListener('click',()=>{close();window.familyChessTraining?.openMatches?.();});
   let creating = false, openInviteId = null;
   /* take back an invitation nobody has joined: the server deletes the waiting game and its pending challenge */
   async function cancelInvite(id){
@@ -883,3 +892,23 @@
   });
   api.auth.getSession().then(({data})=>{void onPlayer(data.session?.user||null);});
 })();
+
+// Finished online matches that count (a result; never 'ended' or 'replaced'), for Challenges → Matches.
+window.familyChessFinishedMatches = async (uid) => {
+  const c = window.chessSupabase; if (!c || !uid) return [];
+  const { data, error } = await c.from('chess_games')
+    .select('id,result,end_reason,white_player_id,black_player_id,updated_at,accuracy_white,accuracy_black')
+    .eq('status', 'finished').or('white_player_id.eq.' + uid + ',black_player_id.eq.' + uid)
+    .order('updated_at', { ascending: false }).limit(200);
+  if (error) throw error;
+  const rows = (data || []).filter((g) => g.result && g.white_player_id && g.black_player_id && g.end_reason !== 'replaced' && g.end_reason !== 'ended');
+  const ids = [...new Set(rows.map((g) => (g.white_player_id === uid ? g.black_player_id : g.white_player_id)))];
+  let names = {};
+  if (ids.length) { const { data: pr } = await c.from('chess_profiles').select('id,display_name').in('id', ids); names = Object.fromEntries((pr || []).map((p) => [p.id, p.display_name])); }
+  return rows.map((g) => {
+    const me = g.white_player_id === uid ? 'w' : 'b', opp = me === 'w' ? g.black_player_id : g.white_player_id;
+    const res = g.result === '1/2-1/2' ? 'd' : (g.result === '1-0') === (me === 'w') ? 'w' : 'l';
+    const acc = me === 'w' ? g.accuracy_white : g.accuracy_black;
+    return { kind: 'human', id: g.id, title: 'vs ' + (names[opp] || 'Player'), side: me, res, reason: g.end_reason || '', at: Date.parse(g.updated_at) || 0, acc: acc == null ? null : Number(acc) };
+  });
+};

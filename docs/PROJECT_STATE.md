@@ -39,7 +39,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Game review | `index.html` `startReview`, `reviewStep`, `renderHistory`; `chess-review-analysis.js` | key-moments stepping |
 | Clocks, pause, pawn-for-time | `chess-clock.js` (practice stops at 0:30 for a choice: pawn +1:30 or play on to 3:00); pawns are picked by tapping the board (`pawnPick` in `index.html`); server `chess-clock-action` + `database/chess-pawn-time-*.sql`, `chess-move60-*.sql` | |
 | Saved games | Save button (`btnSave`/`btnChatSave`, `saveCurrentGame`, `loadSavedGame`, resume banner in `index.html`); list/detail and Create game position editor (`openEditor`) in `chess-training.js` (Training → Saved games); saved clock restored via `ChessClock.resumeLocal`; `chess-saved-game` Edge Function + `database/chess-saved-games-2026-11-12.sql` | |
-| Play online sheet, My matches, profile/name | `chess-online.js` (`show`, `refresh`, `refreshLive`, `startMatch`, `syncMatch`) | |
+| Play online sheet, Your games, name (top), End game, finished-match query | `chess-online.js` (`show`, `refresh`, `refreshLive`, `startMatch`, `syncMatch`) | |
 | Players, presence, challenges, push | `chess-social.js`, `chess-sw.js` | |
 | Chat | `chess-chat.js` (+ `renderChat`/`sendChat` delegates in `index.html`) | |
 | Your plan / style | `chess-plan.js` / `.css` (`familyChessPlan.read/open`), `fillEndPlan` in `index.html`; profile + review deck in `chess-training.js` (`recordGame`, `styleStats`, `P.review`, `P.games`) | per-move drops come from `chess-stats.js` accuracy |
@@ -59,7 +59,8 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - Toolbar: New, Undo, Resign (×), Pause, Reset view, 2D/3D, colour wheel, ⋯ menu; chat header mirrors it.
 - ⋯ menu: Choose board, Move history, Settings.
 - Colour rule: White = player colour (practice: yours; online: White player's), Black always black.
-- Play online sheet: players (Challenge / watch), Share invite link, Live now, My matches (W/L/D/LIVE/WAIT), Settings disclosure (name, notifications, join by link, sign out).
+- Play online sheet: Your name at top, players (Challenge / watch), Share invite link, Live now (human games updated in the last 20 min), Your games (waiting/active only), Settings disclosure (notifications, join by link, sign out). Record and finished matches are in Challenges → Matches (`openMatches`, All/Humans/Computer).
+- Clocks: None / Seconds / Minutes with typed amounts; time-out rule (end / 60 s a move / pawn trade) in Settings (D-33). Online End deletes the game (`chess_end_game`).
 - Abandoned (replaced) matches are deleted, not stored. A waiting invite can be cancelled (box after Share invite link, or Cancel on a WAIT row) via RPC `chess_cancel_invite`.
 - Opening an online match ends the practice game; returning from online opens the side chooser.
 - Review: Next/Prev stop only on inaccuracies, mistakes, blunders and strong replies; "Every move" toggle.
