@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-13 | 9 |
+| 2026-11-13 | 15 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
@@ -15,7 +15,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-13 — Typed timers, time-out rule, End game, Matches, swipes, landscape (deployed 8:51 PM)
 
 **Added**
 - Settings → Timer is now **None / Seconds / Minutes** with a box to type any amount (5–600 seconds per move, or 1–180 minutes each).
