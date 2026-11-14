@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-14 | 2 |
+| 2026-11-14 | 5 |
 | 2026-11-13 | 27 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
@@ -16,7 +16,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-14 — Back to the iOS look on black, overlap sweep (deployed 10:10 AM)
 
 **Improved**
 - Back to the iOS look (system font, blue iOS buttons and links, iOS section headers, the difficulty slider and SWIPE hint), now on a blacked-out background: near-black sheets with dark-grey iOS cards.
