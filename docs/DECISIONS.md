@@ -74,6 +74,10 @@ engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
 - Blunder check "safe"/"blunder" answers come from an offline Stockfish check shipped as `chess-blunder-check.json`, not the quick in-browser engine.
 - Threat and blunder explanations name a skewer/pin/fork only when the puzzle's solution wins the piece named; otherwise they describe the move as it is (check, capture, mate).
 
-## D-35 Chess-clock look (2026-11-13)
+## D-35 Chess-clock look (2026-11-13) — SUPERSEDED by D-36
 - One skin (`chess-skin.css`): matte felt surfaces, ivory text, key-style buttons with a bottom edge, serif headings (ui-serif / New York), sentence case.
 - The only accent is the player's piece colour; primary buttons are ivory. No gradients, glows, glass blur or tracked capitals.
+
+## D-36 Blacked-out iOS look (2026-11-14)
+- Russell prefers the iOS look: system font, blue iOS buttons/links, iOS section headers, green switches, slider for difficulty.
+- `chess-skin.css` only darkens surfaces (near-black sheets, #1c1c1e cards) and holds two layout fixes. Don't bring back the ivory/serif skin or custom fonts.

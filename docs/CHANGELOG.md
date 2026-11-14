@@ -16,6 +16,17 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Improved**
+- Back to the iOS look (system font, blue iOS buttons and links, iOS section headers, the difficulty slider and SWIPE hint), now on a blacked-out background: near-black sheets with dark-grey iOS cards.
+
+**Removed**
+- The chess-clock skin and the Newsreader / Instrument Sans fonts (ivory buttons, serif headings, strength keys).
+
+**Kept**
+- Settings: "When time runs out" on its own full-width row. Review bar: the empty status capsule stays hidden.
+
 ## 2026-11-14 — New fonts, roomier spacing, Settings and review bar fixes (deployed 8:29 AM)
 
 **Improved**

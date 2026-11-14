@@ -98,11 +98,11 @@ test('RLS permits authenticated spectators to read live games and moves, not to 
  assert.doesNotMatch(sql,/for (update|insert|delete)/i);
 });
 
-test('the chess-clock skin loads last and keeps the house rules: player colour accent, no tracked capitals',()=>{
+test('the dark skin loads last and only darkens surfaces (iOS buttons and system font stay)',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const skin=readFileSync(new URL('../chess-skin.css',import.meta.url),'utf8');
  assert.match(html,/<link rel="stylesheet" href="\.\/chess-skin\.css\?v=\d+">\n<\/head>/);
- assert.match(skin,/body \{ --sk-mine: var\(--orbW/);
- assert.doesNotMatch(skin,/text-transform:\s*uppercase/);
- assert.doesNotMatch(skin,/linear-gradient/);
+ assert.doesNotMatch(skin,/font-family|@font-face/);
+ assert.match(skin,/html body #status:empty, html body\.reviewing #status \{ display: none !important; \}/);
+ assert.match(skin,/\.set-row\.set-row-stack \{ flex-direction: column/);
 });
