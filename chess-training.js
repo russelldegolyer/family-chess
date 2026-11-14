@@ -2098,7 +2098,11 @@
     if (c.isCheckmate()) return 'checkmate.';
     const check = c.inCheck();
     /* the attacking piece must survive where it lands: not attacked, or defended (a free piece is no tactic) */
-    const safe = !guarded(at, you) || guarded(at, me);
+    /* safe = nothing of theirs can take it profitably (a cheaper piece, or any piece when it's undefended) */
+    let takers = []; try { takers = c.attackers(at, you).map((q) => c.get(q).type); } catch { /* old chess.js */ }
+    const safe = !takers.length || (guarded(at, me) && takers.every((t) => VAL[t] >= VAL[mv.piece]));
+    /* a skewering check only works if the king must step aside: no capture of the checker, no block */
+    const kingMustMove = check && c.moves({ verbose: true }).every((m) => m.piece === 'k');
     const others = (q, skip) => { try { return c.attackers(q, you).filter((a) => a !== skip).length; } catch { return 0; } };
     /* rays from the moved slider: the first and second pieces it meets */
     const dirs = { r: [[1,0],[-1,0],[0,1],[0,-1]], b: [[1,1],[1,-1],[-1,1],[-1,-1]] }; dirs.q = dirs.r.concat(dirs.b);
@@ -2111,12 +2115,12 @@
         if (pc.color !== you) break;
         const front = first.pc, back = pc;
         if (check && front.type !== 'k') break;   /* a check is the point: don't name a side line on another ray */
-        if (!safe) break;
+        if (!safe || (front.type === 'k' && !kingMustMove)) break;
         /* the piece behind must be winnable: worth more than the attacker, or not defended by anything but the front piece */
         if ((front.type === 'k' || VAL[front.type] > VAL[back.type]) && VAL[back.type] >= 3 && (VAL[back.type] > VAL[mv.piece] || !others(sq(x, y), first.q)))
           return 'a skewer — your ' + PNAME[front.type] + ' on ' + first.q + ' is attacked, and when it moves your ' + PNAME[back.type] + ' on ' + sq(x, y) + ' behind it falls.';
         if (front.type !== 'p' && (back.type === 'k' || VAL[back.type] > VAL[front.type] + 1))
-          return 'a pin — your ' + PNAME[front.type] + ' on ' + first.q + ' can’t move without exposing your ' + PNAME[back.type] + ' on ' + sq(x, y) + '.';
+          return 'a pin — your ' + PNAME[front.type] + ' on ' + first.q + ' is pinned to your ' + PNAME[back.type] + ' on ' + sq(x, y) + ': if it steps off that line, the ' + PNAME[back.type] + ' is exposed.';
         break;
       }
     }
@@ -2232,7 +2236,7 @@
     panel.replaceChildren();
     panel.append(el('div', 'tr-result ' + (clean ? 'good' : 'bad'), clean ? 'Threat stopped!' : 'Stopped — with help'));
     const meta = el('div', 'tr-meta'); meta.append(el('span', 'tr-pill', 'Streak ' + ST.streak), el('span', 'tr-pill', 'Best ' + ST.best)); panel.append(meta);
-    panel.append(el('div', 'tr-say', 'The threat was ' + t.idea + (better ? ' (' + better + ' was even stronger.)' : '') + (clean ? '' : ' It will come back for review.')));
+    panel.append(el('div', 'tr-say', 'The threat was ' + sanOf(t.before, t.threat) + ' — ' + t.idea + (better ? ' (' + better + ' was even stronger.)' : '') + (clean ? '' : ' It will come back for review.')));
     const row = el('div', 'tr-actions');
     let note = null;
     if (t.review) { reviewResult(t.review, clean); note = el('div', 'tr-say ' + (clean ? 'good' : ''), clean ? reviewNote(t.review) : 'Comes back tomorrow.'); row.append(btn('Next card', 'primary', reviewNext, 'next')); }

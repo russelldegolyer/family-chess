@@ -18,7 +18,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Fixed**
-- Spot the threat and Blunder check now name the tactic from what the move actually does (skewer, pin, fork, free capture, check, mate) and say which pieces are involved. A plain check is no longer called a skewer just because the puzzle is tagged that way. Checked against all 605 skewer-tagged puzzles: a skewer is only named when the attacker is safe and the piece behind can really be won.
+- Spot the threat and Blunder check now name the tactic from what the move actually does (skewer, pin, fork, free capture, check, mate) and say which pieces are involved. A plain check is no longer called a skewer just because the puzzle is tagged that way. Checked against all 5,627 drill puzzles: a skewer is only named when the king really has to step aside (no capture or block) and the piece behind can be won; pins say the piece is pinned to what's behind it.
 
 ## 2026-11-13 — Typed timers, time-out rule, End game, Matches, swipes, landscape (deployed 8:51 PM)
 
