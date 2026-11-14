@@ -1467,7 +1467,7 @@ body.clock-in-chat #plateTop .chess-clock, body.clock-in-plate #plateTop .chess-
 body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
 </style>
 
-<link rel="stylesheet" href="./chess-skin.css?v=7">
+<link rel="stylesheet" href="./chess-skin.css?v=8">
 </head>
 <body>
 <canvas id="stage" role="img" aria-label="Three-dimensional chess board"></canvas>
@@ -6938,6 +6938,12 @@ function openSettings() {
   };
   function render() {
     body.replaceChildren();
+    row('Computer speed', seg([['instant', 'Instant'], ['regular', '2.5s'], ['slow', '4.4s'], ['delayed', '10s']], cpuSpeed(), setCpuSpeed, 'Computer move speed'));
+    row('Moving pieces', seg([['preview', 'Two taps'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), 'Moving pieces'));
+    row('2D pieces', seg([['classic', 'Pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v }), '2D pieces'));
+    row('Show last move', toggle(showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }, "Show opponent's last move"));
+    { const b = el('button', 'set-pick'); b.type = 'button'; b.textContent = (BOARD[THEME]?.name || 'Default') + '  ›'; b.addEventListener('click', () => { d.close(); $('btnCollection').click(); }); row('Board', b); }
+    row('Sound', toggle(Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) { Sound.ensure(); Sound.play('move'); } }, 'Sound'));
     /* Timer: none, seconds per move, or minutes per game. Tap Seconds/Minutes, then type the amount. */
     const C = window.ChessClock, cur = C?.getPreference?.() || 'off';
     const kind = cur === 'off' ? 'off' : cur[0] === 's' ? 's' : 'm';
@@ -6965,12 +6971,6 @@ function openSettings() {
     row('Timer', timer);
     body.lastChild.classList.add('set-row-stack', 'set-timer-row');   /* label on top, choices and amount full width */
     if (kind === 's') { const note = el('p', 'set-note'); note.textContent = 'Run out of seconds on a move and the game ends.'; body.append(note); }
-    row('Computer speed', seg([['instant', 'Instant'], ['regular', '2.5s'], ['slow', '4.4s'], ['delayed', '10s']], cpuSpeed(), setCpuSpeed, 'Computer move speed'));
-    row('Moving pieces', seg([['preview', 'Two taps'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), 'Moving pieces'));
-    row('2D pieces', seg([['classic', 'Pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v }), '2D pieces'));
-    row('Show last move', toggle(showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }, "Show opponent's last move"));
-    { const b = el('button', 'set-pick'); b.type = 'button'; b.textContent = (BOARD[THEME]?.name || 'Default') + '  ›'; b.addEventListener('click', () => { d.close(); $('btnCollection').click(); }); row('Board', b); }
-    row('Sound', toggle(Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) { Sound.ensure(); Sound.play('move'); } }, 'Sound'));
     /* last: what happens when a minutes clock runs out */
     if (kind === 'm') {
       const exp = C.getExpiry?.() || 'pawn';

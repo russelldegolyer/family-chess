@@ -57,3 +57,6 @@ html body .set-note + .set-row, html body .set-row + .set-note { border-top: 0 !
 html body.friends-online .auth-account #cgLaunch { border-color: rgba(48, 209, 88, .7) !important; color: #30d158 !important; }
 html body.friends-online .auth-account-toggle { border-color: rgba(48, 209, 88, .7) !important; }
 html body.friends-online:not(.pregame) .auth-account-toggle { color: #30d158 !important; }
+
+/* Settings: pinned near the top so choosing a timer option only grows the bottom (it used to re-centre and jump) */
+html body #ui > .overlay:has(> .settings-card) { align-items: start !important; padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 12px)) !important; }

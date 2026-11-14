@@ -23,7 +23,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - The Online button's outline turns green when any friend is online (red when none).
 
 **Improved**
-- Settings: the timer row is laid out like the others (label on top, None / Seconds / Minutes full width, the amount on its own line), and "When time runs out" is now the last setting.
+- Settings: the timer is laid out like the others (label on top, None / Seconds / Minutes full width, the amount on its own line) and now sits at the bottom, with "When time runs out" under it for minute clocks. The Settings box stays pinned near the top, so picking a timer option no longer makes everything jump.
 
 ## 2026-11-14 — Back to the iOS look on black, overlap sweep (deployed 10:10 AM)
 
