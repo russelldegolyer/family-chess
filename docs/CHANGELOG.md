@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-14 | 8 |
+| 2026-11-14 | 11 |
 | 2026-11-13 | 27 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
@@ -16,7 +16,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-14 — Settings title clear, home buttons and name plate fixed (deployed 12:50 PM)
 
 **Fixed**
 - Challenges and Online buttons are back on the home screen, and your name plate shows again during games (a pop-up rule was matching pop-ups that were closed).
