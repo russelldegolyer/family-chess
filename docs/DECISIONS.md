@@ -54,3 +54,12 @@ Supabase realtime channel `chess-voice:<userA>:<userB>` (ids sorted); RLS polici
 call follows the pair (survives game end, review, Home, new games) and ends when either taps the mic or leaves the app.
 Mic is requested only on tap and released on end. STUN only for now (TURN relay if some networks fail).
 `vercel.json` allows `microphone=(self)`.
+
+## D-32 Pattern training and plan reads (2026-11-13)
+Russell: a beginner gets skilled through quick, intentional repetition, of his own moves AND the ones aimed at him.
+Misses enter a spaced review deck (1/3/7 days, three right = learned); review, drills and speed rounds never change
+the puzzle rating. Threat/blunder drills reuse Lichess puzzles (the puzzle's first move is the blunder). Game plan reads
+are rule-based on the device (`chess-plan.js`), plus the accuracy pass; no outside service. Once 5+ games show one
+costly habit in 30%+ of games, its chapter becomes the recommended next. Rook-ending lessons are scripted lines (the
+engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
+

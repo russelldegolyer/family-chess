@@ -477,3 +477,40 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-daily.done .tr-card-text span { color: #8e8e93; }
 .tr-daily-go { flex: none; padding: 8px 14px; border-radius: 999px; background: #ffb340; color: #2a1a00; font-weight: 700; font-size: 14px; }
 .tr-daily.done .tr-daily-go { background: none; color: #7ee99a; font-size: 18px; padding: 0 4px; }
+
+/* ---- Sharpen: review, drills, speed rounds; Your style ---- */
+.tr-lg.arrow.grey i { background: #a1a1aa; } .tr-lg.arrow.grey i::after { border-left-color: #a1a1aa; }
+.tr-lg.arrow.red i { background: #ff453a; } .tr-lg.arrow.red i::after { border-left-color: #ff453a; }
+.tr-lg.ring i { border-radius: 50%; background: none; box-shadow: inset 0 0 0 2px #ffd60a; }
+.tr-cards .tr-card.hot .tr-card-badge { min-width: 24px; padding: 3px 8px; border-radius: 999px; background: var(--tr-red); color: #fff; font-weight: 700; text-align: center; }
+.tr-item.static { cursor: default; }
+.tr-item.static:active { background: none; }
+.tr-empty { margin-top: 14px; padding: 18px 16px; border-radius: 16px; background: #1c1c1f; color: var(--tr-dim); font-size: 14px; text-align: center; }
+.tr-actions .tr-choice { flex: 1 1 40%; min-height: 50px; font-size: 16px; }
+.tr-actions .tr-choice.safe { background: rgba(48,209,88,.16); color: #6be38a; }
+.tr-actions .tr-choice.unsafe { background: rgba(255,69,58,.16); color: #ff6b63; }
+.tr-chip.tr-timer { min-width: 76px; text-align: center; }
+.tr-chip.tr-timer.slow { color: var(--tr-warn); }
+.tr-speed { display: flex; flex-wrap: wrap; gap: 6px; }
+.tr-speed-cell { padding: 5px 10px; border-radius: 9px; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; background: var(--tr-bg2); color: #d1d1d6; }
+.tr-speed-cell.fast { background: rgba(48,209,88,.16); color: #6be38a; }
+.tr-speed-cell.miss { background: rgba(255,69,58,.16); color: #ff6b63; }
+.tr-style-card { margin-top: 12px; padding: 14px; border-radius: 16px; background: #1c1c1f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); display: flex; flex-direction: column; gap: 10px; }
+.tr-bar-row { display: flex; flex-direction: column; gap: 5px; }
+.tr-bar-top { display: flex; align-items: baseline; gap: 8px; }
+.tr-bar-top b { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; }
+.tr-bar-top .cnt { font-size: 12.5px; color: var(--tr-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tr-bar-top .tr-mini-link { flex: none; padding: 4px 9px; font-size: 12px; }
+.tr-bar { height: 6px; border-radius: 3px; background: #2c2c30; overflow: hidden; }
+.tr-bar i { display: block; height: 100%; border-radius: 3px; background: #0a84ff; }
+.tr-bar-row.warn .tr-bar i { background: var(--tr-red); }
+.tr-muted { margin: 0; font-size: 13px; color: var(--tr-dim); }
+.tr-focus { margin-top: 12px; padding: 14px; border-radius: 16px; background: linear-gradient(180deg, rgba(229,48,42,.2), rgba(229,48,42,.08)); box-shadow: inset 0 0 0 1px rgba(229,48,42,.3); display: flex; flex-direction: column; gap: 6px; }
+.tr-focus .tr-label { color: #ff8a83; }
+.tr-focus b { font-size: 18px; }
+.tr-focus p { margin: 0 0 4px; font-size: 14px; color: #d1d1d6; }
+.tr-focus .tr-btn { align-self: flex-start; flex: none; padding: 0 16px; display: inline-flex; align-items: center; gap: 7px; }
+.tr-acc-trend { display: flex; align-items: baseline; gap: 10px; }
+.tr-acc-trend b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.tr-acc-trend span { font-size: 13px; color: var(--tr-dim); }
+.tr-actions .tr-choice ~ .tr-btn { flex: 0 0 76px; min-width: 76px; }

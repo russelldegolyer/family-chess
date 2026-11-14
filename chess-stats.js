@@ -256,7 +256,7 @@
     const hit = accCached(key); if (hit) return Promise.resolve(hit);
     if (running.has(key)) return running.get(key);
     const job = (async () => {
-      const per = { w: [], b: [] }, swing = { w: null, b: null };
+      const per = { w: [], b: [] }, swing = { w: null, b: null }, drops = [], big = [];
       for (let i = 0; i < moves.length; i++) {
         const side = fens[i].split(' ')[1] === 'b' ? 'b' : 'w';
         const r = await engine(fens[i], moves[i]); const a = moveAcc(r, moves[i]);
@@ -265,10 +265,13 @@
         if (r && Number.isFinite(r.bestScore) && Number.isFinite(r.playedScore) && r.move !== moves[i]) {
           const drop = winPct(r.bestScore) - winPct(Math.min(r.playedScore, r.bestScore));
           if (drop >= 12 && (!swing[side] || drop > swing[side].drop)) swing[side] = { ply: i + 1, drop: Math.round(drop), best: r.move || null };
-        }
+          drops[i] = Math.max(0, Math.round(drop));
+          if (drop >= 12) big.push({ ply: i + 1, drop: Math.round(drop), best: r.move || null });
+        } else drops[i] = 0;
         try { onProgress?.(i + 1, moves.length); } catch { /* UI only */ }
       }
-      const out = { w: gameAcc(per.w), b: gameAcc(per.b), swing };
+      /* drops: winning chances lost on each move (0-100); big: the costly ones with the better move (plan read + review) */
+      const out = { w: gameAcc(per.w), b: gameAcc(per.b), swing, drops, big: big.sort((x, y) => y.drop - x.drop).slice(0, 12) };
       if (out.w != null || out.b != null) try { localStorage.setItem(AKEY + key, JSON.stringify(out)); } catch { /* memory only */ }
       return out;
     })().finally(() => running.delete(key));

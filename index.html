@@ -24,10 +24,12 @@
 <script defer src="./chess-review-analysis.js?v=3"></script>
 <link rel="stylesheet" href="./chess-social.css?v=5">
 <script defer src="./chess-social.js?v=19"></script>
-<link rel="stylesheet" href="./chess-training.css?v=21">
+<link rel="stylesheet" href="./chess-training.css?v=22">
+<link rel="stylesheet" href="./chess-plan.css?v=1">
 <link rel="stylesheet" href="./chess-stats.css?v=2">
-<script defer src="./chess-stats.js?v=3"></script>
-<script defer src="./chess-training.js?v=24"></script>
+<script defer src="./chess-stats.js?v=4"></script>
+<script defer src="./chess-plan.js?v=1"></script>
+<script defer src="./chess-training.js?v=25"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -1202,6 +1204,14 @@ body.compact.chat2d:not(.landscape) .chat-list>.chat-empty-state { background: r
 #endCard .ec-acc-tip b { grid-column: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #endCard .ec-acc-tip em { grid-column: 2; grid-row: 1 / span 2; font-style: normal; font-weight: 600; color: #ffb340; }
 #endCard .ec-acc-tip:active { filter: brightness(1.2); }
+#endCard .ec-plan { width: 100%; margin: -4px 0 14px; }
+#endCard .ec-plan-btn { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 10px; row-gap: 2px; align-items: center; width: 100%; margin: 0; padding: 10px 12px; border: 0; border-radius: 12px; background: rgba(10,132,255,.13); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#endCard .ec-plan-btn span { grid-column: 1; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #64a8ff; }
+#endCard .ec-plan-btn b { grid-column: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#endCard .ec-plan-btn small { grid-column: 1; min-width: 0; font-size: 12px; color: rgba(235,235,245,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#endCard .ec-plan-btn small:empty { display: none; }
+#endCard .ec-plan-btn em { grid-column: 2; grid-row: 1 / span 3; font-style: normal; font-weight: 600; color: #64a8ff; }
+#endCard .ec-plan-btn:active { filter: brightness(1.2); }
 #endCard .ec-acc-fix { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 8px; padding: 9px 12px; border: 0; border-radius: 12px; background: rgba(229,48,42,.12);
   box-shadow: inset 0 0 0 1px rgba(229,48,42,.3); color: #f2f2f7; font: 600 13px/1.25 var(--body); text-align: left; cursor: pointer; }
 #endCard .ec-acc-fix span { flex: 1; min-width: 0; }
@@ -1571,6 +1581,7 @@ body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
       <p id="endLine"></p>
       <div class="ec-meta" id="endEyebrow"></div>
       <div class="ec-acc" id="endAcc" hidden></div>
+      <div class="ec-plan" id="endPlan" hidden></div>
       <div class="end-actions" id="endActions"></div>
     </div>
   </div>
@@ -4730,6 +4741,7 @@ function clearSelection() { if (selected) select(null); }
 function onSquareClick(sq) {
   if (review) return;
   if (pawnPick) { pickPawnSquare(sq); return; }
+  if (G.mode === 'train' && TRAIN.onTap) { if (sq) TRAIN.onTap(sq); return; }
   if (pending) {
     const p = pending;
     if (sq === p.to) { confirmPreview(); return; }
@@ -5860,6 +5872,7 @@ function maybeShowEndCard() {
   links.append(button('Home', 'ec-link', () => { endDismissed = endKey(); card.hidden = true; goHome(); }), button('Close', 'ec-link', () => { endDismissed = endKey(); card.hidden = true; }));
   acts.append(links);
   card.hidden = false;
+  fillEndPlan(me, accuracyKey() ? window.familyChessAccuracy?.cached(accuracyKey()) : null);
   fillEndAccuracy(me);
 }
 /* Accuracy on the end card: worked out on this device (a few seconds), then saved with the game
@@ -5918,7 +5931,41 @@ function fillEndAccuracy(me) {
   catch { box.hidden = true; return; }
   paint(null, 0, G.moves.length);
   const moves = G.moves.slice();
-  A.forGame(key, fens, moves, (d, t) => paint(null, d, t)).then((acc) => { paint(acc); saveAccuracy(key, acc); }).catch(() => { box.hidden = true; });
+  A.forGame(key, fens, moves, (d, t) => paint(null, d, t)).then((acc) => { paint(acc); saveAccuracy(key, acc); if (endKey() === k) fillEndPlan(me, acc); }).catch(() => { box.hidden = true; });
+}
+/* Your plan: what you were trying to do in each phase, how it went, and one thing to fix (chess-plan.js).
+   Also hands the game to Training for the style profile and for "mistakes come back". */
+function gameFens() { const f = []; for (let i = 0; i < G.moves.length; i++) f.push(positionFrom(G.moves, i, G.clockActions || []).chess.fen()); return f; }
+function fillEndPlan(me, acc) {
+  const box = $('endPlan'), PL = window.familyChessPlan;
+  if (!box) return;
+  if (!PL || !me || G.moves.length < 8) { box.hidden = true; return; }
+  const memo = endKey() + ':' + (acc ? 1 : 0);
+  if (fillEndPlan.memo === memo && box.childNodes.length) { box.hidden = false; return; }
+  fillEndPlan.memo = memo;
+  let R = null, fens = null;
+  const res = G.result === '1/2-1/2' ? 'draw' : (G.result === '1-0') === (me === 'w') ? 'win' : 'loss';
+  try { fens = gameFens(); R = PL.read({ Chess, moves: G.moves.slice(), side: me, acc: acc || null, result: res, fens }); } catch { R = null; }
+  if (!R || !R.phases.length) { box.hidden = true; return; }
+  box.replaceChildren();
+  const b = el('button', 'ec-plan-btn'); b.type = 'button';
+  b.innerHTML = '<span>Your plan</span><b></b><small></small><em>Read ›</em>';
+  b.querySelector('b').textContent = PL.headline(R);
+  b.querySelector('small').textContent = R.tip ? 'Fix next: ' + R.tip.what.toLowerCase() : R.phases.every((p) => p.verdict !== 'bad') ? 'Every phase held up' : '';
+  b.addEventListener('click', () => {
+    PL.open(R, {
+      onPly: (ply) => { endDismissed = endKey(); $('endCard').hidden = true; beginGameReview(); setTimeout(() => reviewTo(ply), 60); },
+      onPractise: (tip) => { endDismissed = endKey(); $('endCard').hidden = true; const T = window.familyChessTraining; if (tip.chapter) T?.openChapterId(tip.chapter); else if (tip.lesson) T?.openLessonId?.(tip.lesson); },
+    });
+  });
+  box.append(b); box.hidden = false;
+  /* style profile + review cards (positions where you missed the better move) */
+  try {
+    const key = accuracyKey() || ('x:' + endKey());
+    const misses = (acc?.big || []).filter((x) => (x.ply % 2 === 1) === (me === 'w') && x.best && x.drop >= 15).slice(0, 3)
+      .map((x) => ({ fen: fens[x.ply - 1], best: x.best, played: G.moves[x.ply - 1], ply: x.ply, drop: x.drop }));
+    window.familyChessTraining?.recordGame?.({ key, at: Date.now(), side: me, res, mode: G.mode, plies: G.moves.length, acc: acc ? acc[me] : null, tags: R.tags, tip: R.tip ? { code: R.tip.code } : null, misses });
+  } catch { /* profile is optional */ }
 }
 /* What did the better move do? Only clear, teachable patterns: checkmate, a free piece, a fork. */
 function missedIdea(sw) {
@@ -6615,7 +6662,7 @@ async function applyPawnTimeAction(kind,square){
 /* ------------------------------------------------------------------ training board bridge
    Training (chess-training.js) borrows the real board: same 3D/2D view, theme and colours. Entering saves the
    game in progress (practice clock paused, online match detached) and leaving restores it exactly. */
-const TRAIN = { side: 'w', opponent: 'Trainer', busy: false, marks: {}, saved: null, onMove: null,
+const TRAIN = { side: 'w', opponent: 'Trainer', busy: false, marks: {}, saved: null, onMove: null, onTap: null,
   after(uci, r) { trainLift(null); updateMarkers(); const f = TRAIN.onMove; if (f) setTimeout(() => f(uci, { end: r.end, fen: G.pos.chess.fen() }), REDUCED ? 0 : Math.max(120, r.land || 0)); } };
 function trainEnter() {
   if (G.mode === 'train') return true;
@@ -6635,7 +6682,7 @@ function trainEnter() {
 }
 function trainSetup({ fen, side, opponent = 'Trainer' }) {
   if (!TRAIN.saved) trainEnter();
-  START_FEN = fen; TRAIN.side = side; TRAIN.opponent = opponent; TRAIN.busy = false; TRAIN.marks = {}; trainLift(null);
+  START_FEN = fen; TRAIN.side = side; TRAIN.opponent = opponent; TRAIN.busy = false; TRAIN.onTap = null; TRAIN.marks = {}; trainLift(null);
   hide($('endCard'));
   Object.assign(G, { mode: 'train', gid: null, key: 't' + Date.now().toString(36), moves: [], pos: positionFrom([]), status: 'active', result: null, reason: null, drawOffer: null, turnAt: Date.now(), clockActions: [] });
   G.version++; mySeat = null;
@@ -6669,7 +6716,7 @@ function trainLift(sq) {
 }
 function trainExit() {
   const sv = TRAIN.saved; if (!sv) return;
-  TRAIN.saved = null; TRAIN.onMove = null; TRAIN.marks = {}; trainLift(null); START_FEN = sv.startFen || null;
+  TRAIN.saved = null; TRAIN.onMove = null; TRAIN.onTap = null; TRAIN.marks = {}; trainLift(null); START_FEN = sv.startFen || null;
   if (sv.view && sv.view !== VIEW) applyView(sv.view, false);
   document.body.classList.remove('training');
   Object.assign(G, sv.G); Object.assign(cpu, sv.cpu); mySeat = sv.mySeat; flipped = sv.flipped;
@@ -6700,7 +6747,7 @@ window.familyChessBoard = Object.freeze({
   over: () => (G.status === 'over' ? (G.reason || 'over') : null),
   fen: () => G.pos.chess.fen(), turn: () => G.pos.chess.turn(), moves: () => G.moves.slice(),
   chess: () => new Chess(G.pos.chess.fen()), active: () => G.mode === 'train',
-  onMove(fn) { TRAIN.onMove = fn; }, userMove(uci) { if (G.mode === 'train' && canAct()) playMove(uci); }, busy(v) { TRAIN.busy = !!v; },
+  onMove(fn) { TRAIN.onMove = fn; }, onTap(fn) { TRAIN.onTap = fn || null; if (fn) clearSelection(); }, userMove(uci) { if (G.mode === 'train' && canAct()) playMove(uci); }, busy(v) { TRAIN.busy = !!v; },
   mark(m) { TRAIN.marks = m || {}; trainLift(TRAIN.marks.lift || null); updateMarkers(); },
   view: () => VIEW, setView(v) { if (v !== VIEW) { applyView(v, false); if (G.mode === 'train') { if (VIEW === '2d') draw2D(); syncBoard(G.pos, { animate: false }); updateMarkers(); trainLift(TRAIN.marks.lift || null); } } },
   Chess, engineSource: () => $('engineSrc').textContent, toast: (m, t) => toast(m, t),

@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-13 | 7 |
+| 2026-11-13 | 8 |
 | 2026-11-12 | 52 |
 | 2026-11-11 | 31 |
 | 2026-11-10 | 24 |
@@ -15,7 +15,18 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## 2026-11-13 — Desktop polish, voice chat upgrades, daily puzzle (deployed 5:35 PM)
+## Unreleased
+
+**Added** (training: see the patterns, both yours and the ones aimed at you)
+- **Review**: every missed puzzle, drill or game move comes back after 1, 3 and 7 days; three right in a row and it is learned.
+- **Spot the threat**: tap the enemy piece about to strike, then play a move that stops it.
+- **Blunder check**: safe move or blunder? If it loses, tap the piece that punishes it.
+- **Speed rounds**: five easy puzzles on one pattern against a soft 15-second pace, with best times.
+- **4 defence chapters** in Your path (🛡): Guard your pieces, Back-rank danger, Forks and pins coming, Escaping mate threats.
+- **9 new Academy lessons** (21 total): Queen vs pawn on the 7th, Lucena, Philidor, outside passed pawn, king activity, opposite-coloured bishops, trading down, and two defender-side lessons (survive the queen / the rook). Rook-ending lines move to new files so the idea is learned, not the squares.
+- **Your plan** on the end card: what you were trying to do in the opening, middlegame and endgame, how it went, one way to do it better, and a link to the drill that fixes it.
+- **Your style** in Training: plans you go for, mistakes that keep costing you, weakest phase, accuracy trend. Its top finding becomes your recommended chapter. Positions where you missed a much better move go into Review.
+, voice chat upgrades, daily puzzle (deployed 5:35 PM)
 - Improved: on desktop the Online sheet is wider with two columns (friends and records left, Live now, My matches and Settings right), so it fits without scrolling. Phones unchanged.
 
 **Improved** (desktop)
