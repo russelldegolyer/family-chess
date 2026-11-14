@@ -73,3 +73,7 @@ engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
 ## D-34 Verified drill answers (2026-11-13)
 - Blunder check "safe"/"blunder" answers come from an offline Stockfish check shipped as `chess-blunder-check.json`, not the quick in-browser engine.
 - Threat and blunder explanations name a skewer/pin/fork only when the puzzle's solution wins the piece named; otherwise they describe the move as it is (check, capture, mate).
+
+## D-35 Chess-clock look (2026-11-13)
+- One skin (`chess-skin.css`): matte felt surfaces, ivory text, key-style buttons with a bottom edge, serif headings (ui-serif / New York), sentence case.
+- The only accent is the player's piece colour; primary buttons are ivory. No gradients, glows, glass blur or tracked capitals.

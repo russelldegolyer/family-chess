@@ -1467,6 +1467,7 @@ body.clock-in-chat #plateTop .chess-clock, body.clock-in-plate #plateTop .chess-
 body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
 </style>
 
+<link rel="stylesheet" href="./chess-skin.css?v=1">
 </head>
 <body>
 <canvas id="stage" role="img" aria-label="Three-dimensional chess board"></canvas>
@@ -1476,16 +1477,16 @@ body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
 <p class="fatal" id="fatal" hidden></p>
 <div class="pregame" id="pregame" hidden>
   <div class="pg-top"></div>
-  <div class="pg-hint" id="pgHint" aria-hidden="true"><span class="pg-hint-pill"><i>‹</i>Swipe<i>›</i></span></div>
+  <div class="pg-hint" id="pgHint" aria-hidden="true"><span class="pg-hint-pill">Swipe to turn the board</span></div>
   <div class="pg-bottom" id="pgBottom">
     <div class="pg-pick" role="group" aria-label="Choose your side">
       <button class="pg-side" id="pgWhite" type="button"><span class="orb white"></span>White</button>
       <button class="pg-side" id="pgBlack" type="button">Black<span class="orb"></span></button>
     </div>
     <div class="pg-diff">
-      <div class="pg-diff-head"><span>Difficulty</span><b id="pgLevelName">Level 2</b></div>
+      <div class="pg-diff-head"><span>Computer strength</span><b id="pgLevelName">Level 2</b></div>
       <input class="pg-range" id="pgLevel" type="range" min="1" max="5" step="1" value="2" aria-label="Computer difficulty, 1 to 5">
-      <div class="pg-ticks" id="pgTicks"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+      <div class="pg-ticks" id="pgTicks" role="group" aria-label="Computer strength"><button type="button">1</button><button type="button">2</button><button type="button">3</button><button type="button">4</button><button type="button">5</button></div>
     </div>
   </div>
 </div>
@@ -7039,7 +7040,7 @@ function pgSetLevel(v) {
   cpu.level = v; store.set('sg.level', v);
   const r = $('pgLevel'); r.value = String(v); r.style.setProperty('--pg-fill', ((v - 1) / 4 * 100) + '%');
   $('pgLevelName').textContent = `Level ${v}`;
-  $('pgTicks').querySelectorAll('span').forEach((t, i) => t.classList.toggle('on', i + 1 === v));
+  $('pgTicks').querySelectorAll('button').forEach((t, i) => { t.classList.toggle('on', i + 1 === v); t.setAttribute('aria-pressed', String(i + 1 === v)); });
 }
 function openPregame() {
   /* the chooser is a 3D moment: close the chat sheet and leave the flat board first */
@@ -7167,6 +7168,7 @@ function dismissPregame() { if (PG.on) closePregame(null); }
   $('pgWhite').addEventListener('click', () => closePregame('w'));
   $('pgBlack').addEventListener('click', () => closePregame('b'));
   $('pgLevel').addEventListener('input', (e) => pgSetLevel(e.target.value));
+  $('pgTicks').addEventListener('click', (e) => { const k = e.target.closest('button'); if (k) pgSetLevel([...k.parentNode.children].indexOf(k) + 1); });
   window.addEventListener('keydown', (e) => {
     if (!PG.on || e.target.closest?.('input, textarea, select')) return;
     if (e.key === 'ArrowRight') { e.preventDefault(); closePregame('w'); }

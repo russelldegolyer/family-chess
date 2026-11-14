@@ -18,6 +18,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Improved**
+- New look across the app ("chess clock"): matte warm-charcoal panels, ivory text, buttons that press like clock keys, headings in Apple's book serif, sentence-case labels, and your own piece colour as the only accent. Gone: glossy red gradient tiles, glows, frosted glass and letterspaced capitals. Home screen strength is now five keys instead of a slider. All in `chess-skin.css`.
 - Play online sheet polish: one clean name field (Save lights up only when you change it), a colour for each friend's avatar, "In game" in green, friend-code row matching the cards, each of your games shows Your turn / Their turn / pawn choice / Paused and when the last move was, small link and cancel icons instead of pills, and Record & past matches as a proper row.
 
 **Fixed**

@@ -20,8 +20,8 @@ const movesFromStart=new Set([
 
 test('the opening screen offers exactly five computer levels, shown as numbers only',()=>{
  assert.match(html,/id="pgLevel" type="range" min="1" max="5" step="1"/);
- const ticks=html.match(/id="pgTicks">([\s\S]*?)<\/div>/)?.[1];
- assert.deepEqual([...ticks.matchAll(/<span>(\d)<\/span>/g)].map(x=>x[1]),['1','2','3','4','5']);
+ const ticks=html.match(/id="pgTicks"[^>]*>([\s\S]*?)<\/div>/)?.[1];
+ assert.deepEqual([...ticks.matchAll(/<button type="button">(\d)<\/button>/g)].map(x=>x[1]),['1','2','3','4','5']);
  assert.match(html,/\$\('pgLevelName'\)\.textContent = `Level \$\{v\}`;/);
  assert.doesNotMatch(html,/PG_LEVEL_NAME|Gukesh style|Magnus style/);
  assert.match(html,/clamp\(Number\(store\.get\('sg\.level', 2\)\) \|\| 2, 1, 5\)/);
