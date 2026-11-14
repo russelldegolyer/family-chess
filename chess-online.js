@@ -116,7 +116,42 @@
     #cgNotifySlot .cgButton{width:100%;margin-top:8px}
     #cgNotifySlot .cgSocialSub{margin:8px 2px 0}
     .cgBack{display:block;margin:16px auto 0;font-size:15px}
+    /* ---- polish pass: one surface colour, quieter controls, clearer game state ---- */
+    .cgNameTop .cgLabel{margin:0 4px 8px;color:#8e8e93;font:600 13px/1 -apple-system,BlinkMacSystemFont,sans-serif;text-transform:uppercase;letter-spacing:.04em}
+    .cgNameTop .cgRow{gap:0;padding:4px 4px 4px 0;border-radius:14px;background:#2c2c2e;transition:box-shadow .15s}
+    .cgNameTop .cgRow:focus-within{box-shadow:0 0 0 2px rgba(10,132,255,.55)}
+    .cgNameTop .cgInput{border:0;background:none;min-height:46px;padding:0 14px;font-weight:600;outline:none}
+    .cgNameTop .cgSave{min-height:38px;padding:0 16px;border:0;border-radius:11px;background:#0a84ff;color:#fff;font:600 15px/1 -apple-system,BlinkMacSystemFont,sans-serif;transition:opacity .15s,background .15s}
+    .cgNameTop .cgSave:disabled{background:transparent;color:#636366;opacity:1}
+    .cgSection .cgLink{font:600 13px/1 -apple-system,BlinkMacSystemFont,sans-serif;text-transform:none;letter-spacing:0}
+    #cgGames{background:#2c2c2e;border-radius:14px}
+    #cgGames.cgMuted:not(:has(.cgGame)){padding:14px;color:#8e8e93;font-size:14px}
+    .cgGame{min-height:64px}
+    .cgGame+.cgGame{box-shadow:inset 54px .5px 0 -54px #2c2c2e, inset 0 .5px 0 #3a3a3c}
+    .cgGame:active{background:#323235}
+    .cgBadge{width:36px;height:36px;border-radius:11px;font-size:10px!important;letter-spacing:.04em}
+    .cgBadge.live{background:rgba(10,132,255,.18);color:#64a8ff}
+    .cgBadge.live.yours{background:#0a84ff;color:#fff}
+    .cgBadge.wait{background:rgba(255,159,10,.16);color:#ffb340}
+    .cgGameText b{font-size:16px}
+    .cgGameText span{font-size:13px}
+    .cgGameState{font-style:normal;color:#aeaeb2}
+    .cgGameState.yours{color:#30d158;font-weight:600}
+    .cgGameCopy{background:#3a3a3c}
+    .cgIconBtn{display:grid;place-items:center;width:34px;min-height:34px;height:34px;padding:0;border-radius:50%;color:#0a84ff}
+    .cgIconBtn.cgGameCancel{color:#ff6961;background:rgba(255,69,58,.14)}
+    .cgMatchesLink{display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 0;padding:10px 14px;min-height:56px;border:0;border-radius:14px;background:#2c2c2e;color:#f2f2f7;text-align:left;cursor:pointer;font:inherit}
+    .cgMatchesLink:active{background:#323235}
+    .cgRowIco{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:rgba(255,214,10,.14);font-size:15px}
+    .cgRowText{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .cgRowText b{font:500 16px/1.2 -apple-system,BlinkMacSystemFont,sans-serif}
+    .cgRowText small{font-size:12px;color:#8e8e93}
+    .cgSettings{margin-top:10px}
+    .cgQuick{margin-top:6px}
+    .cgQuick button.cgSmallLink:not([hidden]){min-height:40px;font-size:14px}
   `;
+  const ICON_LINK='<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L11.6 6M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.6-1.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  const ICON_X='<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>';
   document.head.appendChild(style);
   const launch = document.createElement('button');
   launch.id = 'cgLaunch'; launch.type = 'button'; launch.textContent = 'Online'; launch.hidden = true;
@@ -135,10 +170,10 @@
       <form id="cgProfileForm" class="cgNameTop"><label class="cgLabel" for="cgDisplayName">Your name</label>
         <div class="cgRow"><input id="cgDisplayName" class="cgInput" type="text" autocomplete="nickname"
           autocapitalize="words" required minlength="2" maxlength="40" placeholder="What friends see">
-        <button class="cgButton" type="submit">Save</button></div></form>
+        <button class="cgButton cgSave" type="submit" disabled>Save</button></div></form>
       <div id="cgSocialMount"></div>
       <div id="cgLobbyActions" class="cgQuick" aria-label="More ways to play">
-        <button id="cgGoLink" class="cgSmallLink" type="button">or share an invite link</button>
+        <button id="cgGoLink" class="cgSmallLink" type="button">Or share an invite link</button>
       </div>
       <div id="cgCreatedLink" class="cgCreatedLink" hidden>
         <div class="cgCreatedHead"><strong>Invite link ready</strong><span class="cgMuted">Anyone with it can join as your opponent</span></div>
@@ -163,7 +198,7 @@
       <div class="cgBlock">
         <div class="cgSection"><span>Your games</span><button class="cgLink" id="cgRefresh" type="button">Refresh</button></div>
         <div id="cgGames" class="cgMuted">No games in progress.</div>
-        <button class="cgLink cgMatchesLink" id="cgMatchesLink" type="button">Your record and past matches are in Challenges → Matches ›</button>
+        <button class="cgMatchesLink" id="cgMatchesLink" type="button"><span class="cgRowIco" aria-hidden="true">🏆</span><span class="cgRowText"><b>Record &amp; past matches</b><small>In Challenges → Matches</small></span><span class="cgChevron" aria-hidden="true">›</span></button>
       </div>
       <details class="cgSettings" id="cgSettings">
         <summary>Settings<span class="cgSettingsName" id="cgNameValue" hidden>Loading…</span></summary>
@@ -561,7 +596,7 @@
       if(window.ChessClock&&data.clock_preference)
         window.ChessClock.setPreference(data.clock_preference);
       if(window.ChessClock&&data.clock_expiry)window.ChessClock.setExpiry?.(data.clock_expiry);
-      $('cgDisplayName').value=data.display_name;
+      $('cgDisplayName').value=data.display_name;nameSaved(data.display_name);
       $('cgNameValue').textContent=data.display_name;
       const hydrate=[
         ['mine',data.piece_color,'getAccountColor','setAccountColor']
@@ -593,9 +628,14 @@
     if(created.error && created.error.code!=='23505'){
       status('Could not create chess profile: '+created.error.message,true);return;
     }
-    $('cgDisplayName').value=display_name;
+    $('cgDisplayName').value=display_name;nameSaved(display_name);
     $('cgNameValue').textContent=display_name;
   }
+  /* Save stays quiet until the name actually changes */
+  function nameSaved(v){const f=$('cgProfileForm');f.dataset.saved=v;nameDirty();}
+  function nameDirty(){const f=$('cgProfileForm'),v=$('cgDisplayName').value.trim(),d=!!v&&v!==(f.dataset.saved||'');
+    f.classList.toggle('dirty',d);f.querySelector('button[type="submit"]').disabled=!d;}
+  $('cgDisplayName').addEventListener('input',nameDirty);
   $('cgProfileForm').addEventListener('submit', async ev => {
     ev.preventDefault(); if (!player) return;
     const display_name = $('cgDisplayName').value.trim();
@@ -605,12 +645,12 @@
     try {
       const {error} = await api.from('chess_profiles').update({display_name}).eq('id',player.id);
       if(error){status('Could not save your name: '+error.message,true);return;}
-      $('cgNameValue').textContent=display_name;
+      $('cgNameValue').textContent=display_name;nameSaved(display_name);
       $('cgSettings').open=false;
       status('Chess name updated to '+display_name+'.');
       void refresh();
       window.dispatchEvent(new Event('familyChessProfileUpdated'));
-    } finally {saveButton.disabled=false;}
+    } finally {nameDirty();}
   });
   const displayedName=(labels,id,fallback)=>labels[id]||fallback;
   async function refreshLive(prompt=false){
@@ -677,7 +717,7 @@
     void refreshLive(false);
     const games = $('cgGames'); games.replaceChildren(); games.textContent = 'Loading…';
     const {data,error} = await api.from('chess_games')
-      .select('id,status,result,end_reason,white_player_id,black_player_id,created_at,updated_at,accuracy_white,accuracy_black')
+      .select('id,status,result,end_reason,white_player_id,black_player_id,created_at,updated_at,accuracy_white,accuracy_black,current_fen,clock_state,clock_penalty_side')
       .or('white_player_id.eq.'+player.id+',black_player_id.eq.'+player.id)
       .order('created_at',{ascending:false}).limit(20);
     if (!player) return;
@@ -701,7 +741,11 @@
       /* one outcome mark per row: W / L / D for finished games, LIVE / WAIT while open */
       let mark='–',cls='void',outcome='Abandoned';
       if(g.status==='waiting'){mark='WAIT';cls='wait';outcome='Waiting for opponent';}
-      else if(g.status==='active'){mark='LIVE';cls='live';outcome='Playing now';}
+      else if(g.status==='active'){mark='LIVE';cls='live';
+        const turn=String(g.current_fen||'').split(' ')[1];
+        outcome=g.clock_state==='penalty'?(g.clock_penalty_side===mine?'They’re taking a pawn':'Take one of their pawns')
+          :g.clock_state==='paused'?'Paused':turn===mine?'Your turn':'Their turn';
+        if(outcome==='Your turn'||outcome==='Take one of their pawns')cls+=' yours';}
       else if(g.end_reason!=='replaced'&&g.result){
         const won=(g.result==='1-0'&&mine==='w')||(g.result==='0-1'&&mine==='b');
         if(g.result==='1/2-1/2'){mark='D';cls='draw';outcome='Draw';}
@@ -714,7 +758,9 @@
       const text=document.createElement('span');text.className='cgGameText';
       const title=document.createElement('b');title.textContent=oppId?'vs '+opp:'Open invite';
       const sub=document.createElement('span');
-      sub.textContent=[mine==='w'?'White':'Black',outcome,when(g.updated_at||g.created_at)].filter(Boolean).join(' · ');
+      const ago=(t)=>{const m=Math.round((Date.now()-Date.parse(t))/60000);if(!(m>=0))return '';if(m<1)return 'just now';if(m<60)return m+'m ago';if(m<1440)return Math.round(m/60)+'h ago';return when(t);};
+      const st=document.createElement('em');st.className='cgGameState'+(cls.includes('yours')?' yours':'');st.textContent=outcome;
+      sub.append(st,document.createTextNode(' · '+[mine==='w'?'White':'Black',g.status==='finished'?when(g.updated_at||g.created_at):ago(g.updated_at||g.created_at)].filter(Boolean).join(' · ')));
       text.append(title,sub);row.append(badge,text);
       /* accuracy (yours), like chess.com's game list: saved with the game, or this device's copy */
       if(g.status==='finished'&&g.result){
@@ -725,13 +771,13 @@
       }
       /* only open games have a link worth sharing */
       if(g.status==='waiting'||g.status==='active'){
-        const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='cgGameCopy';
-        copyBtn.textContent=g.status==='waiting'?'Copy invite':'Copy link';
+        const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='cgGameCopy cgIconBtn';
+        copyBtn.innerHTML=ICON_LINK;copyBtn.setAttribute('aria-label',g.status==='waiting'?'Copy invite link':'Copy game link');copyBtn.title=copyBtn.getAttribute('aria-label');
         copyBtn.addEventListener('click',(e)=>{e.stopPropagation();void copy(link(g.id));});
         row.append(copyBtn);
         if(g.status==='waiting'){
           const cancelBtn=document.createElement('button');cancelBtn.type='button';cancelBtn.className='cgGameCopy cgGameCancel';
-          cancelBtn.textContent='Cancel';cancelBtn.setAttribute('aria-label','Cancel this invite');
+          cancelBtn.classList.add('cgIconBtn');cancelBtn.innerHTML=ICON_X;cancelBtn.setAttribute('aria-label','Cancel this invite');cancelBtn.title='Cancel invite';
           cancelBtn.addEventListener('click',(e)=>{e.stopPropagation();void cancelInvite(g.id);});
           row.append(cancelBtn);
         }

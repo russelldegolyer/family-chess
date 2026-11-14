@@ -17,6 +17,9 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ## Unreleased
 
+**Improved**
+- Play online sheet polish: one clean name field (Save lights up only when you change it), a colour for each friend's avatar, "In game" in green, friend-code row matching the cards, each of your games shows Your turn / Their turn / pawn choice / Paused and when the last move was, small link and cancel icons instead of pills, and Record & past matches as a proper row.
+
 **Fixed**
 - Watch live no longer shows abandoned games. Paused games and games waiting on a pawn choice drop off after an hour without a move; other games after 20 minutes.
 

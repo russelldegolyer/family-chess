@@ -83,6 +83,7 @@
   history.replaceState(null,'',url.pathname+url.search+url.hash);
  };
  const currentMatch=()=>window.familyChessCurrentMatch?.()||null;
+ const AV_HUES=[212,262,330,18,38,148,186,290];   /* one calm tint per friend, picked from their id */
  const avatar=(name)=>name.trim().split(/\s+/).map(n=>n[0]||'').slice(0,2).join('').toUpperCase();
  const node=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x;};
  const empty=(parent,msg)=>{parent.replaceChildren(node('div','cgSocialEmpty',msg));};
@@ -109,11 +110,13 @@
   for(const p of others){
    const game=activeGames.find(g=>g.white_player_id===p.id||g.black_player_id===p.id);
    const row=node('div','cgSocialRow');
-   row.append(node('span','cgSocialAvatar',avatar(p.display_name)));
+   const av=node('span','cgSocialAvatar',avatar(p.display_name));av.style.setProperty('--av-h',String(AV_HUES[[...p.id+p.display_name].reduce((h,ch)=>Math.imul(h^ch.charCodeAt(0),16777619)>>>0,2166136261)%AV_HUES.length]));
+   row.append(av);
    const identity=node('div','cgSocialIdentity'),n=node('span','cgSocialName',p.display_name);
    const status=node('span','cgSocialMeta'),dot=node('i','cgSocialDot'+(online(p.id)?' online':''));
    dot.setAttribute('aria-hidden','true');
-   status.append(dot,document.createTextNode((online(p.id)?'Online':lastOnline(p))+(game?' · In game':'')));
+   status.append(dot,document.createTextNode(online(p.id)?'Online':lastOnline(p)));
+   if(game){status.append(document.createTextNode(' · '));status.append(node('b','cgInGame','In game'));}
    identity.append(n,status);row.append(identity);
    /* someone mid-game can still be challenged; Watch sits beside it as a smaller eye button */
    if(game){
