@@ -2096,6 +2096,10 @@
     const guarded = (q, by) => { try { return c.attackers(q, by).length > 0; } catch { return false; } };
     const mine = (q) => { const pc = c.get(q); return pc && pc.color === you ? pc : null; };
     if (c.isCheckmate()) return 'checkmate.';
+    const check = c.inCheck();
+    /* the attacking piece must survive where it lands: not attacked, or defended (a free piece is no tactic) */
+    const safe = !guarded(at, you) || guarded(at, me);
+    const others = (q, skip) => { try { return c.attackers(q, you).filter((a) => a !== skip).length; } catch { return 0; } };
     /* rays from the moved slider: the first and second pieces it meets */
     const dirs = { r: [[1,0],[-1,0],[0,1],[0,-1]], b: [[1,1],[1,-1],[-1,1],[-1,-1]] }; dirs.q = dirs.r.concat(dirs.b);
     const [x0, y0] = xy(at);
@@ -2106,9 +2110,12 @@
         if (!first) { if (pc.color !== you) break; first = { q: sq(x, y), pc }; continue; }
         if (pc.color !== you) break;
         const front = first.pc, back = pc;
-        if ((front.type === 'k' || VAL[front.type] > VAL[back.type]) && (VAL[back.type] >= 3 || !guarded(sq(x, y), you)))
+        if (check && front.type !== 'k') break;   /* a check is the point: don't name a side line on another ray */
+        if (!safe) break;
+        /* the piece behind must be winnable: worth more than the attacker, or not defended by anything but the front piece */
+        if ((front.type === 'k' || VAL[front.type] > VAL[back.type]) && VAL[back.type] >= 3 && (VAL[back.type] > VAL[mv.piece] || !others(sq(x, y), first.q)))
           return 'a skewer — your ' + PNAME[front.type] + ' on ' + first.q + ' is attacked, and when it moves your ' + PNAME[back.type] + ' on ' + sq(x, y) + ' behind it falls.';
-        if (back.type === 'k' || VAL[back.type] > VAL[front.type] + 1)
+        if (front.type !== 'p' && (back.type === 'k' || VAL[back.type] > VAL[front.type] + 1))
           return 'a pin — your ' + PNAME[front.type] + ' on ' + first.q + ' can’t move without exposing your ' + PNAME[back.type] + ' on ' + sq(x, y) + '.';
         break;
       }
@@ -2119,15 +2126,17 @@
       if (!pc || pc.color !== you) continue;
       let by = []; try { by = c.attackers(pc.square, me); } catch { /* old chess.js */ }
       if (!by.includes(at)) continue;
-      if (pc.type === 'k' || VAL[pc.type] > VAL[mv.piece] || !guarded(pc.square, you)) hits.push(pc);
+      if (pc.type === 'k' || (pc.type !== 'p' && (VAL[pc.type] > VAL[mv.piece] || !guarded(pc.square, you)))) hits.push(pc);
     }
-    if (hits.length >= 2) return 'a fork — the ' + PNAME[mv.piece] + ' on ' + at + ' hits your ' + hits.slice(0, 2).map((h) => PNAME[h.type] + ' on ' + h.square).join(' and ') + '.';
+    if (safe && hits.length >= 2) return 'a fork — the ' + PNAME[mv.piece] + ' on ' + at + ' hits your ' + hits.slice(0, 2).map((h) => PNAME[h.type] + ' on ' + h.square).join(' and ') + '.';
     if (mv.captured) {
       const free = !guarded(at, you);
-      return free ? 'a free capture — your ' + PNAME[mv.captured] + ' on ' + at + ' isn’t protected.' : 'it takes your ' + PNAME[mv.captured] + ' on ' + at + '.';
+      const what = 'your ' + PNAME[mv.captured] + ' on ' + at;
+      if (check) return 'it takes ' + what + ' with check — your king has to move, and the attack goes on.';
+      return free ? 'a free capture — ' + what + ' isn’t protected.' : 'it takes ' + what + '.';
     }
     if (mv.promotion) return 'the pawn queens.';
-    if (c.inCheck()) {
+    if (check) {
       const t = themes || [];
       return 'a check — your king has to move' + (t.some((x) => /mate/i.test(x)) ? ', and the attack ends in checkmate.' : ', and that sets up the next blow, which wins material.');
     }
