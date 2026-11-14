@@ -19,6 +19,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Fixed**
+- Challenges and Online buttons are back on the home screen, and your name plate shows again during games (a pop-up rule was matching pop-ups that were closed).
 - Settings: the Challenges / Online buttons no longer cover the Settings title. Top controls step back while a pop-up is open, and Settings starts just below them (it scrolls on small phones).
 
 ## 2026-11-14 — Swipe to close, green Online outline, timer at the bottom of Settings (deployed 12:24 PM)

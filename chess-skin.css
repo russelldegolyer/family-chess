@@ -30,7 +30,7 @@ html body .set-list .set-note { padding: 0 14px 12px !important; margin: 0 !impo
 
 /* fix: while any pop-up is open, the floating name plate, captured pieces and clock step back
    (they sat on top of Settings, Boards, the colour picker and "End this game?") */
-html body:has(#ui > .overlay) #plateBottom.plate-floating, html body:has(#ui > .overlay) .cap-strip, html body:has(#ui > .overlay) #chessClockHud,
+html body:has(#ui > .overlay:not([hidden])) #plateBottom.plate-floating, html body:has(#ui > .overlay:not([hidden])) .cap-strip, html body:has(#ui > .overlay:not([hidden])) #chessClockHud,
 html body:has(#collection:not([hidden])) #plateBottom.plate-floating, html body:has(#collection:not([hidden])) .cap-strip { visibility: hidden !important; }
 
 /* fix: list rows never shrink (a long Your path list cropped the highlighted chapter's title) */
@@ -63,4 +63,4 @@ html body #ui > .overlay:has(> .settings-card) { align-items: start !important; 
 html body #ui > .overlay:has(> .settings-card) > .settings-card { max-height: calc(100dvh - var(--gt, 12px) - 76px) !important; }
 
 /* while a pop-up is open, the top controls (Challenges, Online, the opponent's plate) step back too; they sat over the Settings title */
-html body:has(#ui > .overlay) .train-top, html body:has(#ui > .overlay) .auth-account, html body:has(#ui > .overlay) #plateTop { visibility: hidden !important; }
+html body:has(#ui > .overlay:not([hidden])) .train-top, html body:has(#ui > .overlay:not([hidden])) .auth-account, html body:has(#ui > .overlay:not([hidden])) #plateTop { visibility: hidden !important; }

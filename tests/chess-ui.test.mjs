@@ -106,3 +106,9 @@ test('the dark skin loads last and only darkens surfaces (iOS buttons and system
  assert.match(skin,/html body #status:empty, html body\.reviewing #status \{ display: none !important; \}/);
  assert.match(skin,/\.set-row\.set-row-stack \{ flex-direction: column/);
 });
+
+test('pop-up rules only react to an OPEN pop-up (hidden overlays always exist in the page)',()=>{
+ const skin=readFileSync(new URL('../chess-skin.css',import.meta.url),'utf8');
+ assert.doesNotMatch(skin,/:has\(#ui > \.overlay\)/);
+ assert.match(skin,/:has\(#ui > \.overlay:not\(\[hidden\]\)\) \.train-top/);
+});
