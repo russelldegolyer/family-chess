@@ -11,7 +11,9 @@
   const MODES = Object.freeze({ off:0, m10:600000, s60:60000 });
   const EXPIRY = new Set(['end','sec60','pawn']);
   const prefKey = 'sg.chessClock', expKey = 'sg.clockExpiry';
-  const PAWN_AT = 10000;   /* the pawn trade (+1:30) opens at 10 seconds left */
+  const PAWN_AT = 10000;   /* minutes clocks: the pawn trade (+1:30) opens at 10 seconds left */
+  /* per-move clocks: the trade opens at 10 s (or half the move time if that's shorter) and refills the clock */
+  const pawnAt = (mode) => { const mv = moveMs(mode); return mv != null ? Math.min(PAWN_AT, Math.floor(mv / 2)) : PAWN_AT; };
   let preference = 'off', expiryPref = 'pawn';
   try { const saved = JSON.parse(localStorage.getItem(prefKey) || '"off"'); if (MODE_RE.test(saved)) preference = tidy(saved); else if(saved==='move3')preference='s60'; } catch {}
   try { const e = JSON.parse(localStorage.getItem(expKey) || '"pawn"'); if (EXPIRY.has(e)) expiryPref = e; } catch {}
@@ -108,7 +110,14 @@
     decided:{w:false,b:false},actorSide:null,viewSide:'w',bonusW:0,bonusB:0,expiry:'pawn' };
   const parseDate = v => v ? new Date(v).getTime() || 0 : 0;
   const normalized = mode => MODE_RE.test(mode||'') ? tidy(mode) : 'off';
-  const pawnRule = () => totalMs(state.mode) != null && state.expiry === 'pawn';
+  const pawnRule = () => (totalMs(state.mode) != null || moveMs(state.mode) != null) && state.expiry === 'pawn';
+  /* wording for the current timer: minutes +1:30 / back to 3:00, per-move a fresh move clock */
+  function pawnTerms(mode = state.mode) {
+    const mv = moveMs(mode), at = pawnAt(mode);
+    const atText = '0:' + String(Math.round(at / 1000)).padStart(2, '0');
+    if (mv != null) { const f = 'a fresh ' + Math.round(mv / 1000) + 's'; return { perMove: true, at: atText, trade: f, back: f }; }
+    return { perMove: false, at: atText, trade: '+1:30', back: '3:00' };
+  }
   const active = () => state.mode!=='off' && state.status==='active'
     && state.clockState==='running' && state.startedAt>0;
   const remaining = (side,at=Date.now()) => Math.max(0, state[side] -
@@ -168,8 +177,8 @@
     const remainingNow=remaining(state.turn,at);
     tradeBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState!=='running'
       ||!pawnRule()
-      ||state.actorSide!==state.turn||remainingNow<=0||remainingNow>PAWN_AT;
-    tradeBtn.textContent='♟ Pawn +1:30';
+      ||state.actorSide!==state.turn||remainingNow<=0||remainingNow>pawnAt(state.mode);
+    tradeBtn.textContent=pawnTerms().perMove?'♟ Pawn · fresh clock':'♟ Pawn +1:30';
     chooseBtn.hidden=!state.actorSide||state.status!=='active'||state.clockState!=='penalty'
       ||!pawnRule()||state.actorSide===state.penaltySide;
     chooseBtn.textContent='♟ Choose pawn';
@@ -215,7 +224,7 @@
   function checkDecision(){
     if(state.source!=='local'||!active()||!pawnRule())return;
     const side=state.turn,left=remaining(side);
-    if(left>PAWN_AT){state.decided[side]=false;return;}
+    if(left>pawnAt(state.mode)){state.decided[side]=false;return;}
     if(left<=0||state.decided[side]||state.actorSide!==side)return;
     state.decided[side]=true;
     state[side]=left;state.startedAt=0;state.clockState='decision';
@@ -234,7 +243,7 @@
       state[side]=0;
       state.startedAt=0;
       let outcome='penalty';
-      if(moveMs(state.mode)!=null||state.expiry==='end'){
+      if(state.expiry==='end'||(moveMs(state.mode)!=null&&state.expiry!=='pawn')){
         state.status='over';state.clockState='running';state.penaltySide=null;outcome='timeout';
       }else if(state.expiry==='sec60'){
         /* time ran out: from now on both sides get 60 seconds per move */
@@ -384,19 +393,21 @@
   }
   function resolveLocalPenalty(){
     if(state.source!=='local'||state.clockState!=='penalty'||!pawnRule())return false;
-    state[state.penaltySide]=180000;state.decided[state.penaltySide]=false;
+    state[state.penaltySide]=moveMs(state.mode)??180000;state.decided[state.penaltySide]=false;
     state.clockState='running';state.penaltySide=null;state.startedAt=Date.now();tick();return true;
   }
   function sacrificeLocal(nextTurn,ply){
     if(state.source!=='local'||state.clockState!=='running'||!pawnRule()
-      ||remaining(state.turn)<=0||remaining(state.turn)>PAWN_AT)return false;
+      ||remaining(state.turn)<=0||remaining(state.turn)>pawnAt(state.mode))return false;
     const actor=state.turn,rem=remaining(actor);
-    state[actor]=rem+90000;
+    const mv=moveMs(state.mode);
+    if(mv!=null){state.w=mv;state.b=mv;}   /* per-move: trading a pawn passes the turn; the next move starts fresh */
+    else state[actor]=rem+90000;
     state.turn=nextTurn;state.startedAt=Date.now();
     if(Number.isInteger(ply))state.history[ply]={w:state.w,b:state.b,turn:state.turn};
     tick();return true;
   }
-  window.ChessClock=Object.freeze({relayout:()=>{if(!hud.hidden)redraw();},MODES,MODE_RE,totalMs,moveMs,pawnRule,getPreference,setPreference,getExpiry,setExpiry,startLocal,resumeLocal,moveLocal,
+  window.ChessClock=Object.freeze({relayout:()=>{if(!hud.hidden)redraw();},MODES,MODE_RE,totalMs,moveMs,pawnRule,pawnTerms,getPreference,setPreference,getExpiry,setExpiry,startLocal,resumeLocal,moveLocal,
     undoLocal,stopLocal,showOnline,reset,remaining,check:tick,setPerspective,setHandlers,
     pauseLocal,resolveLocalPenalty,sacrificeLocal,endDecision,changeLocalMode,
     snapshot:()=>({...state,history:state.history.slice()})});

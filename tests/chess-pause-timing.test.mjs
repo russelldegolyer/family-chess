@@ -40,20 +40,43 @@ function makeClock(){
   return {clock:window.ChessClock,advance(ms){now+=ms}};
 }
 
-test('60 seconds per move has no pawn trade or penalty and expires as a loss',()=>{
+test('seconds per move with "Game ends" has no pawn trade and expires as a loss',()=>{
   const a=makeClock();
   let expired=null;
+  a.clock.setExpiry('end');
   a.clock.startLocal('move60',side=>{expired=side});
   a.clock.moveLocal('b',1);a.clock.moveLocal('w',2);
   a.clock.setPerspective('w','w');
-  a.advance(45_000);
+  a.advance(55_000);
   assert.equal(a.clock.sacrificeLocal('b',1),false);
-  a.advance(16_000);
+  a.advance(6_000);
   a.clock.check();
   assert.equal(expired,'w');
   assert.equal(a.clock.snapshot().status,'over');
   assert.notEqual(a.clock.snapshot().clockState,'penalty');
   assert.equal(a.clock.resolveLocalPenalty(),false);
+  a.clock.setExpiry('pawn');
+});
+
+test('seconds per move with the pawn rule: trade at 10s passes the turn with a fresh clock; running out is a pawn penalty',()=>{
+  const a=makeClock();
+  let outcome=null;
+  a.clock.setExpiry('pawn');
+  a.clock.startLocal('s30',(side,o)=>{outcome=o});
+  a.clock.moveLocal('b',1);a.clock.moveLocal('w',2);
+  a.clock.setPerspective('w','w');
+  a.advance(15_000);
+  assert.equal(a.clock.sacrificeLocal('b',1),false,'not before 10s left');
+  a.advance(6_000);a.clock.endDecision();
+  assert.equal(a.clock.sacrificeLocal('b',3),true);
+  assert.equal(a.clock.snapshot().w,30_000);assert.equal(a.clock.snapshot().b,30_000);
+  assert.equal(a.clock.snapshot().turn,'b');
+  a.advance(31_000);a.clock.check();
+  assert.equal(outcome,'penalty');
+  assert.equal(a.clock.snapshot().clockState,'penalty');
+  assert.equal(a.clock.resolveLocalPenalty(),true);
+  assert.equal(a.clock.snapshot().b,30_000);
+  assert.equal(a.clock.pawnTerms('s30').trade,'a fresh 30s');
 });
 
 test('a practice clock waits for the first move before counting down',()=>{
@@ -98,10 +121,10 @@ test('Pause is available in the main board and chat header, not as a floating cl
   assert.match(clock,/pauseBtn\.hidden=true/);
 });
 
-test('pawn exchange is rejected outside standard timed games on all layers',()=>{
+test('pawn exchange is rejected without a timer on all layers',()=>{
   assert.match(clock,/const pawnRule = \(\) =>/);
   assert.match(page,/ChessClock\?\.pawnRule\?\.\(\)/);
-  assert.match(pawnEdge,/\^\(10m\|12m\|15m\|m\[0-9\]\{1,3\}\)\$/);
+  assert.match(pawnEdge,/\^\(10m\|12m\|15m\|m\[0-9\]\{1,3\}\|s\[0-9\]\{1,3\}\)\$/);
   assert.match(sql,/Pawn exchanges require a normal timed game/);
   assert.match(sql,/end_reason='timeout'/);
   assert.match(submitEdge,/g\.clock_mode==='move60'/);

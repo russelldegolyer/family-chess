@@ -47,7 +47,7 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
-<script defer src="./chess-clock.js?v=15"></script>
+<script defer src="./chess-clock.js?v=16"></script>
 <script defer src="./chess-online.js?v=29"></script>
 <script defer src="./chess-chat.js?v=8"></script>
 <script defer src="./chess-voice.js?v=5"></script>
@@ -6744,8 +6744,9 @@ async function applyPawnTimeAction(kind,square){
   G.clockActions=actions;G.pos=updated;G.version++;
   clearSelection();syncBoard(updated,{animate:true,quick:true});
   updateAll();renderChat();
-  toast(kind==='penalty'?'Pawn removed · three minutes restored':
-    'Pawn forfeited · 1:30 added to your next turn',2800);
+  const pt=window.ChessClock.pawnTerms?.()||{trade:'+1:30',back:'3:00',perMove:false};
+  toast(kind==='penalty'?'Pawn removed · '+(pt.perMove?pt.back+' to move':'three minutes restored'):
+    (pt.perMove?'Pawn forfeited · turn passes, '+pt.trade+' for the next move':'Pawn forfeited · 1:30 added to your next turn'),2800);
   if(G.mode==='cpu'&&updated.chess.turn()!==cpu.human)
     setTimeout(requestComputer,250);
 }
@@ -6872,7 +6873,7 @@ function promptPawnTimeChoice(kind){
   if(kind==='penalty'&&clock.clockState!=='penalty')return;
   const options=pawnCandidates(victim);
   if(!options.length){
-    if(kind==='penalty'){toast('No pawns left · 3:00 restored');void applyPawnTimeAction('penalty',null);}
+    if(kind==='penalty'){toast('No pawns left · '+(window.ChessClock.pawnTerms?.().back||'3:00')+' restored');void applyPawnTimeAction('penalty',null);}
     else toast('You have no pawns to give up.');
     return;
   }
@@ -6881,7 +6882,7 @@ function promptPawnTimeChoice(kind){
   const bar=pawnPickBar();bar.hidden=false;
   $('pawnPickText').textContent=kind==='penalty'
     ?SIDE[victim]+' ran out of time · tap a '+SIDE[victim].toLowerCase()+' pawn to remove'
-    :'Tap one of your pawns to give up for +1:30';
+    :'Tap one of your pawns to give up for '+(window.ChessClock.pawnTerms?.().trade||'+1:30');
   $('pawnPickCancel').hidden=kind==='penalty';
   updateMarkers();
 }
@@ -6890,12 +6891,13 @@ function promptDecision(){
   if(G.status!=='active'||window.ChessClock?.snapshot().clockState!=='decision')return;
   const block=(e)=>{if(e.target===d.card.parentNode)e.stopPropagation();};
   const done=()=>document.removeEventListener('pointerdown',block,true);
-  const d=dialog('0:30 left',[],[
-    ['Give a pawn · +1:30','gold',()=>{done();promptPawnTimeChoice('sacrifice');}],
-    ['3:00','quiet',()=>{done();window.ChessClock?.endDecision?.();updateAll();}]]);
+  const pt=window.ChessClock?.pawnTerms?.()||{at:'0:10',trade:'+1:30',back:'3:00'};
+  const d=dialog(pt.at+' left',[],[
+    ['Give a pawn · '+pt.trade,'gold',()=>{done();promptPawnTimeChoice('sacrifice');}],
+    ['Keep playing','quiet',()=>{done();window.ChessClock?.endDecision?.();updateAll();}]]);
   d.card.classList.add('pawn-decision');
   document.addEventListener('pointerdown',block,true);
-  d.card.querySelectorAll('button')[1]?.setAttribute('aria-label','Keep playing. At 0:00 your opponent removes one of your pawns and you get 3:00');
+  d.card.querySelectorAll('button')[1]?.setAttribute('aria-label','Keep playing. At 0:00 your opponent removes one of your pawns and you get '+pt.back);
 }
 window.ChessClock?.setHandlers({
   pause:()=>void toggleChessPause(),
@@ -6970,19 +6972,21 @@ function openSettings() {
     }
     row('Timer', timer);
     body.lastChild.classList.add('set-row-stack', 'set-timer-row');   /* label on top, choices and amount full width */
-    if (kind === 's') { const note = el('p', 'set-note'); note.textContent = 'Run out of seconds on a move and the game ends.'; body.append(note); }
-    /* last: what happens when a minutes clock runs out */
-    if (kind === 'm') {
-      const exp = C.getExpiry?.() || 'pawn';
-      row('When time runs out', seg([['end', 'Game ends'], ['sec60', '60s a move'], ['pawn', 'Pawn trade']], exp, (v) => {
+    /* last: what happens when the clock runs out (minutes: three choices; seconds per move: game ends or pawn trade) */
+    if (kind !== 'off') {
+      const raw = C.getExpiry?.() || 'pawn', exp = kind === 's' && raw === 'sec60' ? 'end' : raw;
+      const opts = kind === 's' ? [['end', 'Game ends'], ['pawn', 'Pawn trade']] : [['end', 'Game ends'], ['sec60', '60s a move'], ['pawn', 'Pawn trade']];
+      row('When time runs out', seg(opts, exp, (v) => {
         C.setExpiry(v);
         window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(C.getPreference(), v));
         if (G.onlineProvider === 'supabase' && G.status === 'active' && mySeat && G.gid) Promise.resolve(window.familyChessChangeClock?.(G.gid, C.getPreference(), v)).catch((e) => toast(e?.message || 'Could not change the rule', 4200));
       }, 'When time runs out'));
-      body.lastChild.classList.add('set-row-stack');   /* three choices need the full width */
+      body.lastChild.classList.add('set-row-stack');   /* the choices get the full width */
       const note = el('p', 'set-note');
-      note.textContent = exp === 'end' ? 'Run out of time and you lose.'
+      const pt = C.pawnTerms?.(cur) || { at: '0:10', trade: '+1:30', back: '3:00', perMove: kind === 's' };
+      note.textContent = exp === 'end' ? (kind === 's' ? 'Run out of seconds on a move and you lose.' : 'Run out of time and you lose.')
         : exp === 'sec60' ? 'Run out of time and both of you switch to 60 seconds per move.'
+        : kind === 's' ? 'At ' + pt.at + ' you can give up one of your pawns instead of moving; the next move starts with ' + pt.trade + '. Let it run out and your opponent removes any pawn of yours, then you get ' + pt.back + ' to move.'
         : 'At 10 seconds you can trade one of your pawns for +1:30. Let it run out and your opponent removes any pawn of yours; your clock goes back to 3:00.';
       body.append(note);
     }

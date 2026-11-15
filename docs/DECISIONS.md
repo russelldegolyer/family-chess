@@ -81,3 +81,7 @@ engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
 ## D-36 Blacked-out iOS look (2026-11-14)
 - Russell prefers the iOS look: system font, blue iOS buttons/links, iOS section headers, green switches, slider for difficulty.
 - `chess-skin.css` only darkens surfaces (near-black sheets, #1c1c1e cards) and holds two layout fixes. Don't bring back the ivory/serif skin or custom fonts.
+
+## D-37 Pawn rule on per-move clocks (2026-11-14)
+- Seconds (s<N>) clocks support the pawn rule: trade window min(10 s, N/2); a trade passes the turn and both clocks reset to N; a timeout with the pawn rule is a pawn penalty, then the victim gets N to move.
+- For Seconds the time-out choices are Game ends / Pawn trade ('60s a move' only applies to minute clocks). Minute clocks are unchanged (+1:30, back to 3:00).
