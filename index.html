@@ -3657,6 +3657,7 @@ function updateBanner() {
 }
 let cpuIntro = '';
 function updateAll() {
+  checkPremove();
   updateResignBtn();updatePauseControls();applySideColors();updateMarkers();updatePlates();
   updateBanner();renderHistory();updateChatEnabled();renderResumeBanner();
   if(window.ChessClock){
@@ -4395,6 +4396,10 @@ function markers2D() {
   }
   const kingSq = pos.chess.inCheck() ? (pos.board.find(([, t, c]) => t === 'k' && c === pos.chess.turn()) || [])[0] : null;
   if (kingSq) { const [c, r] = sqCR(kingSq); sv('circle', { cx: c + 0.5, cy: r + 0.5, r: 0.5, fill: 'url(#chk2)' }, g); }
+  if (typeof premove !== 'undefined') {   /* premove: a blue wash on the queued squares */
+    if (preFrom) cell(preFrom, { fill: 'rgba(10,132,255,.45)' });
+    if (premove) { cell(premove.from, { fill: 'rgba(10,132,255,.35)' }); cell(premove.to, { fill: 'rgba(10,132,255,.5)' }); }
+  }
   const live = selected && canAct();
   if (live) {
     if (C2.mono) edge(selected, 0.9); else cell(selected, { fill: C2.hl + '0.55)' });
@@ -4815,6 +4820,7 @@ function onSquareClick(sq) {
     return;
   }
   const piece = sq ? G.pos.chess.get(sq) : null;
+  if (!canAct() && premoveSide()) { premoveTap(sq, piece); return; }
   if (!canAct()) {
     if (piece && G.mode === 'live' && mySeat && piece.color === mySeat && G.status === 'active') toast(bothSeated() ? `It's ${seatName(other(mySeat))}'s move.` : 'Waiting for an opponent to sit down.');
     else if (thinking && piece) toast('The computer is thinking.');
@@ -4827,6 +4833,51 @@ function onSquareClick(sq) {
   }
   if (piece && piece.color === side) { select(sq === selected ? null : sq); return; }
   clearSelection();
+}
+/* Premoves: during the computer's or the online opponent's turn, pick a piece and a square; the move plays
+   the moment it is your turn, if it is legal then (otherwise it is dropped). Tap the piece again to cancel. */
+let premove = null, preFrom = null, premoveTimer = 0;
+function premoveSide() {
+  if (review || G.status !== 'active' || PG.on || G.onlineBusy) return null;
+  if (window.ChessClock?.snapshot?.().clockState !== 'running') return null;
+  if (G.mode === 'cpu' && G.pos.chess.turn() !== cpu.human) return cpu.human;
+  if (G.mode === 'live' && mySeat && bothSeated() && G.pos.chess.turn() !== mySeat) return mySeat;
+  return null;
+}
+function liftSq(sq, up) { if (sq) { const p = pieceAt(sq); if (p) liftPiece(p, up); } if (typeof markers2D === 'function') queueMicrotask(markers2D); }
+function clearPremove(note) {
+  liftSq(preFrom, false); liftSq(premove?.from, false);
+  preFrom = null; premove = null; clearTimeout(premoveTimer);
+  if (note) toast(note, 2200);
+}
+function premoveTap(sq, piece) {
+  const me = premoveSide();
+  if (premove) { clearPremove('Premove cancelled.'); if (!(piece && piece.color === me)) return; }
+  if (piece && piece.color === me && sq !== preFrom) { liftSq(preFrom, false); preFrom = sq; liftSq(sq, true); return; }
+  if (!preFrom || !sq || sq === preFrom) { clearPremove(); return; }
+  /* plausible for that piece if it were my turn now (the real check happens on my turn) */
+  const f = G.pos.chess.fen().split(' '); f[1] = me; f[3] = '-';
+  let ok = false;
+  try { const c = new Chess(f.join(' ')); ok = c.moves({ square: preFrom, verbose: true }).some((m) => m.to === sq) || (G.pos.chess.get(preFrom)?.type === 'p' && preFrom[0] !== sq[0]); } catch { ok = false; }
+  if (!ok) { clearPremove(); return; }
+  premove = { from: preFrom, to: sq }; preFrom = null;
+  toast('Premove ' + premove.from + '–' + premove.to + ' set. Tap any piece to cancel.', 2400);
+}
+function checkPremove() {
+  if (!premove && !preFrom) return;
+  if (G.status !== 'active' || review) { clearPremove(); return; }
+  if (!premove || premoveSide()) return;
+  const { from, to } = premove;
+  clearTimeout(premoveTimer);
+  let tries = 0;
+  const attempt = () => {
+    if (!premove) return;
+    if (!canAct()) { if (++tries < 40 && G.status === 'active') premoveTimer = setTimeout(attempt, 120); else clearPremove(); return; }
+    const hits = legalFrom(from).filter((m) => m.to === to);
+    clearPremove(hits.length ? '' : 'Premove dropped: no longer legal.');
+    if (hits.length) playMove(from + to + (hits.some((m) => m.promotion) ? 'q' : ''));
+  };
+  premoveTimer = setTimeout(attempt, Math.max(120, lockUntil - performance.now() + 40));
 }
 function tryMove(from, to, hits) {
   if (moveMode === 'preview') { startPreview(from, to); return; }
@@ -4878,6 +4929,7 @@ function applyMove(uci, { placed = false } = {}) {
   let land = 0;
   if (!placed) { land = syncBoard(after, { animate: true, hint: after.last }); fxForMove(after.last, land, false); }
   lockUntil = performance.now() + (REDUCED ? 0 : land);
+  if (premove) setTimeout(checkPremove, 0);
   return { after, end, now, land };
 }
 function playMove(uci, opts = {}) {
@@ -5623,7 +5675,7 @@ function resetLocalGame(mode, n) {
   cancelComputer();
   if (pending) pending = null;
   stopReviewPlayback(false); window.ChessReviewAnalyzer?.stop();
-  review = null; selected = null; hoverSq = null; lockUntil = 0;
+  clearPremove(); review = null; selected = null; hoverSq = null; lockUntil = 0;
   hide($('endCard')); endDismissed = null;
   if (!$('promoDialog').hidden) { promoCtx = null; hide($('promoDialog')); }
   Object.assign(G, { mode, gid: null, key: 'k' + Date.now().toString(36) + rid(4), board: null, chooser: null, n, moves: [], pos: positionFrom([]), status: 'active', result: null, reason: null, drawOffer: null, turnAt: Date.now(), startedAt: Date.now(), endedAt: null, feedback: null, seats: { w: 'local', b: 'local' }, names: { w: '', b: '' } });
