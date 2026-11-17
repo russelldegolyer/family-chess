@@ -6990,6 +6990,12 @@ function openSettings() {
     row('Show last move', toggle(showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }, "Show opponent's last move"));
     { const b = el('button', 'set-pick'); b.type = 'button'; b.textContent = (BOARD[THEME]?.name || 'Default') + '  ›'; b.addEventListener('click', () => { d.close(); $('btnCollection').click(); }); row('Board', b); }
     row('Sound', toggle(Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) { Sound.ensure(); Sound.play('move'); } }, 'Sound'));
+    { const box = el('div', 'set-pgn'); box.style.cssText = 'display:flex;gap:14px';
+      const cp = el('button', 'set-pick'); cp.type = 'button'; cp.textContent = 'Copy PGN'; cp.disabled = !G.moves.length; if (cp.disabled) cp.style.opacity = '.4';
+      cp.addEventListener('click', () => copyPgn());
+      const im = el('button', 'set-pick'); im.type = 'button'; im.textContent = 'Set up…';
+      im.addEventListener('click', () => { d.close(); openImport(); });
+      box.append(cp, im); row('Game record', box); }
     /* Timer: none, seconds per move, or minutes per game. Tap Seconds/Minutes, then type the amount. */
     const C = window.ChessClock, cur = C?.getPreference?.() || 'off';
     const kind = cur === 'off' ? 'off' : cur[0] === 's' ? 's' : 'm';
@@ -7037,6 +7043,76 @@ function openSettings() {
   }
   render();
 }
+/* ---------------- PGN export and position / game import ---------------- */
+function gamePgn() {
+  const c = START_FEN ? new Chess(START_FEN) : new Chess();
+  const day = new Date(G.startedAt || Date.now()), pad = (n) => String(n).padStart(2, '0');
+  const names = G.mode === 'cpu' ? (cpu.human === 'w' ? [cleanName(store.get('sg.name', '')) || 'You', 'Computer level ' + cpu.level] : ['Computer level ' + cpu.level, cleanName(store.get('sg.name', '')) || 'You'])
+    : [G.names?.w || 'White', G.names?.b || 'Black'];
+  const acts = G.clockActions || [];
+  const stopAt = acts.length ? Math.min(...acts.map((a) => Number(a.after_ply))) : Infinity;
+  for (let i = 0; i < G.moves.length && i < stopAt; i++) {
+    const u = G.moves[i];
+    try { c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] || undefined }); } catch { break; }
+  }
+  const result = G.status === 'over' && G.result ? G.result : '*';
+  const head = [['Event', 'Family chess'], ['Site', 'chess.allseasonpestllc.com'], ['Date', day.getFullYear() + '.' + pad(day.getMonth() + 1) + '.' + pad(day.getDate())],
+    ['White', names[0]], ['Black', names[1]], ['Result', result]];
+  if (START_FEN) head.push(['SetUp', '1'], ['FEN', START_FEN]);
+  for (const [k, v] of head) c.setHeader(k, String(v).replace(/"/g, "'"));
+  let text = c.pgn();
+  if (Number.isFinite(stopAt) && stopAt < G.moves.length) text = text.replace(/\s*\*?\s*$/, '') + ' {A pawn was traded for time here; the game continued from ' + G.pos.chess.fen() + '} ' + result;
+  else if (!/(1-0|0-1|1\/2-1\/2|\*)\s*$/.test(text)) text += ' ' + result;
+  return text.trim() + '\n';
+}
+function copyPgn() {
+  if (!G.moves.length) { toast('Make a move first.', 2000); return; }
+  const text = gamePgn();
+  const done = () => toast('PGN copied. Paste it into any chess site or app.', 2800);
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => showPgn(text));
+  else showPgn(text);
+}
+function showPgn(text) {
+  const d = dialog('Game record (PGN)', ['Select the text below and copy it.'], [['Done', 'gold', null]]);
+  const ta = el('textarea'); ta.value = text; ta.readOnly = true; ta.rows = 8;
+  ta.style.cssText = 'width:100%;box-sizing:border-box;font:13px/1.4 ui-monospace,Menlo,monospace;background:#1c1c1e;color:#fff;border:0;border-radius:10px;padding:10px';
+  d.card.insertBefore(ta, d.card.lastChild); ta.focus(); ta.select();
+}
+/* Paste a FEN (a position) or a PGN (a whole game) and continue it here against the computer or two players. */
+function parseImport(text) {
+  text = String(text || '').trim();
+  if (!text) return null;
+  if (!/[[\]{}]/.test(text) && text.split(/\s+/).length >= 2 && text.split('/').length === 8) {
+    const f = text.split(/\s+/), full = f.length >= 6 ? text : [f[0], f[1] || 'w', f[2] || '-', f[3] || '-', f[4] || '0', f[5] || '1'].join(' ');
+    try { const c = new Chess(full); return { start_fen: c.fen(), moves: [], turn: c.turn() }; } catch { return { error: 'That position isn’t valid. Check the FEN.' }; }
+  }
+  try {
+    const c = new Chess(); c.loadPgn(text);
+    const fen = c.getHeaders?.().FEN || c.header?.().FEN || null;
+    const moves = c.history({ verbose: true }).map((m) => m.from + m.to + (m.promotion || ''));
+    if (!moves.length && !fen) return { error: 'No moves found in that PGN.' };
+    return { start_fen: fen, moves, turn: c.turn() };
+  } catch { return { error: 'That isn’t a PGN or FEN this app can read.' }; }
+}
+function openImport() {
+  const d = dialog('Set up a game', ['Paste a FEN to start from a position, or a PGN to continue a whole game.'], [['Cancel', 'quiet', null]]);
+  const ta = el('textarea'); ta.rows = 5; ta.placeholder = 'FEN or PGN'; ta.spellcheck = false; ta.autocapitalize = 'off';
+  ta.style.cssText = 'width:100%;box-sizing:border-box;font:13px/1.4 ui-monospace,Menlo,monospace;background:#1c1c1e;color:#fff;border:0;border-radius:10px;padding:10px';
+  const err = el('p'); err.style.cssText = 'color:#ff6961;min-height:1.2em;margin:6px 0 0';
+  const row = d.card.querySelector('.end-actions'); row.replaceChildren();
+  const go = (mode) => {
+    const r = parseImport(ta.value);
+    if (!r || r.error) { err.textContent = r?.error || 'Paste a FEN or PGN first.'; return; }
+    try { const c = r.start_fen ? new Chess(r.start_fen) : new Chess(); for (const u of r.moves) c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] || undefined }); if (c.isGameOver()) { err.textContent = 'That game is already over.'; return; } } catch { err.textContent = 'Those moves don’t fit that position.'; return; }
+    d.close();
+    if (G.onlineProvider === 'supabase' && G.status === 'active' && mySeat) { toast('Finish or leave your online game first.', 3200); return; }
+    loadSavedGame({ moves: r.moves, start_fen: r.start_fen }, { mode, level: cpu.level, side: r.turn });
+    toast(mode === 'cpu' ? 'You play the side to move.' : 'Set up for two players here.', 2600);
+  };
+  row.append(button('Cancel', 'quiet', () => d.close()), button('Two players', 'quiet', () => go('local')), button('Play computer', 'gold', () => go('cpu')));
+  d.card.insertBefore(ta, row); d.card.insertBefore(err, row); ta.focus();
+}
+
 /* ------------------------------------------------------------------ boot */
 let needsRender = true;
 let firstFrame = true, warmFrames = 0;
