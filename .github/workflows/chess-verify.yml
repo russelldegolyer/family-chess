@@ -17,3 +17,20 @@ jobs:
           for f in *.js; do node --check "$f"; done
       - name: Test shared player colors and mobile chat layout
         run: node --test tests/*.test.mjs
+  browser:
+    # Plays the real app in headless Chromium (computer game, premove, PGN set-up, review, home buttons).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Run browser tests
+        run: |
+          python3 -m http.server 8124 >/dev/null 2>&1 &
+          sleep 2
+          node --test tests/e2e/*.e2e.mjs
