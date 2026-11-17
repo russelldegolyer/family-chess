@@ -713,7 +713,7 @@
       ['Settles in', 'Your first 20 puzzles move your rating faster so it finds your level quickly. After that, changes get smaller.'],
     ]);
     sec('Difficulty', [
-      ['Adaptive', 'Picks puzzles within 150 points of your rating, so they get harder as you improve.'],
+      ['Adaptive', 'Picks puzzles within 150 points of your rating, so they get harder as you improve. Every third one comes from the theme you miss most.'],
       ['Fixed levels', 'Beginner 400–999 · Easy 1000–1399 · Intermediate 1400–1799 · Advanced 1800–2199 · Expert 2200+.'],
       ['Categories', 'Mixed gives every theme. Pick one (mates, forks, pins and more) to drill a single idea.'],
     ]);
@@ -777,7 +777,9 @@
     return BANDS[lv].slice(0, 2);
   }
   /* opt (drills, speed rounds): { theme: string | string[], lo, hi } instead of the puzzle settings */
+  let focusName = '';
   async function nextPuzzle(opt = null) {
+    focusName = '';
     let cat = CATS.find((c) => c[0] === P.settings.cat) || CATS[0];
     const recent = new Set(P.puzzle.history.slice(-300).map((h) => h.id).concat((P.seen || []).slice(-200)));
     let [lo, hi] = band();
@@ -785,6 +787,11 @@
       const th = Array.isArray(opt.theme) ? pick(opt.theme) : opt.theme;
       if (th) { const re = new RegExp('\\b' + th + '\\b'); cat = [th, th, (t) => re.test(t), th]; } else cat = CATS[0];
       lo = Math.max(400, opt.lo); hi = Math.max(lo + 200, opt.hi);
+    } else if (!PATH && cat[0] === 'mixed' && P.settings.level === 'adaptive' && P.puzzle.attempted % 3 === 2) {
+      /* every third adaptive puzzle comes from your weakest theme (seen 6+ times, under 70% solved) */
+      const weak = CATS.filter((c) => c[3] && c[0] !== 'mixed').map((c) => [c, P.puzzle.cats[c[0]]])
+        .filter(([, st]) => st && st.a >= 6 && st.s / st.a < 0.7).sort((a, b) => a[1].s / a[1].a - b[1].s / b[1].a);
+      if (weak.length) { cat = weak[0][0]; focusName = cat[1]; }
     } else if (PATH && PATH.theme) { const th = PATH.theme, re = new RegExp('\\b' + th + '\\b'); cat = [th, th, (t) => re.test(t), th]; const up = Math.max(0, Math.min(400, Math.round(P.puzzle.rating) - 1300)); lo = PATH.lo + up; hi = PATH.hi + up; }
     const c = api();
     if (c && remotePuzzles && uid !== 'local') {
@@ -862,7 +869,7 @@
     B().play(p.moves[0]); /* the opponent's last move, then the player's turn */
     await sleep(350); if (my !== session) return;
     B().busy(false);
-    say(PZ.msgNode, PATH && PATH.review ? 'You missed this one before. Find the best move.' : 'Find the best move.');
+    say(PZ.msgNode, PATH && PATH.review ? 'You missed this one before. Find the best move.' : focusName && !retry ? 'Find the best move. Practising ' + focusName.toLowerCase() + ', a theme you miss more often.' : 'Find the best move.');
     if (PATH && PATH.speed) { PATH.t0 = performance.now(); speedTick(my); }
     B().onMove((uci) => void onPuzzleMove(uci, my));
   }
