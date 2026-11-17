@@ -4,6 +4,28 @@
   const api = window.chessSupabase;
   const account = document.getElementById('accountControl');
   if (!api || !account) return;
+  /* Crash reports: uncaught errors and rejected promises go to chess_client_errors (signed-in players
+     only, deduplicated per page load, rate-limited by the server). Nothing about the game is sent. */
+  (() => {
+    const sent = new Set();
+    const ver = (document.querySelector('script[src*="chess-online.js"]')?.getAttribute('src') || '').split('v=')[1] || '';
+    const report = (message, source, stack) => {
+      message = String(message || 'Unknown error').slice(0, 500);
+      if (/ResizeObserver loop|Script error\.?$|AbortError|Load failed|NetworkError|Failed to fetch/i.test(message)) return;
+      const key = message + '|' + (source || '');
+      if (sent.has(key) || sent.size >= 10) return;
+      sent.add(key);
+      Promise.resolve(api.auth.getSession()).then(({ data }) => {
+        if (!data?.session) return;
+        return api.rpc('chess_report_error', { p_message: message, p_source: String(source || '').slice(0, 300),
+          p_stack: String(stack || '').slice(0, 2000), p_page: location.pathname + location.hash.slice(0, 40),
+          p_agent: navigator.userAgent.slice(0, 300), p_version: ver });
+      }).catch(() => {});
+    };
+    window.addEventListener('error', (e) => report(e.message, e.filename ? e.filename.split('/').pop() + ':' + e.lineno + ':' + e.colno : '', e.error?.stack));
+    window.addEventListener('unhandledrejection', (e) => { const r = e.reason; report(r?.message || String(r), 'promise', r?.stack); });
+    window.familyChessReportError = report;
+  })();
   const style = document.createElement('style');
   style.textContent = `
     #cgCreatedLink[hidden] {display:none!important}
