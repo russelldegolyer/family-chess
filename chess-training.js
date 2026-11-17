@@ -71,7 +71,20 @@
 
   /* ------------------------------------------------------------------ engine + tablebase */
   let worker = null, wseq = 0; const waiting = new Map();
+  /* Stockfish (chess-stockfish.js) when this browser runs it; the built-in engine otherwise */
   function engine(fen, level = 5, budget = 800, analysisMove = '') {
+    const SF = window.ChessStockfish;
+    if (SF && SF.available()) {
+      const ms = Math.min(600, budget);
+      const p = analysisMove && analysisMove !== '0000'
+        ? SF.evalMove(fen, analysisMove, ms)
+        : SF.search({ fen, ms }).then((r) => ({ move: r.move, score: r.score, depth: r.depth,
+          ...(analysisMove ? { bestScore: r.score, playedScore: null } : {}) }));
+      return p.catch(() => jsEngine(fen, level, budget, analysisMove));
+    }
+    return jsEngine(fen, level, budget, analysisMove);
+  }
+  function jsEngine(fen, level = 5, budget = 800, analysisMove = '') {
     if (!worker) {
       try {
         worker = new Worker(URL.createObjectURL(new Blob([B().engineSource()], { type: 'text/javascript' })));

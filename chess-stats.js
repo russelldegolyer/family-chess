@@ -38,6 +38,11 @@
   /* ---------------- move quality (engine on this device, cached per game) ---------------- */
   let worker = null, wid = 0; const wait = new Map();
   function engine(fen, uci) {
+    const SF = window.ChessStockfish;
+    if (SF && SF.available()) return SF.evalMove(fen, uci, 200).catch(() => jsEngine(fen, uci));
+    return jsEngine(fen, uci);
+  }
+  function jsEngine(fen, uci) {
     if (!worker) {
       try { worker = new Worker(URL.createObjectURL(new Blob([B().engineSource()], { type: 'text/javascript' }))); worker.onmessage = (e) => { const f = wait.get(e.data.id); if (f) { wait.delete(e.data.id); f(e.data); } }; }
       catch { return Promise.resolve(null); }
@@ -45,7 +50,7 @@
     const id = ++wid;
     return new Promise((res) => { wait.set(id, res); worker.postMessage({ id, fen, level: 5, budget: 220, analysisMove: uci }); setTimeout(() => { if (wait.has(id)) { wait.delete(id); res(null); } }, 5000); });
   }
-  const QKEY = 'chess.stats.q2.';
+  const QKEY = 'chess.stats.q3.';
   function cached(g) { try { return JSON.parse(localStorage.getItem(QKEY + g.id) || 'null'); } catch { return null; } }
   function grade(r, uci) {
     if (!r || !Number.isFinite(r.bestScore) || !Number.isFinite(r.playedScore)) return null;

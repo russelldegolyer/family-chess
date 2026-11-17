@@ -1,8 +1,8 @@
-/* Offline, opt-in game review using the existing chess engine in a separate Worker.
-   No moves, positions or personal data are sent to an external analysis service. */
+/* Offline, opt-in game review. Uses Stockfish (chess-stockfish.js) on this device, falling back to the
+   built-in engine in a separate Worker. No moves, positions or personal data leave the device. */
 (() => {
   'use strict';
-  const CACHE_VERSION = 'chess-review-estimate-v2:';
+  const CACHE_VERSION = 'chess-review-estimate-v3:';
   let worker = null, workerURL = null, token = 0, steps = [], results = [];
   let signature = '', focusPly = 0, busy = false, error = '', onUpdate = () => {};
   let activeIndex = -1, timeoutId = 0;
@@ -128,7 +128,7 @@
       if (run !== token || activeIndex < 0) return;
       error = 'Analysis took too long on this device. You can still replay the game.';
       stop(); notify();
-    }, 10000);
+    }, 30000);
   }
   function start(items, source, update) {
     stop();
@@ -147,8 +147,7 @@
     }
     const run = token;
     try {
-      workerURL = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
-      worker = new Worker(workerURL);
+      worker = stockfishWorker(source);
       worker.onerror = () => {
         if (run !== token) return;
         error = 'Move analysis could not start. Replay still works.';
@@ -181,6 +180,31 @@
       error = 'This browser cannot start the review engine.';
       stop(); notify();
     }
+  }
+  /* A Worker-shaped wrapper: Stockfish when it runs here, otherwise the built-in engine. */
+  function stockfishWorker(source) {
+    const SF = window.ChessStockfish;
+    let real = null, dead = false;
+    const shim = {
+      onmessage: null, onerror: null,
+      postMessage(msg) {
+        const toReal = () => {
+          if (!real) {
+            workerURL = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+            real = new Worker(workerURL);
+            real.onmessage = (e) => shim.onmessage && shim.onmessage(e);
+            real.onerror = (e) => shim.onerror && shim.onerror(e);
+          }
+          real.postMessage({ ...msg, budget: 1500 });
+        };
+        if (real || !SF || !SF.available()) { toReal(); return; }
+        SF.evalMove(msg.fen, msg.analysisMove, 450).then(
+          (r) => { if (!dead && shim.onmessage) shim.onmessage({ data: { id: msg.id, ...r } }); },
+          () => { if (!dead) toReal(); });
+      },
+      terminate() { dead = true; if (real) real.terminate(); else SF?.stop(); }
+    };
+    return shim;
   }
   function focus(ply) { focusPly = Math.max(0, ply || 0); }
   window.ChessReviewAnalyzer = Object.freeze({ start, stop, focus, get, issues, counts, status, keyMoments });
