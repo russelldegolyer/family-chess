@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     if(typeof game_id!=='string'||!uuid.test(game_id)||typeof move_uci!=='string'||!uci.test(move_uci))
       return reply(400,{error:'Invalid game ID or move.'});
     const {data:g,error:gErr}=await db.from('chess_games')
-      .select('id,white_player_id,black_player_id,current_fen,status,result,clock_mode')
+      .select('id,white_player_id,black_player_id,current_fen,status,result,clock_mode,start_fen')
       .eq('id',game_id).maybeSingle();
     if(gErr)throw gErr;
     if(!g||(g.white_player_id!==auth.user.id && g.black_player_id!==auth.user.id))
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     if(g.status!=='active')return reply(409,{error:'This game is not active.'});
 
     const {data:records,error:hErr}=await db.from('chess_moves')
-      .select('ply,move_uci').eq('game_id',game_id).order('ply',{ascending:true}).limit(1001);
+      .select('ply,move_uci,fen_after').eq('game_id',game_id).order('ply',{ascending:true}).limit(1001);
     if(hErr)throw hErr;
     if((records?.length||0)>1000)return reply(409,{error:'Game history exceeds supported size.'});
     // Saved pawn-for-time events can alter the board without a conventional UCI move.
@@ -61,7 +61,14 @@ Deno.serve(async (req) => {
     if(!mv)return reply(422,{error:'That is not a legal move.'});
     const canonical=mv.from+mv.to+(mv.promotion||'');
     if(canonical!==move_uci)return reply(422,{error:'Invalid promotion.'});
-    const finished=chess.isGameOver();
+    // Threefold repetition needs the game's history; the FEN alone covers mate, stalemate,
+    // insufficient material and the fifty-move rule.
+    const key=(f:string)=>f.split(' ').slice(0,4).join(' ');
+    const here=key(chess.fen());
+    const seen=[g.start_fen||'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      ...(records||[]).map((r)=>r.fen_after)].filter((f)=>f&&key(f)===here).length;
+    const threefold=seen>=2;
+    const finished=chess.isGameOver()||threefold;
     const result=!finished?null:chess.isCheckmate()?(side==='w'?'1-0':'0-1'):'1/2-1/2';
     const newFen=chess.fen();
     const {data:ply,error:commitErr}=await db.rpc('chess_commit_validated_move',{

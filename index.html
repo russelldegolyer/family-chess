@@ -48,7 +48,7 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
 <script defer src="./auth-gate.js"></script>
 <script defer src="./chess-clock.js?v=16"></script>
-<script defer src="./chess-online.js?v=29"></script>
+<script defer src="./chess-online.js?v=30"></script>
 <script defer src="./chess-chat.js?v=8"></script>
 <script defer src="./chess-voice.js?v=5"></script>
 <script defer src="./chess-stockfish.js?v=1"></script>
@@ -6170,8 +6170,51 @@ function askToResign() {
       [['Keep playing','quiet',null],['End game','gold',()=>resign()]]);
     return;
   }
+  if (G.onlineProvider === 'supabase' && mySeat) {
+    const acts = [['Keep playing','quiet',null]];
+    if (OFFERS.draw !== OFFERS.me) acts.push([OFFERS.draw ? 'Accept draw' : 'Offer a draw','quiet',()=>sendOffer('draw')]);
+    if (G.moves.length && G.pos.chess.turn() !== mySeat && !OFFERS.takeback) acts.push(['Ask to take back','quiet',()=>sendOffer('takeback')]);
+    acts.push(['Resign','gold',()=>resign()]);
+    dialog('Resign this game?', ['Resigning gives your opponent the win. You can offer a draw or ask to take back your last move instead.'], acts);
+    return;
+  }
   dialog('Resign this game?', ['Your opponent will be given the win. This cannot be undone.'],
     [['Keep playing','quiet',null],['Resign','gold',()=>resign()]]);
+}
+/* online draw offers and takeback requests (server: chess_offer / chess_answer_offer) */
+const OFFERS = { draw: null, takeback: null, me: null, seen: '', mine: '' };
+let offerDialog = null;
+function sendOffer(kind) {
+  if (G.onlineBusy) return;
+  G.onlineBusy = true;
+  Promise.resolve(window.familyChessOffer?.(kind) ?? Promise.reject(new Error('Reload the app to use this.')))
+    .then((r) => toast(r === 'agreed' ? 'Draw agreed.' : kind === 'draw' ? 'Draw offered. It stays open until they move.' : 'Takeback requested.', 3200))
+    .catch((e) => toast(e?.message || 'Could not send that.', 4200))
+    .finally(() => { G.onlineBusy = false; updateAll(); });
+}
+function answerOffer(kind, accept) {
+  Promise.resolve(window.familyChessAnswerOffer?.(kind, accept))
+    .then((r) => { if (r === 'taken') toast('Move taken back.', 2400); })
+    .catch((e) => toast(e?.message || 'Could not answer that.', 4200));
+}
+function setOffers(o) {
+  const prevMine = OFFERS.mine;
+  Object.assign(OFFERS, { draw: o.draw, takeback: o.takeback, me: o.me });
+  const mine = ['draw', 'takeback'].filter((k) => o[k] === o.me).join(',');
+  if (o.status === 'active') for (const k of prevMine.split(',').filter(Boolean))
+    if (!mine.includes(k) && !(k === 'draw' && OFFERS.draw)) toast(k === 'draw' ? 'Draw offer not accepted.' : 'Takeback not accepted.', 3000);
+  OFFERS.mine = o.status === 'active' ? mine : '';
+  const incoming = o.status !== 'active' ? null : o.takeback && o.takeback !== o.me ? 'takeback' : o.draw && o.draw !== o.me ? 'draw' : null;
+  const key = incoming ? incoming + ':' + G.gid + ':' + o.ply : '';
+  if (!incoming) { if (offerDialog) { offerDialog.close(); offerDialog = null; } OFFERS.seen = ''; return; }
+  if (key === OFFERS.seen) return;
+  OFFERS.seen = key;
+  if (offerDialog) offerDialog.close();
+  offerDialog = incoming === 'draw'
+    ? dialog(o.other + ' offers a draw', ['Accepting ends the game as a draw.'],
+      [['Decline','quiet',()=>{ offerDialog = null; answerOffer('draw', false); }],['Accept draw','gold',()=>{ offerDialog = null; answerOffer('draw', true); }]])
+    : dialog(o.other + ' asks to take back their last move', ['If you agree, their move is undone and it’s their turn again.'],
+      [['Decline','quiet',()=>{ offerDialog = null; answerOffer('takeback', false); }],['Allow','gold',()=>{ offerDialog = null; answerOffer('takeback', true); }]]);
 }
 $('btnResign').addEventListener('click',askToResign);
 $('btnChatResign').addEventListener('click',askToResign);
@@ -7193,6 +7236,7 @@ function dismissPregame() { if (PG.on) closePregame(null); }
 /* Supabase match bridge: reuse the original 3D/2D board and chess.js engine. */
 const familyChessBoot = boot();
 window.familyChessNative = {
+  offers(o) { try { setOffers(o || {}); } catch (e) { console.warn('offers', e); } },
   async present(game, moves, userId, labels = {}, sharedColors = {}, options = {}) {
     await familyChessBoot;
     if (!game || !Array.isArray(moves) || typeof userId !== 'string') throw new Error('Invalid online game');
@@ -7234,7 +7278,7 @@ window.familyChessNative = {
     G.result = game.result || null;
     G.reason = G.status === 'over' ?
       (game.end_reason==='replaced'?'replaced':game.end_reason==='ended'?'ended':game.end_reason==='resignation'?'resignation':
-       game.end_reason==='timeout'?'timeout':
+       game.end_reason==='timeout'?'timeout':game.end_reason==='agreement'?'agreement':
        pos.chess.isCheckmate()?'checkmate':
        pos.chess.isStalemate()?'stalemate':pos.chess.isInsufficientMaterial()?'insufficient material':
        pos.chess.isThreefoldRepetition()?'threefold repetition':'the fifty-move rule') : null;

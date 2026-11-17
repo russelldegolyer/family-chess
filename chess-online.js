@@ -403,7 +403,7 @@
     const id=matchId, uid=player.id, epoch=syncToken;
     try {
       const {data:g,error:gameError}=await api.from('chess_games')
-        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_expiry,clock_white_ms,clock_black_ms,clock_turn_started_at,clock_state,clock_penalty_side,clock_paused_by,resumed_plies,start_fen')
+        .select('id,white_player_id,black_player_id,status,current_fen,result,end_reason,created_at,updated_at,clock_mode,clock_expiry,clock_white_ms,clock_black_ms,clock_turn_started_at,clock_state,clock_penalty_side,clock_paused_by,resumed_plies,start_fen,draw_offer_by,takeback_by')
         .eq('id',id).maybeSingle();
       if (gameError) throw gameError;
       if (!g) {
@@ -437,6 +437,8 @@
       await native.present(g,moves.map(m=>m.move_uci),uid,labels,colors,
         {spectating:isWatcher,actions:actions||[]});
       shownMatch=id;
+      if(!isWatcher)native.offers?.({draw:g.draw_offer_by||null,takeback:g.takeback_by||null,me:uid,
+        other:labels[g.white_player_id===uid?g.black_player_id:g.white_player_id]||'Your opponent',ply:moves.length,status:g.status});
       if(isWatcher){
         spectatorLabel.textContent=`Watching · ${labels[g.white_player_id]||'White'} vs ${labels[g.black_player_id]||'Black'}`;
         spectatorBar.hidden=false;
@@ -544,6 +546,20 @@
     if(error) throw new Error(error.message || 'Could not resign the game.');
     await syncMatch();
     return data;
+  };
+
+  // Draw offers and takeback requests: the RPCs check the player, the turn and the history.
+  window.familyChessOffer = async (kind) => {
+    if(!player||!matchId||matchMode!=='play')throw new Error('Open your online match first.');
+    const {data,error}=await api.rpc('chess_offer',{p_game_id:matchId,p_kind:kind});
+    if(error)throw new Error(/function|schema cache/i.test(error.message||'')?'This needs the new database update.':(error.message||'Could not send that.'));
+    await syncMatch(); return data;
+  };
+  window.familyChessAnswerOffer = async (kind,accept) => {
+    if(!player||!matchId||matchMode!=='play')throw new Error('Open your online match first.');
+    const {data,error}=await api.rpc('chess_answer_offer',{p_game_id:matchId,p_kind:kind,p_accept:!!accept});
+    if(error)throw new Error(error.message||'Could not answer that.');
+    await syncMatch(); return data;
   };
 
   window.familyChessSubmitMove = async (id,move) => {
