@@ -28,7 +28,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Feature | Where | Notes |
 | --- | --- | --- |
 | Game state, moves, undo | `index.html` (`G`, `applyMove`, `playMove`, `undo`, `resetLocalGame`) | practice + online share one board |
-| Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu` | UI shows numbers only; engine branches on `level === 4/5` for the two extreme styles; each has its own opening book (`BOOK`: 4 = Gukesh repertoire, 5 = Magnus repertoire) and both avoid draws |
+| Computer opponent (5 levels) | `index.html` `#engineSrc` (worker), `requestComputer`, `cpu` | transposition table (Zobrist, cleared per move); UI shows numbers only; engine branches on `level === 4/5` for the two extreme styles; each has its own opening book (`BOOK`: 4 = Gukesh repertoire, 5 = Magnus repertoire) and both avoid draws |
 | 3D board/pieces/themes | `index.html` `THEMES`, `#masterSrc` (`sdfMesh` surface nets + vertex snapping; knight/bishop/queen heads are SDF), `applyTheme`, `fitCamera` | themes: unnamed (Default), cats (Wooden); retired ids alias to Default |
 | 2D board | `index.html` `draw2D`, `applyView`, `PREF2D` | |
 | Side chooser (start screen) | `index.html` `PG`, `openPregame`, `closePregame`, `pgStep`, `goHome`, `newGame` | swipe or tap White/Black + difficulty slider |
@@ -37,6 +37,12 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Settings dialog | `index.html` `openSettings` | one compact list: segmented controls + switches, no help text |
 | Sound | `index.html` `Sound` (Web Audio), `fxForMove` | unlocked by any tap/key (document listeners); `navigator.audioSession.type='playback'` on iPhone |
 | Game review | `index.html` `startReview`, `reviewStep`, `renderHistory`; `chess-review-analysis.js` | key-moments stepping |
+| Analysis engine (Stockfish 18 lite WASM) | `chess-stockfish.js` (`ChessStockfish.search/evalMove`), `engine/stockfish-18-lite-single.{js,wasm}` (GPL-3.0, `engine/COPYING.txt`) | loaded on first use by review, stats accuracy and training checks; the `#engineSrc` engine stays the opponent and the fallback |
+| Online draw offers / takebacks | RPCs `chess_offer`, `chess_answer_offer`, trigger `chess_moves_clear_offers` (`database/chess-draw-takeback-2026-11-17.sql`); `familyChessOffer`/`familyChessAnswerOffer` in `chess-online.js`; `askToResign`, `setOffers` in `index.html` | offered from the Resign (×) dialog; a draw offer stays open until the other player moves; a takeback is only your own last move |
+| Premoves | `index.html` `premove`, `premoveTap`, `checkPremove` (blue squares in 2D) | computer and online games |
+| PGN / FEN | `index.html` `gamePgn`, `copyPgn`, `openImport` (Settings → Game record) | import continues the game via `loadSavedGame` |
+| Crash reports | `chess-online.js` (top) → RPC `chess_report_error` → `chess_client_errors` (`database/chess-client-errors-2026-11-17.sql`) | signed-in players only, 30/hour, kept 60 days |
+| Offline cache | `chess-sw.js` (fetch handler), registered from `index.html`; `auth-gate.js` lets a known player in offline | |
 | Clocks, pause, pawn-for-time | `chess-clock.js` (practice stops at 0:30 for a choice: pawn +1:30 or play on to 3:00); pawns are picked by tapping the board (`pawnPick` in `index.html`); server `chess-clock-action` + `database/chess-pawn-time-*.sql`, `chess-move60-*.sql` | |
 | Saved games | Save button (`btnSave`/`btnChatSave`, `saveCurrentGame`, `loadSavedGame`, resume banner in `index.html`); list/detail and Create game position editor (`openEditor`) in `chess-training.js` (Training → Saved games); saved clock restored via `ChessClock.resumeLocal`; `chess-saved-game` Edge Function + `database/chess-saved-games-2026-11-12.sql` | |
 | Play online sheet, Your games, name (top), End game, finished-match query | `chess-online.js` (`show`, `refresh`, `refreshLive`, `startMatch`, `syncMatch`) | |
@@ -49,7 +55,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Live clock change | `ChessClock.changeLocalMode` (practice), `applyClockChange` in `index.html`, `familyChessChangeClock` → RPC `chess_change_clock` (online) | total→total shifts both clocks by the difference |
 | Last online | `chess-social.js` (`lastOnline`, `touchLastSeen` heartbeat → RPC `chess_touch_last_seen`) | falls back to "Offline" if the column is missing |
 | Stats (record cards on Play online → vs Players / vs Computer) | `chess-stats.js` / `.css`; computer games logged per level in `recordCpuResult` (`chess.cpuRecord`, `chess.cpuGames`, last 80, this device) | online stats read `chess_games` + `chess_moves.fen_after`; move quality graded by the engine on the device, cached per game |
-| Tests | `tests/*.test.mjs` | regex checks on source + VM clock/AI/colour tests; all 39 pass |
+| Tests | `tests/*.test.mjs` (source checks + VM tests); `tests/e2e/*.e2e.mjs` (Playwright, real app with `tests/e2e/mock-supabase.js`; CI job `browser`) | |
 
 ## Feature Registry
 **Implemented and verified** (checked in a browser or by tests during 2026-11 sessions)
@@ -65,6 +71,8 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - Opening an online match ends the practice game; returning from online opens the side chooser.
 - Review: Next/Prev stop only on inaccuracies, mistakes, blunders and strong replies; "Every move" toggle.
 - Five computer levels; 4 and 5 use different decision criteria (tests in `chess-ai-five-levels.test.mjs`).
+- Online games end on threefold repetition on the server (`chess-submit-move` v5), as well as mate, stalemate, insufficient material and the fifty-move rule.
+- Adaptive puzzles: every third one comes from the weakest theme (6+ attempts, under 70%).
 
 **Implemented but unverified end-to-end here** (code present; needs real devices / two accounts)
 - Online play with server-validated moves; realtime sync; spectating; separate spectator chat.
@@ -101,5 +109,6 @@ Setup, deployment and secrets: see README.md (not repeated here).
 - Clock state lives in `chess-clock.js`; local timeouts call back into `index.html`; online timeouts are settled only by the server.
 - Shared Supabase project: any SQL must target `public.chess_*` only.
 - Deploy contents: `.vercelignore` keeps database/, docs/, supabase/, tests/, tools/, .github/, README.md and CLAUDE.md out of Vercel deploys. A new runtime file must live at the repo root (or a folder not listed there).
-- Blunder check answers: `chess-blunder-check.json` (Stockfish 16.1, depth 18; rebuild with `tools/verify-blunder-check.py` when drill puzzles change). Puzzles not in it fall back to the in-browser engine.
+- Blunder check answers: `chess-blunder-check.json` (Stockfish 16.1, depth 18; rebuild with `tools/verify-blunder-check.py` when drill puzzles change). Puzzles not in it fall back to Stockfish in the browser.
+- `engine/` (Stockfish WASM, ~7 MB) must stay deployable (not in `.vercelignore`); bump `URL_SF ?v=` in `chess-stockfish.js` when replacing it.
 - Visual system: iOS look on near-black surfaces; `chess-skin.css` (loaded last) only darkens backgrounds and holds two layout fixes (D-36).

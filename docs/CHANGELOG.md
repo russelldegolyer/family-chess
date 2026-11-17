@@ -17,6 +17,26 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Added**
+- Stockfish (the world's strongest engine) now runs on your device for game review, accuracy grades, hints and lesson checks. It loads the first time you open a review. The computer opponents are unchanged.
+- Online games: offer a draw or ask to take back your last move from the Resign (×) button. Your opponent gets Accept / Decline.
+- Premoves: during the computer's or your opponent's turn, tap a piece and a square; the move plays the moment it's your turn (if still legal). Tap a piece to cancel.
+- Settings → Game record: Copy PGN (paste into any chess site), and Set up… to start from a pasted FEN position or continue a pasted PGN game.
+- The app now works offline for practice games and lessons.
+- Crash reports from signed-in players are saved so bugs can be found and fixed.
+- Browser tests run on every push (computer game, premove, PGN, review, home buttons).
+
+**Improved**
+- The computer opponent searches deeper in the same time (it remembers positions it has already looked at), most noticeably in endgames.
+- Adaptive puzzles: every third one comes from the theme you miss most.
+
+**Fixed**
+- Online games now end in a draw on threefold repetition (the server already handled mate, stalemate, insufficient material and the fifty-move rule).
+
+---
+
 ## 2026-11-16 — Pawn rule for the Seconds timer (deployed 6:30 PM)
 
 **Added**

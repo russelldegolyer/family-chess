@@ -85,3 +85,9 @@ engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
 ## D-37 Pawn rule on per-move clocks (2026-11-14)
 - Seconds (s<N>) clocks support the pawn rule: trade window min(10 s, N/2); a trade passes the turn and both clocks reset to N; a timeout with the pawn rule is a pawn penalty, then the victim gets N to move.
 - For Seconds the time-out choices are Game ends / Pawn trade ('60s a move' only applies to minute clocks). Minute clocks are unchanged (+1:30, back to 3:00).
+
+## D-38 Stockfish for analysis, built-in engine as opponent (2026-11-17)
+- Review grades, accuracy, hints and training checks use Stockfish 18 lite (WASM, on the device, loaded on first use). The five computer levels keep the built-in engine so their personalities don't change; it is also the fallback.
+
+## D-39 Online draw offers and takebacks (2026-11-17)
+- Both go through RPCs (`chess_offer`, `chess_answer_offer`). A takeback undoes only the requester's own last move, before the reply, and not across a pawn trade. A draw offer stays open until the other player moves; two offers agree a draw.
