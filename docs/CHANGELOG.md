@@ -6,6 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
+| 2026-11-17 | 13 |
 | 2026-11-16 | 1 |
 | 2026-11-14 | 11 |
 | 2026-11-13 | 27 |
@@ -17,7 +18,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-17 — Stockfish analysis, online draws and takebacks, premoves, PGN, offline (deployed 11:05 AM)
 
 **Added**
 - Stockfish (the world's strongest engine) now runs on your device for game review, accuracy grades, hints and lesson checks. It loads the first time you open a review. The computer opponents are unchanged.
@@ -34,6 +35,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 **Fixed**
 - Online games now end in a draw on threefold repetition (the server already handled mate, stalemate, insufficient material and the fifty-move rule).
+- Security: the friends check only answers about your own friendships.
 
 ---
 
