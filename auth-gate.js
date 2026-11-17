@@ -113,8 +113,11 @@
     if (event === 'SIGNED_OUT') { recovering = false; showUser(null); return; }
     if (!recovering) showUser(session?.user || null);
   });
+  // Offline with an expired token the session can't refresh: let a known player in for practice;
+  // online features reconnect when the signal returns.
+  const storedUser = () => { try { for (const k of Object.keys(localStorage)) if (/^sb-.*-auth-token$/.test(k)) { const u = JSON.parse(localStorage.getItem(k))?.user; if (u?.id) return u; } } catch {} return null; };
   client.auth.getSession().then(({data,error}) => {
-    if (error) { setMessage('Unable to check your account. Try reloading.', true); return; }
+    if (error) { const u = !navigator.onLine && storedUser(); if (u) { showUser(u); return; } setMessage('Unable to check your account. Try reloading.', true); return; }
     if (!recovering) showUser(data.session?.user || null);
-  }).catch((e) => setMessage('Unable to check your account: ' + e.message, true));
+  }).catch((e) => { const u = !navigator.onLine && storedUser(); if (u) showUser(u); else setMessage('Unable to check your account: ' + e.message, true); });
 })();

@@ -46,7 +46,7 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <link rel="stylesheet" href="./auth.css?v=4">
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
-<script defer src="./auth-gate.js"></script>
+<script defer src="./auth-gate.js?v=2"></script>
 <script defer src="./chess-clock.js?v=16"></script>
 <script defer src="./chess-online.js?v=31"></script>
 <script defer src="./chess-chat.js?v=8"></script>
@@ -7164,6 +7164,10 @@ function openImport() {
   row.append(button('Cancel', 'quiet', () => d.close()), button('Two players', 'quiet', () => go('local')), button('Play computer', 'gold', () => go('cpu')));
   d.card.insertBefore(ta, row); d.card.insertBefore(err, row); ta.focus();
 }
+
+/* offline cache for the app files (chess-sw.js also handles challenge alerts) */
+if ('serviceWorker' in navigator && location.protocol === 'https:')
+  setTimeout(() => navigator.serviceWorker.register('/chess-sw.js').catch(() => {}), 4000);
 
 /* ------------------------------------------------------------------ boot */
 let needsRender = true;
