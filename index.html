@@ -1644,6 +1644,25 @@ function Engine() {
   let nodes = 0, deadline = 0, stopped = false, level = 2;
   const killers = [];
   const hist = new Int32Array(128 * 128);
+  /* transposition table: positions reached by different move orders are searched once.
+     Two 32-bit Zobrist hashes (h1 picks the slot, h2 verifies it), cleared for every think(). */
+  let seed = 0x9e3779b9;
+  const rnd32 = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed | 0; };
+  const ZP1 = new Int32Array(16 * 128), ZP2 = new Int32Array(16 * 128), ZC1 = new Int32Array(16), ZC2 = new Int32Array(16), ZE1 = new Int32Array(128), ZE2 = new Int32Array(128);
+  for (const a of [ZP1, ZP2, ZC1, ZC2, ZE1, ZE2]) for (let i = 0; i < a.length; i++) a[i] = rnd32();
+  const ZS1 = rnd32(), ZS2 = rnd32();
+  let h1 = 0, h2 = 0;
+  const TT_BITS = 19, TT_MASK = (1 << TT_BITS) - 1;
+  const ttKey = new Int32Array(1 << TT_BITS), ttScore = new Int32Array(1 << TT_BITS), ttMove = new Int32Array(1 << TT_BITS);
+  const ttDepth = new Int8Array(1 << TT_BITS), ttFlag = new Int8Array(1 << TT_BITS);   /* flag 0 empty, 1 exact, 2 lower, 3 upper */
+  function rehash() {
+    h1 = 0; h2 = 0;
+    for (let s = 0; s < 128; s++) { if (s & 0x88) { s += 7; continue; } if (b[s]) { h1 ^= ZP1[b[s] * 128 + s]; h2 ^= ZP2[b[s] * 128 + s]; } }
+    h1 ^= ZC1[castle]; h2 ^= ZC2[castle];
+    if (ep >= 0) { h1 ^= ZE1[ep]; h2 ^= ZE2[ep]; }
+    if (side) { h1 ^= ZS1; h2 ^= ZS2; }
+  }
+  const zp = (code, sq) => { h1 ^= ZP1[code * 128 + sq]; h2 ^= ZP2[code * 128 + sq]; };
   const on = (s) => (s & 0x88) === 0;
   const idx64 = (s, white) => (white ? (s >> 4) * 8 + (s & 7) : (7 - (s >> 4)) * 8 + (s & 7));
   const sqName = (s) => 'abcdefgh'[s & 7] + (8 - (s >> 4));
@@ -1666,6 +1685,7 @@ function Engine() {
     castle = (cas.includes('K') ? 1 : 0) | (cas.includes('Q') ? 2 : 0) | (cas.includes('k') ? 4 : 0) | (cas.includes('q') ? 8 : 0);
     ep = eps && eps !== '-' ? sqOf(eps) : -1;
     stack.length = 0;
+    rehash();
   }
 
   function attacked(s, by) {
@@ -1740,20 +1760,29 @@ function Engine() {
   }
 
   function make(m) {
-    stack.push({ m, castle, ep });
+    stack.push({ m, castle, ep, h1, h2 });
     const us = side;
+    zp(m.p, m.f);
+    if (m.c) zp(m.c, m.fl & 1 ? m.t + (us ? -16 : 16) : m.t);
+    zp(m.pr ? (m.pr | us) : m.p, m.t);
     b[m.t] = m.pr ? (m.pr | us) : m.p;
     b[m.f] = 0;
     if (m.fl & 1) b[m.t + (us ? -16 : 16)] = 0;
     if (m.fl & 2) {
-      if (m.t === 0x76) { b[0x75] = b[0x77]; b[0x77] = 0; }
-      else if (m.t === 0x72) { b[0x73] = b[0x70]; b[0x70] = 0; }
-      else if (m.t === 0x06) { b[0x05] = b[0x07]; b[0x07] = 0; }
-      else if (m.t === 0x02) { b[0x03] = b[0x00]; b[0x00] = 0; }
+      const rk = R | us;
+      if (m.t === 0x76) { b[0x75] = b[0x77]; b[0x77] = 0; zp(rk, 0x77); zp(rk, 0x75); }
+      else if (m.t === 0x72) { b[0x73] = b[0x70]; b[0x70] = 0; zp(rk, 0x70); zp(rk, 0x73); }
+      else if (m.t === 0x06) { b[0x05] = b[0x07]; b[0x07] = 0; zp(rk, 0x07); zp(rk, 0x05); }
+      else if (m.t === 0x02) { b[0x03] = b[0x00]; b[0x00] = 0; zp(rk, 0x00); zp(rk, 0x03); }
     }
     if ((m.p & 7) === K) king[us ? 1 : 0] = m.t;
+    h1 ^= ZC1[castle]; h2 ^= ZC2[castle];
     castle &= CR[m.f] & CR[m.t];
+    h1 ^= ZC1[castle]; h2 ^= ZC2[castle];
+    if (ep >= 0) { h1 ^= ZE1[ep]; h2 ^= ZE2[ep]; }
     ep = m.fl & 4 ? (m.f + m.t) >> 1 : -1;
+    if (ep >= 0) { h1 ^= ZE1[ep]; h2 ^= ZE2[ep]; }
+    h1 ^= ZS1; h2 ^= ZS2;
     side ^= BL;
     if (attacked(king[us ? 1 : 0], side)) { unmake(); return false; }
     return true;
@@ -1772,7 +1801,7 @@ function Engine() {
       else if (m.t === 0x02) { b[0x00] = b[0x03]; b[0x03] = 0; }
     }
     if ((m.p & 7) === K) king[us ? 1 : 0] = m.f;
-    castle = u.castle; ep = u.ep;
+    castle = u.castle; ep = u.ep; h1 = u.h1; h2 = u.h2;
   }
 
   function perft(d) {
@@ -1920,14 +1949,26 @@ function Engine() {
     const check = inCheck();
     if (check && level >= 3 && ply < 10) depth++;
     if (depth <= 0) return level === 1 ? evaluate() : quiesce(alpha, beta, QD[level]);
-    let legal = 0, best = -MATE * 2;
-    for (const m of order(gen([], false), ply, null)) {
+    const slot = h1 & TT_MASK, alpha0 = alpha;
+    let ttBest = null;
+    if (ttFlag[slot] && ttKey[slot] === h2) {
+      const code = ttMove[slot];
+      if (code) ttBest = { f: code >> 10, t: (code >> 3) & 127, pr: code & 7 };
+      if (ttDepth[slot] >= depth) {
+        let v = ttScore[slot];
+        if (v > MATE - 500) v -= ply; else if (v < -MATE + 500) v += ply;   /* stored relative to this node */
+        const fl = ttFlag[slot];
+        if (fl === 1 || (fl === 2 && v >= beta) || (fl === 3 && v <= alpha)) return v;
+      }
+    }
+    let legal = 0, best = -MATE * 2, bestMove = null;
+    for (const m of order(gen([], false), ply, ttBest)) {
       if (!make(m)) continue;
       legal++;
       const v = -search(depth - 1, -beta, -alpha, ply + 1);
       unmake();
       if (stopped) return 0;
-      if (v > best) best = v;
+      if (v > best) { best = v; bestMove = m; }
       if (v > alpha) alpha = v;
       if (alpha >= beta) {
         if (!m.c) { const k = killers[ply] || (killers[ply] = [null, null]); k[1] = k[0]; k[0] = m; hist[m.f * 128 + m.t] += depth * depth; }
@@ -1935,6 +1976,13 @@ function Engine() {
       }
     }
     if (!legal) return check ? -MATE + ply : (level >= 4 ? (side === rootSide ? -30 : 30) : 0);
+    if (ttDepth[slot] <= depth || ttKey[slot] !== h2) {
+      let v = best;
+      if (v > MATE - 500) v += ply; else if (v < -MATE + 500) v -= ply;
+      ttKey[slot] = h2; ttDepth[slot] = Math.min(depth, 127); ttScore[slot] = v;
+      ttFlag[slot] = best <= alpha0 ? 3 : best >= beta ? 2 : 1;
+      ttMove[slot] = bestMove ? (bestMove.f << 10) | (bestMove.t << 3) | (bestMove.pr || 0) : 0;
+    }
     return best;
   }
 
@@ -1974,7 +2022,7 @@ function Engine() {
   function think(fen, lvl, budget, rnd = Math.random, analysisMove = '') {
     load(fen);
     lvl = Math.max(1, Math.min(5, Math.trunc(Number(lvl) || 2)));
-    level = lvl; nodes = 0; stopped = false; killers.length = 0; hist.fill(0); rootSide = side;
+    level = lvl; nodes = 0; stopped = false; killers.length = 0; hist.fill(0); rootSide = side; ttFlag.fill(0);
     const start = performance.now();
     deadline = start + budget;
     const root = gen([], false).filter((m) => { if (!make(m)) return false; unmake(); return true; });
