@@ -6,6 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
+| 2026-11-16 | 1 |
 | 2026-11-14 | 11 |
 | 2026-11-13 | 27 |
 | 2026-11-12 | 52 |
@@ -16,7 +17,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-16 — Pawn rule for the Seconds timer (deployed 6:30 PM)
 
 **Added**
 - The pawn rule now works with the Seconds (per-move) timer too. At 10 seconds left (or half the move time on very short clocks) you can give up one of your pawns instead of moving; the next move starts with a fresh clock. Let it run out and your opponent removes one of your pawns, then you get a fresh clock to move. Settings → When time runs out offers Game ends or Pawn trade for Seconds. (Database and server changes are already live.)
