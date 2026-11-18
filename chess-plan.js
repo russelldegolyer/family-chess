@@ -1,7 +1,7 @@
 /* Your plan: reads a finished game from one player's side and says, phase by phase, what they were trying to do,
    how it went, and one concrete way to do it better. Plain rules over the moves (plus the accuracy pass when it
    has run) — no outside service. Also produces compact tags for the style profile in Training.
-   API: window.familyChessPlan = { read({ Chess, moves, side, acc, result }), open(read, { onPly, onPractise }) } */
+   API: window.familyChessPlan = { read({ Chess, moves, side, acc, result }), open(read, { onPly, onPractice }) } */
 (() => {
   'use strict';
   const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
@@ -12,7 +12,7 @@
   const moveNo = (ply) => Math.ceil(ply / 2);
   const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
 
-  /* where each finding sends you to practise (Training chapter or Academy lesson) */
+  /* where each finding sends you to practice (Training chapter or Academy lesson) */
   const FIX = {
     hung:        { chapter: 'd1', title: 'Guard your pieces', what: 'Left a piece unprotected' },
     forked:      { chapter: 'd3', title: 'Forks and pins coming', what: 'Walked into a fork or pin' },
@@ -242,7 +242,7 @@
 
   /* ---- the sheet ---- */
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-  function open(R, { onPly, onPractise, title } = {}) {
+  function open(R, { onPly, onPractice, title } = {}) {
     if (!R) return;
     document.querySelector('.pl-ov')?.remove();
     const ov = el('div', 'pl-ov'), sh = el('section', 'pl-sheet'); sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-label', 'Your game, read');
@@ -258,7 +258,7 @@
       const t = el('div', 'pl-tip'); t.append(el('span', 'pl-label', 'Fix this next'), el('b', '', R.tip.what), el('p', '', R.tip.text));
       const row = el('div', 'pl-row');
       if (onPly) { const b = el('button', 'pl-btn', 'See move ' + moveNo(R.tip.ply)); b.type = 'button'; b.addEventListener('click', () => { close(); onPly(R.tip.ply); }); row.append(b); }
-      if (onPractise && (R.tip.chapter || R.tip.lesson)) { const b = el('button', 'pl-btn primary', 'Practise: ' + R.tip.title + ' ›'); b.type = 'button'; b.addEventListener('click', () => { close(); onPractise(R.tip); }); row.append(b); }
+      if (onPractice && (R.tip.chapter || R.tip.lesson)) { const b = el('button', 'pl-btn primary', 'Practice: ' + R.tip.title + ' ›'); b.type = 'button'; b.addEventListener('click', () => { close(); onPractice(R.tip); }); row.append(b); }
       if (row.childNodes.length) t.append(row);
       sh.append(t);
     }

@@ -29,7 +29,7 @@ test('phones show captured pieces and the material lead',()=>{
  assert.match(page,/if \(compact\) return;   \/\* phones show captured pieces/);
 });
 
-test('the path: chapters with learn / practise / prove, all open, recommended next',()=>{
+test('the path: chapters with learn / practice / prove, all open, recommended next',()=>{
  const tr=readFileSync(new URL('../chess-training.js',import.meta.url),'utf8');
  assert.match(tr,/const CHAPTERS = \[/);
  assert.match(tr,/const recommended = \(\) => \{ try \{ const f = styleFocus\(\); if \(f && f\.ch\) return f\.ch; \}/);

@@ -54,13 +54,13 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="./chess-stockfish.js?v=1"></script>
 <script defer src="./chess-review-analysis.js?v=4"></script>
 <link rel="stylesheet" href="./chess-social.css?v=6">
-<script defer src="./chess-social.js?v=24"></script>
+<script defer src="./chess-social.js?v=25"></script>
 <link rel="stylesheet" href="./chess-training.css?v=25">
 <link rel="stylesheet" href="./chess-plan.css?v=1">
 <link rel="stylesheet" href="./chess-stats.css?v=3">
 <script defer src="./chess-stats.js?v=6"></script>
-<script defer src="./chess-plan.js?v=1"></script>
-<script defer src="./chess-training.js?v=32"></script>
+<script defer src="./chess-plan.js?v=2"></script>
+<script defer src="./chess-training.js?v=33"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -6102,7 +6102,7 @@ function fillEndAccuracy(me) {
       const fix = me ? missedIdea(sw) : null;
       if (fix && window.familyChessTraining?.openChapterId) {
         const go = el('button', 'ec-acc-fix'); go.type = 'button';
-        go.innerHTML = '<span></span><em>Practise ›</em>';
+        go.innerHTML = '<span></span><em>Practice ›</em>';
         go.querySelector('span').textContent = 'Missed ' + fix.what + ' → ' + fix.title;
         go.addEventListener('click', () => { endDismissed = endKey(); $('endCard').hidden = true; window.familyChessTraining.openChapterId(fix.id); });
         box.append(go);
@@ -6144,7 +6144,7 @@ function fillEndPlan(me, acc) {
   b.addEventListener('click', () => {
     PL.open(R, {
       onPly: (ply) => { endDismissed = endKey(); $('endCard').hidden = true; beginGameReview(); setTimeout(() => reviewTo(ply), 60); },
-      onPractise: (tip) => { endDismissed = endKey(); $('endCard').hidden = true; const T = window.familyChessTraining; if (tip.chapter) T?.openChapterId(tip.chapter); else if (tip.lesson) T?.openLessonId?.(tip.lesson); },
+      onPractice: (tip) => { endDismissed = endKey(); $('endCard').hidden = true; const T = window.familyChessTraining; if (tip.chapter) T?.openChapterId(tip.chapter); else if (tip.lesson) T?.openLessonId?.(tip.lesson); },
     });
   });
   box.append(b); box.hidden = false;

@@ -43,7 +43,9 @@
   });
   let P = fresh();
   const key = () => 'chess.training.' + uid;
-  function loadLocal() { try { const v = JSON.parse(localStorage.getItem(key()) || 'null'); if (v && v.v === 1) P = { ...fresh(), ...v, puzzle: { ...fresh().puzzle, ...v.puzzle }, settings: { ...fresh().settings, ...v.settings } }; else P = fresh(); } catch { P = fresh(); } }
+  /* chapter progress used to be saved as "practise"; carry it over to "practice" */
+  function migrate() { for (const st of Object.values(P.path || {})) if (st && st.practise != null) { st.practice = Math.max(st.practice || 0, st.practise); delete st.practise; } if (P.settings?.mode === 'practise') P.settings.mode = 'practice'; }
+  function loadLocal() { try { const v = JSON.parse(localStorage.getItem(key()) || 'null'); if (v && v.v === 1) P = { ...fresh(), ...v, puzzle: { ...fresh().puzzle, ...v.puzzle }, settings: { ...fresh().settings, ...v.settings } }; else P = fresh(); } catch { P = fresh(); } migrate(); }
   let saveTimer = 0, remoteOk = true;
   function save() {
     P.updated = Date.now();
@@ -65,7 +67,7 @@
     try {
       const { data, error } = await c.from('chess_training_progress').select('data,updated_at').eq('user_id', uid).maybeSingle?.() ?? {};
       if (error) { if (/relation|schema cache|does not exist/i.test(error.message || '')) remoteOk = false; return; }
-      if (data?.data?.v === 1 && (data.data.updated || 0) > (P.updated || 0)) { P = { ...fresh(), ...data.data }; try { localStorage.setItem(key(), JSON.stringify(P)); } catch { } }
+      if (data?.data?.v === 1 && (data.data.updated || 0) > (P.updated || 0)) { P = { ...fresh(), ...data.data }; migrate(); try { localStorage.setItem(key(), JSON.stringify(P)); } catch { } }
     } catch { /* table not created yet */ }
   }
 
@@ -725,7 +727,7 @@
     ]);
     sec('Endgames', [
       ['Endgame Academy', LESSONS.length + ' lessons: check and stalemate, the basic mates, pawn endings, queen and rook endings (Lucena and Philidor), pawn structure, and the defender\'s side. A lesson is mastered when you pass its final test.'],
-      ['Your path', CHAPTERS.length + ' chapters that build on each other, including ' + CHAPTERS.filter((c) => c.defend).length + ' defence chapters (🛡). Each one: learn the idea, practise it (puzzles, a drill or a lesson), then prove it (in a row with no help, or a challenge). Every chapter is open; the first unfinished one is recommended next — or, once your style profile has enough games, the chapter that fixes what keeps costing you.'],
+      ['Your path', CHAPTERS.length + ' chapters that build on each other, including ' + CHAPTERS.filter((c) => c.defend).length + ' defense chapters (🛡). Each one: learn the idea, practice it (puzzles, a drill or a lesson), then prove it (in a row with no help, or a challenge). Every chapter is open; the first unfinished one is recommended next — or, once your style profile has enough games, the chapter that fixes what keeps costing you.'],
       ['Endgame Challenges', 'Win a set ending (basic mates, stalemate traps, pawn endings) against a computer that fights back. Several use exact endgame tables, so only precise play wins.'],
       ['Overall', 'The ring on the Training page averages three things: puzzles solved (up to 100), lessons mastered and challenges won (up to 20).'],
     ]);
@@ -869,7 +871,7 @@
     B().play(p.moves[0]); /* the opponent's last move, then the player's turn */
     await sleep(350); if (my !== session) return;
     B().busy(false);
-    say(PZ.msgNode, PATH && PATH.review ? 'You missed this one before. Find the best move.' : focusName && !retry ? 'Find the best move. Practising ' + focusName.toLowerCase() + ', a theme you miss more often.' : 'Find the best move.');
+    say(PZ.msgNode, PATH && PATH.review ? 'You missed this one before. Find the best move.' : focusName && !retry ? 'Find the best move. Practicing ' + focusName.toLowerCase() + ', a theme you miss more often.' : 'Find the best move.');
     if (PATH && PATH.speed) { PATH.t0 = performance.now(); speedTick(my); }
     B().onMove((uci) => void onPuzzleMove(uci, my));
   }
@@ -1037,7 +1039,7 @@
     if (goal === 'hold') {
       const j = await judge(fenAfter); /* computer (attacker) to move */
       if (j.r === 'win') return { ...out, kind: 'lost', text: pawnEnding ? explainPawn(fenBefore, uci, fenAfter, false) : 'That lets the computer win. Keep your king in front of the pawn and take the opposition.' };
-      return { ...out, kind: 'good', text: pawnEnding ? explainPawn(fenBefore, uci, fenAfter, true) : 'Good defence. The draw holds.' };
+      return { ...out, kind: 'good', text: pawnEnding ? explainPawn(fenBefore, uci, fenAfter, true) : 'Good defense. The draw holds.' };
     }
     const jb = probe(fenBefore);
     const j = await judge(fenAfter); /* defender to move: 'loss' means you are still winning */
@@ -1141,7 +1143,7 @@
   }
 
   /* ------------------------------------------------------------------ Endgame Academy */
-  /* scripted lines (rook endings): user steps accept listed moves; reply steps are the defence. Texts name ranks and
+  /* scripted lines (rook endings): user steps accept listed moves; reply steps are the defense. Texts name ranks and
      pieces, never files, so a line can be mirrored or shifted to another file (vary). */
   const LUCENA = { fen: '1K6/1P1k4/8/8/8/8/r7/2R5 w - - 0 1', mid: '1K6/1P2k3/8/8/3R4/8/8/r7 w - - 0 1', steps: [
     { ok: ['c1d1'], ask: 'First, check the black king to push it one more file away.', say: 'Check — the king is pushed another file away.', no: 'Start with a rook check that pushes the king further from the pawn.' },
@@ -1206,7 +1208,7 @@
         { fen: '8/8/5k2/8/4K3/6P1/8/8 w - - 0 1', task: 'Distant opposition: only one king move wins.', type: 'keep' },
       ],
       harder: { fen: '8/8/8/2k5/8/8/2K1P3/8 w - - 0 1', task: 'Opposition from far away — find the only winning move.', type: 'keep' },
-      mastery: { table: 'p', minPlies: 22, task: 'Win the pawn ending against perfect defence.', goal: 'promote', kind: 'engine' } },
+      mastery: { table: 'p', minPlies: 22, task: 'Win the pawn ending against perfect defense.', goal: 'promote', kind: 'engine' } },
     { id: 'f4', title: 'The square rule',
       intro: ['Draw a square from the pawn to its queening rank. If the defending king can step into that square, it catches the pawn. If not, the pawn runs home alone.', 'A pawn on its starting square may move two — count the square from where it lands. And it matters whose move it is.'],
       demo: { fen: '8/8/8/3P4/k7/8/8/6K1 w - - 0 1', steps: [
@@ -1270,8 +1272,8 @@
         { fen: '8/1k6/8/8/K7/6P1/8/8 w - - 0 1', task: 'Only one move wins. Think opposition.', type: 'keep' },
         { fen: '8/8/8/8/8/5k2/2P5/4K3 w - - 0 1', task: 'Only one move wins.', type: 'keep' },
       ],
-      harder: { table: 'p', minPlies: 30, task: 'Win against perfect defence.', goal: 'promote', kind: 'engine' },
-      mastery: { table: 'p', minPlies: 36, task: 'Mastery: a long win against perfect defence.', goal: 'promote', kind: 'engine' } },
+      harder: { table: 'p', minPlies: 30, task: 'Win against perfect defense.', goal: 'promote', kind: 'engine' },
+      mastery: { table: 'p', minPlies: 36, task: 'Mastery: a long win against perfect defense.', goal: 'promote', kind: 'engine' } },
     { id: 'p2', title: 'Defending against the pawn',
       intro: ['With the lone king, stand IN FRONT of the pawn. When the kings face each other, keep the opposition; when the pawn reaches your back rank\'s neighbour, step straight back.', 'Every endgame of king and pawn against king is either a forced win or a draw — your job is to make no mistake.'],
       demo: { fen: '4k3/8/4K3/4P3/8/8/8/8 b - - 0 1', auto: 'engine', plies: 6, say: 'When the attacker already owns a key square, nothing helps — so stop it earlier.' },
@@ -1325,7 +1327,7 @@
       ],
       harder: { type: 'line', ...LUCENA, vary: true, task: 'The whole Lucena, on a different file.' },
       mastery: { line: true, ...LUCENA, vary: true, task: 'Play the Lucena from start to finish — no hints, no mistakes.' } },
-    { id: 'r2', title: 'Philidor: the drawing defence', side: 'b', noBox: true,
+    { id: 'r2', title: 'Philidor: the drawing defense', side: 'b', noBox: true,
       intro: ['Defending rook and pawn with your rook: keep your king in front of the pawn and your rook on your 3rd rank (the 6th, when you are Black). The white king cannot come forward.', 'When the pawn steps onto that rank, the white king loses its shelter. Drop your rook to the far end of the board and check from behind — the checks never end. Draw.'],
       demo: { fen: PHILIDOR.fen, steps: [
         { say: 'You are Black. The white king wants to reach the 6th rank and help the pawn.' },
@@ -1389,16 +1391,16 @@
     { group: 'Defender\'s side' },
     { id: 'dq', title: 'Survive the queen', side: 'b', noBox: true,
       intro: ['Play the lone king against king and queen. You will lose — but seeing the mate from the other side teaches you how it works.', 'Stay in the middle of the board and keep away from the edges and corners. Stay close to the enemy king\'s side: the queen alone can\'t mate you.'],
-      demo: { fen: '8/8/8/3k4/8/8/8/1Q2K3 w - - 0 1', auto: 'engine', plies: 16, say: 'The best defence heads for the centre every time it gets the chance.' },
-      guided: [{ type: 'longest', table: 'q', minPlies: 12, task: 'You are the lone king. Pick the move that survives longest.' }, { type: 'longest', table: 'q', minPlies: 14, task: 'Again: the longest defence.' }],
-      harder: { type: 'longest', table: 'q', minPlies: 16, task: 'Find the longest defence.' },
-      mastery: { survive: 'q', task: 'Survive as long as you can: 7 of every 10 moves must be the longest defence.' } },
+      demo: { fen: '8/8/8/3k4/8/8/8/1Q2K3 w - - 0 1', auto: 'engine', plies: 16, say: 'The best defense heads for the centre every time it gets the chance.' },
+      guided: [{ type: 'longest', table: 'q', minPlies: 12, task: 'You are the lone king. Pick the move that survives longest.' }, { type: 'longest', table: 'q', minPlies: 14, task: 'Again: the longest defense.' }],
+      harder: { type: 'longest', table: 'q', minPlies: 16, task: 'Find the longest defense.' },
+      mastery: { survive: 'q', task: 'Survive as long as you can: 7 of every 10 moves must be the longest defense.' } },
     { id: 'dr', title: 'Survive the rook', side: 'b', noBox: true,
       intro: ['Now the lone king against king and rook. The rook mate takes longer — make it as long as possible.', 'Attack the rook when you can, step away from the rook\'s line, and avoid facing the white king (opposition) on the edge.'],
       demo: { fen: '8/8/8/4k3/8/8/8/R3K3 w - - 0 1', auto: 'engine', plies: 16, say: 'The defending king keeps to the centre and makes the rook work for every square.' },
-      guided: [{ type: 'longest', table: 'r', minPlies: 20, task: 'Pick the move that survives longest.' }, { type: 'longest', table: 'r', minPlies: 24, task: 'Again: the longest defence.' }],
-      harder: { type: 'longest', table: 'r', minPlies: 28, task: 'Find the longest defence.' },
-      mastery: { survive: 'r', task: 'Survive as long as you can: 7 of every 10 moves must be the longest defence.' } },
+      guided: [{ type: 'longest', table: 'r', minPlies: 20, task: 'Pick the move that survives longest.' }, { type: 'longest', table: 'r', minPlies: 24, task: 'Again: the longest defense.' }],
+      harder: { type: 'longest', table: 'r', minPlies: 28, task: 'Find the longest defense.' },
+      mastery: { survive: 'r', task: 'Survive as long as you can: 7 of every 10 moves must be the longest defense.' } },
   ];
 
   const LESSONS = ALL_LESSONS.filter((l) => l.id);
@@ -1531,7 +1533,7 @@
       const bx = box(B().fen(), 'b');
       mark(LS.l.noBox ? {} : { tint: bx.squares });
       if (after.isCheckmate()) { say(msg, 'Checkmate! ' + (d.say || '')); break; }
-      if (isPawnLesson(LS.l)) { say(msg, (white ? '' : 'Black: ') + sanOf(fen, u) + (white ? ' — ' + explainPawn(fen, u, B().fen(), true).replace(/^Correct — /, '') : ' — the best defence.')); mark(d.rings && white && i < 2 ? { rings: d.rings } : {}); }
+      if (isPawnLesson(LS.l)) { say(msg, (white ? '' : 'Black: ') + sanOf(fen, u) + (white ? ' — ' + explainPawn(fen, u, B().fen(), true).replace(/^Correct — /, '') : ' — the best defense.')); mark(d.rings && white && i < 2 ? { rings: d.rings } : {}); }
       else if (white && d.auto !== 'teacher') { say(msg, sanOf(fen, u) + (after.inCheck() ? ' — check. ' : '. ') + (d.say || '')); mark(new C(B().fen()).moves().length && /p/i.test(fen.split(' ')[0].replace(/[^pP]/g, '')) ? {} : { tint: bx.squares }); }
       else if (white) say(msg, (after.inCheck() ? 'Check. ' : '') + (bx.area < before ? 'Box: ' + before + ' → ' + bx.area + ' squares.' : 'Box ' + bx.area + ' squares — ' + (u.length && new C(fen).get(u.slice(0, 2))?.type === 'k' ? 'the king steps up to help.' : 'keeping the cut.')));
       await sleep(900);
@@ -1541,7 +1543,7 @@
     await loadTables(); if (my !== session) return;
     if (g.type === 'line') { const L = g.vary ? varyLine(g) : g; B().setup({ fen: L.fen, side: g.side || 'w', opponent: 'Defender' }); B().busy(true); return void runLine(L, my, () => done()); }
     if (g.type === 'best') { const G2 = g.vary ? varyBest(g) : g; B().setup({ fen: G2.fen, side: g.side || 'w', opponent: 'Defender' }); B().busy(false); mark({}); return void runBest(G2, my, () => done()); }
-    if (g.type === 'longest') { const f = genDefence(g.table, g.minPlies || 12); B().setup({ fen: f, side: 'b', opponent: 'Computer' }); B().busy(false); mark({}); return void runLongest(g, my, done); }
+    if (g.type === 'longest') { const f = genDefense(g.table, g.minPlies || 12); B().setup({ fen: f, side: 'b', opponent: 'Computer' }); B().busy(false); mark({}); return void runLongest(g, my, done); }
     const fen0 = g.fen || masteryFen(g);
     B().setup({ fen: fen0, side: g.side || 'w', opponent: 'Defender' }); B().busy(false);
     if (g.type === 'keep') return void runKeep(g, my, done);
@@ -1693,7 +1695,7 @@
     { id: 'kbb', title: 'Two bishops mate', task: 'Checkmate with two bishops.', goal: 'mate', kind: 'engine', gen: () => genEnding(['b', 'b'], { bk: EDGE, minBox: 6 }) },
     { id: 'kbn', title: 'Bishop and knight mate', task: 'Checkmate with bishop and knight.', goal: 'mate', kind: 'engine', gen: () => genEnding(['b', 'n'], { bk: CORNER }) },
     { id: 'stale', title: 'Stalemate avoidance', task: 'Mate the cornered king — without stalemating it.', goal: 'mate', kind: 'teacher', gen: () => genEnding(['q'], { bk: ['a8', 'h8', 'a1', 'h1'], test: (c, f) => { const k = kingSq(c, 'b'); return dist(k, kingSq(c, 'w')) <= 3 && box(f, 'b').area <= 4; } }) },
-    { id: 'promo', title: 'King and pawn: win it', task: 'Promote the pawn — perfect defence, only precise moves win.', goal: 'promote', kind: 'engine', gen: () => hardKPK('w', 'win') },
+    { id: 'promo', title: 'King and pawn: win it', task: 'Promote the pawn — perfect defense, only precise moves win.', goal: 'promote', kind: 'engine', gen: () => hardKPK('w', 'win') },
     { id: 'pawns', title: 'Winning pawn endgames', task: 'Win the pawn ending: promote a pawn.', goal: 'promote', kind: 'engine', gen: () => pick(['8/8/8/4k3/8/p7/P3K1P1/8 w - - 0 1', '8/5pk1/8/8/8/1P6/5PK1/8 w - - 0 1', '8/8/2k5/p7/P7/2K5/6P1/8 w - - 0 1', '8/8/4k3/8/4KP2/6P1/8/8 w - - 0 1', '8/5p2/5k2/8/5K2/5P2/5P2/8 w - - 0 1', '8/8/8/2k5/8/1PK5/1P6/8 w - - 0 1']) },
     { id: 'hold', title: 'King and pawn: hold it', task: 'You are Black. Hold the draw for 25 moves.', goal: 'hold', kind: 'engine', side: 'b', gen: () => hardKPK('b', 'draw') },
   ];
@@ -1749,78 +1751,78 @@
   }
 
   /* ------------------------------------------------------------------ the path
-     One route through everything: each chapter teaches one idea (Learn), drills it (Practise) and tests it
+     One route through everything: each chapter teaches one idea (Learn), drills it (Practice) and tests it
      (Prove it). Every chapter is open; the first unfinished one is marked "Recommended next". */
   let PATH = null;   /* { ch, step, theme, lo, hi, count } while a path puzzle set is running */
   let RETURN = null; /* where Back / Done go while working through a chapter */
   const learn = (text, look) => ({ text, look });
   const CHAPTERS = [
     { id: 'c1', title: 'Checkmate basics', blurb: 'What check, mate and stalemate are, and finishing a game.',
-      learn: { lesson: 'l1' }, practise: { theme: 'mateIn1', lo: 400, hi: 1300, count: 6 }, prove: { challenge: 'stale' } },
+      learn: { lesson: 'l1' }, practice: { theme: 'mateIn1', lo: 400, hi: 1300, count: 6 }, prove: { challenge: 'stale' } },
     { id: 'c2', title: 'Free pieces', blurb: 'Spot pieces that are left unprotected, and take them.',
       learn: learn(['Before every move, ask: what did my opponent just leave undefended?', 'Count attackers and defenders on each piece. If a piece is attacked more times than it is defended, it can be won.'], ['Every capture', 'Pieces with no defender', 'Pieces defended only once']),
-      practise: { theme: 'hangingPiece', lo: 400, hi: 1300, count: 6 }, prove: { theme: 'hangingPiece', lo: 800, hi: 1600, count: 3 } },
+      practice: { theme: 'hangingPiece', lo: 400, hi: 1300, count: 6 }, prove: { theme: 'hangingPiece', lo: 800, hi: 1600, count: 3 } },
     { id: 'd1', title: 'Guard your pieces', blurb: 'See what your opponent can take — before you move.', defend: true,
       learn: learn(['Most games between beginners are lost to a piece left unprotected, not to a deep plan.', 'Before every move, look at your opponent\'s pieces one by one: what can each of them capture next move? If something of yours is attacked and not defended — or attacked more times than defended — deal with it first.'], ['Your pieces with no defender', 'What the opponent\'s last move attacks', 'Captures your opponent has next move']),
-      practise: { drill: 'threat', theme: ['hangingPiece'], count: 5 }, prove: { drill: 'blunder', theme: ['hangingPiece', 'fork'], count: 4 } },
+      practice: { drill: 'threat', theme: ['hangingPiece'], count: 5 }, prove: { drill: 'blunder', theme: ['hangingPiece', 'fork'], count: 4 } },
     { id: 'c3', title: 'Forks', blurb: 'One piece attacking two things at once.',
       learn: learn(['A fork is one move that attacks two targets. They can only save one.', 'Knights are the classic forkers, but queens, pawns and even kings fork too. Look for a square that touches two loose pieces, or the king and a piece.'], ['Knight jumps near the king', 'Two pieces on the same colour square', 'Checks that also attack']),
-      practise: { theme: 'fork', lo: 600, hi: 1400, count: 6 }, prove: { theme: 'fork', lo: 1000, hi: 1700, count: 3 } },
+      practice: { theme: 'fork', lo: 600, hi: 1400, count: 6 }, prove: { theme: 'fork', lo: 1000, hi: 1700, count: 3 } },
     { id: 'c4', title: 'King and queen mate', blurb: 'The first mate everyone needs: push the king to the edge.',
-      learn: { lesson: 'l2' }, practise: { lesson: 'l4' }, prove: { challenge: 'kq' } },
+      learn: { lesson: 'l2' }, practice: { lesson: 'l4' }, prove: { challenge: 'kq' } },
     { id: 'c5', title: 'Pins', blurb: 'Freeze a piece in front of something more valuable.',
       learn: learn(['A pinned piece cannot move without exposing something bigger behind it — often the king, so it cannot legally move at all.', 'Pile up on a pinned piece: it cannot run, so attack it again and again.'], ['Pieces lined up with the king or queen', 'Bishops and rooks behind them', 'Attacking a piece that cannot move']),
-      practise: { theme: 'pin', lo: 700, hi: 1500, count: 6 }, prove: { theme: 'pin', lo: 1100, hi: 1800, count: 3 } },
+      practice: { theme: 'pin', lo: 700, hi: 1500, count: 6 }, prove: { theme: 'pin', lo: 1100, hi: 1800, count: 3 } },
     { id: 'c6', title: 'Back-rank mates', blurb: 'The king trapped behind its own pawns.',
       learn: learn(['A king that has castled and never moved its pawns has no escape square. A rook or queen landing on the back rank can be mate.', 'Check whether the back rank is guarded. If the only defender can be distracted, the mate works.'], ['Kings with no "luft" (escape square)', 'Rooks and queens on open files', 'The one piece guarding the back rank']),
-      practise: { theme: 'backRankMate', lo: 600, hi: 1500, count: 6 }, prove: { theme: 'backRankMate', lo: 1100, hi: 1900, count: 3 } },
+      practice: { theme: 'backRankMate', lo: 600, hi: 1500, count: 6 }, prove: { theme: 'backRankMate', lo: 1100, hi: 1900, count: 3 } },
     { id: 'd2', title: 'Back-rank danger', blurb: 'Spot the back-rank mate coming at you, and stop it.', defend: true,
       learn: learn(['If your king sits behind unmoved pawns, one rook or queen on your back rank can be checkmate.', 'Fix it before it happens: make an escape square (a "luft") by pushing a pawn in front of your king, or keep a rook guarding the back rank.'], ['Your king with no escape square', 'Enemy rooks and queens on open files', 'The one piece guarding your back rank']),
-      practise: { drill: 'threat', theme: ['backRankMate'], count: 5 }, prove: { drill: 'blunder', theme: ['backRankMate'], count: 3 } },
+      practice: { drill: 'threat', theme: ['backRankMate'], count: 5 }, prove: { drill: 'blunder', theme: ['backRankMate'], count: 3 } },
     { id: 'c7', title: 'Rook mates', blurb: 'Mate with one rook, and the two-rook ladder.',
-      learn: { lesson: 'l5' }, practise: { lesson: 'l3' }, prove: { challenge: 'kr' } },
+      learn: { lesson: 'l5' }, practice: { lesson: 'l3' }, prove: { challenge: 'kr' } },
     { id: 'c8', title: 'Mate in two', blurb: 'A forcing first move, then mate.',
       learn: learn(['Most mates in two start with a check or a capture that leaves the king no choice.', 'Try every check first, even ones that give up material. Then ask what the king can do, and whether you have mate after each reply.'], ['Checks, then captures, then threats', 'Squares the king can still reach', 'Sacrifices that open the king']),
-      practise: { theme: 'mateIn2', lo: 800, hi: 1500, count: 6 }, prove: { theme: 'mateIn2', lo: 1300, hi: 2000, count: 3 } },
-    { id: 'd4', title: 'Escaping mate threats', blurb: 'When your king is in danger, find the defence.', defend: true,
+      practice: { theme: 'mateIn2', lo: 800, hi: 1500, count: 6 }, prove: { theme: 'mateIn2', lo: 1300, hi: 2000, count: 3 } },
+    { id: 'd4', title: 'Escaping mate threats', blurb: 'When your king is in danger, find the defense.', defend: true,
       learn: learn(['A mate threat comes before the mate. When your opponent piles pieces toward your king, ask: if it were their move, could they checkmate me?', 'Defend with the most forcing answer: take the attacker, block the line, give your king a square, or check back.'], ['Enemy pieces near your king', 'Squares your king can escape to', 'Checks they could give next move']),
-      practise: { drill: 'threat', theme: ['mateIn1', 'mateIn2', 'backRankMate'], count: 5 }, prove: { theme: 'defensiveMove', lo: 800, hi: 1600, count: 3 } },
+      practice: { drill: 'threat', theme: ['mateIn1', 'mateIn2', 'backRankMate'], count: 5 }, prove: { theme: 'defensiveMove', lo: 800, hi: 1600, count: 3 } },
     { id: 'c9', title: 'Skewers', blurb: 'Attack a big piece so it moves and exposes the one behind.',
       learn: learn(['A skewer is a pin in reverse: the valuable piece is in front. When it moves away, you take what was behind it.', 'Look for the king or queen on the same line as another piece, with your bishop, rook or queen able to reach that line.'], ['King and queen on one line', 'Checks along a file, rank or diagonal', 'Long-range pieces']),
-      practise: { theme: 'skewer', lo: 800, hi: 1600, count: 6 }, prove: { theme: 'skewer', lo: 1200, hi: 1900, count: 3 } },
+      practice: { theme: 'skewer', lo: 800, hi: 1600, count: 6 }, prove: { theme: 'skewer', lo: 1200, hi: 1900, count: 3 } },
     { id: 'd3', title: 'Forks and pins coming', blurb: 'See a fork or pin before it lands on you.', defend: true,
       learn: learn(['A fork needs a square that touches two of your pieces. A pin needs your pieces lined up with your king or queen.', 'Look for enemy knight jumps that land next to two of your pieces, and for your king and queen standing on the same line as an enemy bishop, rook or queen. Move one of them first.'], ['Your pieces a knight\'s jump from one square', 'Your king and queen on one line', 'Checks that also attack something']),
-      practise: { drill: 'threat', theme: ['fork', 'pin', 'skewer'], count: 5 }, prove: { drill: 'blunder', theme: ['fork', 'pin'], count: 4 } },
+      practice: { drill: 'threat', theme: ['fork', 'pin', 'skewer'], count: 5 }, prove: { drill: 'blunder', theme: ['fork', 'pin'], count: 4 } },
     { id: 'c10', title: 'Discovered attacks', blurb: 'Move one piece to unleash another behind it.',
       learn: learn(['When a piece steps out of the way, the piece behind it suddenly attacks. If the moving piece also threatens something, the opponent faces two threats at once.', 'A discovered check is the strongest version: the moving piece can go almost anywhere, even grab material.'], ['Your pieces lined up behind each other', 'Lines toward the enemy king or queen', 'Where the front piece can go with a threat']),
-      practise: { theme: 'discoveredAttack', lo: 900, hi: 1600, count: 6 }, prove: { theme: 'discoveredAttack', lo: 1300, hi: 2000, count: 3 } },
+      practice: { theme: 'discoveredAttack', lo: 900, hi: 1600, count: 6 }, prove: { theme: 'discoveredAttack', lo: 1300, hi: 2000, count: 3 } },
     { id: 'c11', title: 'King and pawn basics', blurb: 'The opposition and the square rule.',
-      learn: { lesson: 'f3' }, practise: { lesson: 'f4' }, prove: { challenge: 'promo' } },
+      learn: { lesson: 'f3' }, practice: { lesson: 'f4' }, prove: { challenge: 'promo' } },
     { id: 'c12', title: 'Winning pawn endings', blurb: 'Key squares and turning a pawn into a queen.',
-      learn: { lesson: 'f5' }, practise: { lesson: 'l8' }, prove: { challenge: 'pawns' } },
+      learn: { lesson: 'f5' }, practice: { lesson: 'l8' }, prove: { challenge: 'pawns' } },
     { id: 'c13', title: 'Deflection and sacrifice', blurb: 'Lure a defender away; give material to break through.',
       learn: learn(['Every defender has a job. If you attack it, or offer it something juicy, it may have to leave that job.', 'A sacrifice is worth it when what you get back — mate, a bigger piece, a queen — is more than you gave.'], ['Pieces doing two jobs', 'What each defender is guarding', 'Forcing moves after a sacrifice']),
-      practise: { theme: 'deflection', lo: 900, hi: 1700, count: 6 }, prove: { theme: 'sacrifice', lo: 1300, hi: 2000, count: 3 } },
+      practice: { theme: 'deflection', lo: 900, hi: 1700, count: 6 }, prove: { theme: 'sacrifice', lo: 1300, hi: 2000, count: 3 } },
     { id: 'c14', title: 'Defending', blurb: 'Hold the position when you are the one under pressure.',
-      learn: { lesson: 'p2' }, practise: { theme: 'defensiveMove', lo: 900, hi: 1700, count: 6 }, prove: { challenge: 'hold' } },
+      learn: { lesson: 'p2' }, practice: { theme: 'defensiveMove', lo: 900, hi: 1700, count: 6 }, prove: { challenge: 'hold' } },
     { id: 'c15', title: 'Longer mates', blurb: 'Mate in three and beyond: keep forcing.',
       learn: learn(['Long mates are a chain of forcing moves. Every move should be a check or a threat the opponent must answer.', 'Picture the final mating net first, then work backwards: which checks drive the king there?'], ['Checks that take away squares', 'Where the king ends up', 'Quiet moves that threaten unstoppable mate']),
-      practise: { theme: 'mateIn3', lo: 1100, hi: 1900, count: 6 }, prove: { theme: 'mateIn3', lo: 1500, hi: 2200, count: 3 } },
+      practice: { theme: 'mateIn3', lo: 1100, hi: 1900, count: 6 }, prove: { theme: 'mateIn3', lo: 1500, hi: 2200, count: 3 } },
     { id: 'c16', title: 'Two bishops and B + N', blurb: 'The hardest basic mates.',
-      learn: { lesson: 'l6' }, practise: { lesson: 'l7' }, prove: { challenge: 'kbb' } },
+      learn: { lesson: 'l6' }, practice: { lesson: 'l7' }, prove: { challenge: 'kbb' } },
   ];
-  const pathState = (ch) => P.path[ch.id] || (P.path[ch.id] = { learn: false, practise: 0, prove: false, streak: 0 });
+  const pathState = (ch) => P.path[ch.id] || (P.path[ch.id] = { learn: false, practice: 0, prove: false, streak: 0 });
   const lessonById = (id) => LESSONS.find((l) => l.id === id);
   const challengeById = (id) => CHALLENGES.find((c) => c.id === id);
   function stepDone(ch, step) {
     const st = pathState(ch), s = ch[step];
     if (s.lesson) return !!P.lessons[s.lesson]?.mastered;
     if (s.challenge) return (P.challenges[s.challenge]?.wins || 0) > 0;
-    if (step === 'learn') return !!st.learn || (st.practise || 0) >= ch.practise.count;   /* practised it all: the idea has landed */
-    if (step === 'practise') return (st.practise || 0) >= s.count;
+    if (step === 'learn') return !!st.learn || (st.practice || 0) >= ch.practice.count;   /* practiced it all: the idea has landed */
+    if (step === 'practice') return (st.practice || 0) >= s.count;
     return !!st.prove;
   }
-  const STEPS = ['learn', 'practise', 'prove'];
+  const STEPS = ['learn', 'practice', 'prove'];
   const chapterDone = (ch) => STEPS.every((k) => stepDone(ch, k));
   const nextStep = (ch) => STEPS.find((k) => !stepDone(ch, k)) || null;
   const recommended = () => { try { const f = styleFocus(); if (f && f.ch) return f.ch; } catch { /* no profile yet */ } return CHAPTERS.find((ch) => !chapterDone(ch)) || null; };
@@ -1832,7 +1834,7 @@
     if (s.challenge) return 'Challenge: ' + (challengeById(s.challenge)?.title || 'Challenge');
     if (step === 'learn') return 'The idea';
     const name = NAME[s.theme] || s.theme;
-    return step === 'practise' ? 'Solve ' + s.count + ' ' + name.toLowerCase() + ' puzzles' : 'Solve ' + s.count + ' in a row, no hints';
+    return step === 'practice' ? 'Solve ' + s.count + ' ' + name.toLowerCase() + ' puzzles' : 'Solve ' + s.count + ' in a row, no hints';
   }
   function stepSub(ch, step) {
     const s = ch[step], st = pathState(ch);
@@ -1840,13 +1842,13 @@
     if (s.lesson) return P.lessons[s.lesson]?.stage ? 'In progress' : 'Concept, demo, guided, mastery';
     if (s.challenge) return (P.challenges[s.challenge]?.attempts ? 'Not won yet' : 'Win it once') + ' · against a defending computer';
     if (step === 'learn') return 'A short read: what to look for';
-    if (s.drill) return step === 'practise' ? (st.practise || 0) + ' of ' + s.count + ' stopped without help' : (st.streak || 0) + ' of ' + s.count + ' in a row · no help';
-    if (step === 'practise') return (st.practise || 0) + ' of ' + s.count + ' solved without a miss';
+    if (s.drill) return step === 'practice' ? (st.practice || 0) + ' of ' + s.count + ' stopped without help' : (st.streak || 0) + ' of ' + s.count + ' in a row · no help';
+    if (step === 'practice') return (st.practice || 0) + ' of ' + s.count + ' solved without a miss';
     return (st.streak || 0) + ' of ' + s.count + ' in a row · harder puzzles';
   }
   function pathPill() {
     const st = pathState(PATH.ch), s = PATH.ch[PATH.step];
-    return PATH.step === 'practise' ? Math.min(st.practise || 0, s.count) + '/' + s.count : Math.min(st.streak || 0, s.count) + '/' + s.count + ' in a row';
+    return PATH.step === 'practice' ? Math.min(st.practice || 0, s.count) + '/' + s.count : Math.min(st.streak || 0, s.count) + '/' + s.count + ' in a row';
   }
   /* after a path puzzle: count it, and offer the next step when this one is done */
   function pathPuzzleResult(clean, noHints, row) {
@@ -1859,11 +1861,11 @@
     const ch = PATH.ch, st = pathState(ch), s = ch[PATH.step];
     if (PZ.retry) return el('div', 'tr-say', 'Retries are for practice and don’t change your chapter progress.');
     let done = false;
-    if (PATH.step === 'practise') { if (clean) st.practise = (st.practise || 0) + 1; done = st.practise >= s.count; }
+    if (PATH.step === 'practice') { if (clean) st.practice = (st.practice || 0) + 1; done = st.practice >= s.count; }
     else { if (clean && noHints) st.streak = (st.streak || 0) + 1; else st.streak = 0; if (st.streak >= s.count) { st.prove = true; done = true; } }
     save();
-    const note = el('div', 'tr-say ' + (done ? 'good' : ''), done ? (PATH.step === 'practise' ? 'Practice complete! ' : 'Proven! ') + (chapterDone(ch) ? 'Chapter finished.' : 'Next step is open.')
-      : PATH.step === 'practise' ? (clean ? 'Counts toward the chapter: ' : 'Solve it without a miss to count it: ') + Math.min(st.practise || 0, s.count) + '/' + s.count
+    const note = el('div', 'tr-say ' + (done ? 'good' : ''), done ? (PATH.step === 'practice' ? 'Practice complete! ' : 'Proven! ') + (chapterDone(ch) ? 'Chapter finished.' : 'Next step is open.')
+      : PATH.step === 'practice' ? (clean ? 'Counts toward the chapter: ' : 'Solve it without a miss to count it: ') + Math.min(st.practice || 0, s.count) + '/' + s.count
       : (clean && noHints ? 'In a row: ' : 'Streak reset — no misses or hints here: ') + (st.streak || 0) + '/' + s.count);
     if (done) { row.replaceChildren(btn(chapterDone(ch) ? 'Back to the path' : 'Back to chapter', 'primary', chapterDone(ch) ? openPath : () => openChapter(ch), 'next'), btn('One more', 'quiet', () => void startPuzzle(), 'retry')); }
     return note;
@@ -1880,7 +1882,7 @@
   }
   function dailyTheme() {
     const rec = recommended() || CHAPTERS[CHAPTERS.length - 1];
-    const s = rec.practise.theme && !rec.practise.drill ? rec.practise : rec.prove.theme && !rec.prove.drill ? rec.prove : rec.practise.drill ? { theme: [].concat(rec.practise.theme)[0], lo: 600, hi: 1400 } : null;
+    const s = rec.practice.theme && !rec.practice.drill ? rec.practice : rec.prove.theme && !rec.prove.drill ? rec.prove : rec.practice.drill ? { theme: [].concat(rec.practice.theme)[0], lo: 600, hi: 1400 } : null;
     return s ? { theme: s.theme, lo: s.lo, hi: s.hi, label: rec.title } : { theme: 'mateIn2', lo: 900, hi: 1600, label: rec.title };
   }
   function dailyCard() {
@@ -1920,7 +1922,7 @@
     session++; screen = 'path'; PATH = null; RETURN = null; top.hidden = true; panel.hidden = true; B().onMove(null); mark({});
     hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
     const rec = recommended();
-    hub.append(subHead('Your path', openHub), el('p', 'tr-note', 'Each chapter: learn the idea, practise it, then prove it. Everything is open — the green one is recommended next' + (rec && fromGames(rec) ? ', picked from what keeps costing you in your games.' : '.') + ' Chapters marked 🛡 train defence: seeing what your opponent is planning.'));
+    hub.append(subHead('Your path', openHub), el('p', 'tr-note', 'Each chapter: learn the idea, practice it, then prove it. Everything is open — the green one is recommended next' + (rec && fromGames(rec) ? ', picked from what keeps costing you in your games.' : '.') + ' Chapters marked 🛡 train defense: seeing what your opponent is planning.'));
     const list = el('div', 'tr-path-list');
     CHAPTERS.forEach((ch, i) => {
       const b = btn('', 'tr-chap' + (chapterDone(ch) ? ' done' : '') + (ch === rec ? ' next' : ''), () => openChapter(ch));
@@ -1944,7 +1946,7 @@
       const b = btn('', 'tr-step' + (stepDone(ch, k) ? ' done' : '') + (k === nx ? ' next' : ''), () => runStep(ch, k));
       b.innerHTML = '<span class="tr-step-num"></span><span class="tr-card-text"><small></small><b></b><span></span></span><span class="tr-chev" aria-hidden="true">›</span>';
       b.querySelector('.tr-step-num').textContent = stepDone(ch, k) ? '✓' : String(j + 1);
-      b.querySelector('small').textContent = ['Learn', 'Practise', 'Prove it'][j];
+      b.querySelector('small').textContent = ['Learn', 'Practice', 'Prove it'][j];
       b.querySelector('b').textContent = stepLabel(ch, k);
       b.querySelector('.tr-card-text span').textContent = stepSub(ch, k);
       list.append(b);
@@ -1952,7 +1954,7 @@
     hub.append(list);
     if (!nx) hub.append(el('div', 'tr-chap-done', '★ Chapter complete'));
     const row = el('div', 'tr-actions tr-chap-actions');
-    if (nx) row.append(btn('Start: ' + ['Learn', 'Practise', 'Prove it'][STEPS.indexOf(nx)], 'primary', () => runStep(ch, nx), 'play'));
+    if (nx) row.append(btn('Start: ' + ['Learn', 'Practice', 'Prove it'][STEPS.indexOf(nx)], 'primary', () => runStep(ch, nx), 'play'));
     else { const nc = recommended(); row.append(btn(nc ? 'Next chapter: ' + nc.title : 'Back to the path', 'primary', () => (nc ? openChapter(nc) : openPath()), 'next')); }
     hub.append(row); hub.hidden = false; hub.scrollTop = 0;
   }
@@ -1977,7 +1979,7 @@
     if (ch.learn.look) { card.append(el('span', 'tr-label', 'Look for')); const ul = el('ul'); for (const t of ch.learn.look) ul.append(el('li', '', t)); card.append(ul); }
     hub.append(card);
     const row = el('div', 'tr-actions tr-chap-actions');
-    row.append(btn('Got it — practise', 'primary', () => { pathState(ch).learn = true; save(); runStep(ch, 'practise'); }, 'play'));
+    row.append(btn('Got it — practice', 'primary', () => { pathState(ch).learn = true; save(); runStep(ch, 'practice'); }, 'play'));
     hub.append(row); hub.hidden = false; hub.scrollTop = 0;
   }
 
@@ -2396,7 +2398,7 @@
   }
 
   /* ---------------- speed rounds: five easy puzzles on one pattern, against a soft clock ---------------- */
-  const SPEED = [['mateIn1', 'Mate in 1'], ['hangingPiece', 'Free pieces'], ['fork', 'Forks'], ['pin', 'Pins'], ['skewer', 'Skewers'], ['backRankMate', 'Back-rank mates'], ['mateIn2', 'Mate in 2'], ['defensiveMove', 'Defence']];
+  const SPEED = [['mateIn1', 'Mate in 1'], ['hangingPiece', 'Free pieces'], ['fork', 'Forks'], ['pin', 'Pins'], ['skewer', 'Skewers'], ['backRankMate', 'Back-rank mates'], ['mateIn2', 'Mate in 2'], ['defensiveMove', 'Defense']];
   const SPEED_N = 5, PACE = 15000;
   function openSpeed() {
     session++; screen = 'speed'; PATH = null; RETURN = null; top.hidden = true; panel.hidden = true; B().onMove(null); B().onTap(null); mark({});
@@ -2459,16 +2461,16 @@
   /* ---------------- path steps that use the drills ---------------- */
   function pathDrillResult(clean, row) {
     const ch = PATH.ch, st = pathState(ch), s = ch[PATH.step]; let done = false;
-    if (PATH.step === 'practise') { if (clean) st.practise = (st.practise || 0) + 1; done = st.practise >= s.count; }
+    if (PATH.step === 'practice') { if (clean) st.practice = (st.practice || 0) + 1; done = st.practice >= s.count; }
     else { if (clean) st.streak = (st.streak || 0) + 1; else st.streak = 0; if (st.streak >= s.count) { st.prove = true; done = true; } }
     save();
     if (done) row.replaceChildren(btn(chapterDone(ch) ? 'Back to the path' : 'Back to chapter', 'primary', chapterDone(ch) ? openPath : () => openChapter(ch), 'next'), btn('One more', 'quiet', () => (PATH.drill === 'threat' ? startThreat() : startBlunder()), 'retry'));
-    return el('div', 'tr-say ' + (done ? 'good' : ''), done ? (PATH.step === 'practise' ? 'Practice complete! ' : 'Proven! ') + (chapterDone(ch) ? 'Chapter finished.' : 'Next step is open.')
-      : PATH.step === 'practise' ? (clean ? 'Counts: ' : 'Do it without help to count it: ') + Math.min(st.practise || 0, s.count) + '/' + s.count
+    return el('div', 'tr-say ' + (done ? 'good' : ''), done ? (PATH.step === 'practice' ? 'Practice complete! ' : 'Proven! ') + (chapterDone(ch) ? 'Chapter finished.' : 'Next step is open.')
+      : PATH.step === 'practice' ? (clean ? 'Counts: ' : 'Do it without help to count it: ') + Math.min(st.practice || 0, s.count) + '/' + s.count
       : (clean ? 'In a row: ' : 'Streak reset — no help here: ') + (st.streak || 0) + '/' + s.count);
   }
 
-  /* ---------------- lesson task types: scripted lines, engine-checked best moves, longest defence ---------------- */
+  /* ---------------- lesson task types: scripted lines, engine-checked best moves, longest defense ---------------- */
   /* mirror and/or shift a position (and its moves) to another file so the idea is learned, not the squares */
   function transform(fen, moves) {
     const sqs = []; fen.split(' ')[0].split('/').forEach((row, ri) => { let f = 0; for (const ch of row) { if (/\d/.test(ch)) f += +ch; else { sqs.push(f); f++; } } });
@@ -2545,51 +2547,51 @@
     });
   }
   /* the lone king: every move is measured by how long it delays mate (exact tables) */
-  function defenceOptions(fen) {
+  function defenseOptions(fen) {
     const C = B().Chess, c = new C(fen), out = [];
     for (const m of c.moves({ verbose: true })) { c.move(m); const mate = c.isCheckmate(); const j = mate ? { r: 'win', plies: 0 } : (c.isStalemate() || c.isInsufficientMaterial()) ? { r: 'draw', plies: 999 } : probe(c.fen()); c.undo(); if (j) out.push({ uci: uciOf(m), plies: j.r === 'draw' ? 999 : j.plies ?? 0, m }); }
     return out.sort((a, b) => b.plies - a.plies);
   }
-  function genDefence(table, minPlies) {
+  function genDefense(table, minPlies) {
     for (let k = 0; k < 60; k++) {
       const f = genTable(table, { stm: 'b', want: 'loss', minPlies, test: (x) => !x.inCheck() }); if (!f) continue;
-      const o = defenceOptions(f); if (o.length >= 3 && o[0].plies - o[o.length - 1].plies >= 6) return f;
+      const o = defenseOptions(f); if (o.length >= 3 && o[0].plies - o[o.length - 1].plies >= 6) return f;
     }
     return genTable(table, { stm: 'b', want: 'loss', minPlies });
   }
   function runLongest(g, my, done) {
     let hints = 0, tries = 0;
-    const msg = lessonPanel(g.task, [btn('Hint', 'hint', () => { hints++; const o = defenceOptions(B().fen()); if (!o.length) return; mark(hints === 1 ? { lift: o[0].m.from } : { lift: o[0].m.from, arrows: [[o[0].m.from, o[0].m.to]] }); say(msg, hints === 1 ? 'Hint: move the highlighted piece.' : 'Hint: the arrow is the longest defence.'); }, 'hint'), btn('Skip', 'quiet', done, 'skip')],
+    const msg = lessonPanel(g.task, [btn('Hint', 'hint', () => { hints++; const o = defenseOptions(B().fen()); if (!o.length) return; mark(hints === 1 ? { lift: o[0].m.from } : { lift: o[0].m.from, arrows: [[o[0].m.from, o[0].m.to]] }); say(msg, hints === 1 ? 'Hint: move the highlighted piece.' : 'Hint: the arrow is the longest defense.'); }, 'hint'), btn('Skip', 'quiet', done, 'skip')],
       'Mate is coming. Make it take as long as possible.');
     B().onMove(async (uci) => {
       if (my !== session) return; B().busy(true); mark({});
-      const fenBefore = B().prevFen(), o = defenceOptions(fenBefore), best = o[0], mine = o.find((x) => x.uci === uci.slice(0, 4) || x.uci === uci);
-      if (best && mine && mine.plies >= best.plies - 2) { say(msg, 'Longest defence — mate is still ' + Math.ceil(mine.plies / 2) + ' moves away. ' + (dist(kingSq(new (B().Chess)(B().fen()), 'b'), 'e4') <= 2 ? 'Staying central is what makes it last.' : ''), 'good'); await sleep(1900); if (my === session) done(); return; }
+      const fenBefore = B().prevFen(), o = defenseOptions(fenBefore), best = o[0], mine = o.find((x) => x.uci === uci.slice(0, 4) || x.uci === uci);
+      if (best && mine && mine.plies >= best.plies - 2) { say(msg, 'Longest defense — mate is still ' + Math.ceil(mine.plies / 2) + ' moves away. ' + (dist(kingSq(new (B().Chess)(B().fen()), 'b'), 'e4') <= 2 ? 'Staying central is what makes it last.' : ''), 'good'); await sleep(1900); if (my === session) done(); return; }
       tries++;
-      say(msg, 'This shortens it: mate in ' + Math.ceil((mine?.plies || 0) / 2) + ' now — the best defence lasts ' + Math.ceil((best?.plies || 0) / 2) + '. ' + (tries > 1 ? 'Head for the centre, away from the edge.' : 'Try again.'), 'bad');
+      say(msg, 'This shortens it: mate in ' + Math.ceil((mine?.plies || 0) / 2) + ' now — the best defense lasts ' + Math.ceil((best?.plies || 0) / 2) + '. ' + (tries > 1 ? 'Head for the centre, away from the edge.' : 'Try again.'), 'bad');
       await sleep(2000); if (my !== session) return; B().takeBack(1); B().busy(false);
     });
   }
   /* mastery: survive a whole mate against perfect play */
   async function playSurvive(type, task, onDone) {
     const my = ++session; await loadTables(); if (my !== session) return;
-    const fen = genDefence(type, type === 'q' ? 16 : 30);
+    const fen = genDefense(type, type === 'q' ? 16 : 30);
     if (!fen) { lessonPanel('Could not create a position.', [btn('Try again', 'primary', () => runStage())]); return; }
     B().setup({ fen, side: 'b', opponent: 'Computer' }); B().busy(false); mark({});
     const start = probe(fen); let good = 0, moves = 0;
-    const msg = lessonPanel(task, [btn('Give up', 'quiet', () => onDone({ win: false, summary: 'You stopped this attempt.' }), 'flag')], 'Best defence lasts ' + Math.ceil((start?.plies || 0) / 2) + ' moves. Make it last.');
+    const msg = lessonPanel(task, [btn('Give up', 'quiet', () => onDone({ win: false, summary: 'You stopped this attempt.' }), 'flag')], 'Best defense lasts ' + Math.ceil((start?.plies || 0) / 2) + ' moves. Make it last.');
     B().onMove(async (uci) => {
       if (my !== session) return; B().busy(true);
-      const fenBefore = B().prevFen(), o = defenceOptions(fenBefore), best = o[0], mine = o.find((x) => x.uci === uci.slice(0, 4) || x.uci === uci);
+      const fenBefore = B().prevFen(), o = defenseOptions(fenBefore), best = o[0], mine = o.find((x) => x.uci === uci.slice(0, 4) || x.uci === uci);
       moves++; const ok = best && mine && mine.plies >= best.plies - 2; if (ok) good++;
-      say(msg, (ok ? '✓ Longest defence.' : '✗ Shorter — the best lasted ' + Math.ceil((best?.plies || 0) / 2) + ' moves.') + ' ' + good + '/' + moves + ' best so far.', ok ? 'good' : 'warn');
+      say(msg, (ok ? '✓ Longest defense.' : '✗ Shorter — the best lasted ' + Math.ceil((best?.plies || 0) / 2) + ' moves.') + ' ' + good + '/' + moves + ' best so far.', ok ? 'good' : 'warn');
       await sleep(450); if (my !== session) return;
       const u = tableBest(B().fen()) || (await bestMove(B().fen())); if (my !== session || !u) return;
       B().play(u); await sleep(380); if (my !== session) return;
       const c = new (B().Chess)(B().fen());
       if (c.isCheckmate() || c.isGameOver()) {
         const pct = Math.round(good / Math.max(1, moves) * 100), win = moves >= 4 && pct >= 70;
-        return onDone({ win, summary: 'You lasted ' + moves + ' moves (perfect defence: ' + Math.ceil((start?.plies || 0) / 2) + ') · ' + pct + '% longest-defence moves' });
+        return onDone({ win, summary: 'You lasted ' + moves + ' moves (perfect defense: ' + Math.ceil((start?.plies || 0) / 2) + ') · ' + pct + '% longest-defense moves' });
       }
       B().busy(false);
     });
@@ -2703,7 +2705,7 @@
     const F = styleFocus() || (S.costs[0] && (S.costs[0].fix.chapter || S.costs[0].fix.lesson) ? { ...S.costs[0], ch: S.costs[0].fix.chapter ? CHAPTERS.find((c) => c.id === S.costs[0].fix.chapter) : null, lesson: S.costs[0].fix.lesson } : null);
     if (F) {
       const f = el('div', 'tr-focus'); f.append(el('span', 'tr-label', 'Focus next'), el('b', '', F.fix.what), el('p', '', 'Showed up in ' + F.n + ' of your last ' + S.N + ' games. ' + (F.ch ? 'Chapter "' + F.ch.title + '" drills exactly this' + (styleFocus() ? ' — it is now your recommended next step.' : '.') : 'The "' + F.fix.title + '" lesson in the Academy covers it.')));
-      f.append(btn('Practise: ' + (F.ch ? F.ch.title : F.fix.title), 'primary', () => (F.ch ? openChapter(F.ch) : (() => { const l = lessonById(F.lesson); if (l) startLesson(l); })()), 'play'));
+      f.append(btn('Practice: ' + (F.ch ? F.ch.title : F.fix.title), 'primary', () => (F.ch ? openChapter(F.ch) : (() => { const l = lessonById(F.lesson); if (l) startLesson(l); })()), 'play'));
       hub.append(f);
     }
     const c1 = card('What you go for');
@@ -2712,7 +2714,7 @@
     const c2 = card('What costs you');
     if (S.costs.length) S.costs.slice(0, 5).forEach((c) => {
       const r = bar(c.fix.what, c.n, S.N, c.n + ' of ' + S.N + ' games', 'warn');
-      if (c.fix.chapter || c.fix.lesson) { const go = btn('Practise ›', 'tr-chip tr-mini-link', () => { if (c.fix.chapter) { const ch = CHAPTERS.find((x) => x.id === c.fix.chapter); if (ch) openChapter(ch); } else { const l = lessonById(c.fix.lesson); if (l) startLesson(l); } }); r.querySelector('.tr-bar-top').append(go); }
+      if (c.fix.chapter || c.fix.lesson) { const go = btn('Practice ›', 'tr-chip tr-mini-link', () => { if (c.fix.chapter) { const ch = CHAPTERS.find((x) => x.id === c.fix.chapter); if (ch) openChapter(ch); } else { const l = lessonById(c.fix.lesson); if (l) startLesson(l); } }); r.querySelector('.tr-bar-top').append(go); }
       c2.append(r);
     });
     else c2.append(el('p', 'tr-muted', 'Nothing keeps repeating. Nice.'));
@@ -2804,7 +2806,7 @@
     let R = null;
     try { if (moves.length) R = PL.read({ Chess: C, moves, side: g.side, result: { w: 'win', l: 'loss', d: 'draw' }[g.res], fens: f.slice(0, moves.length) }); } catch { R = null; }
     if (!R) { window.familyChessStats?.openComputer(0); return; }
-    PL.open(R, { title: g.title, onPractise: (tip) => { if (tip.chapter) openChapterId(tip.chapter); else if (tip.lesson) openLessonId(tip.lesson); } });
+    PL.open(R, { title: g.title, onPractice: (tip) => { if (tip.chapter) openChapterId(tip.chapter); else if (tip.lesson) openLessonId(tip.lesson); } });
   }
   function openMatches(filter) {
     if (!B()) return;
@@ -2822,7 +2824,7 @@
     document.body.append(b);
   }
   mountButton(); document.addEventListener('DOMContentLoaded', mountButton);
-  /* open Training straight on one chapter (the end card's "Practise" link) */
+  /* open Training straight on one chapter (the end card's "Practice" link) */
   function openChapterId(id) {
     const ch = CHAPTERS.find((c) => c.id === id); if (!ch || !B()) return;
     root.hidden = false; document.body.classList.add('training-open'); B().enter();
@@ -2835,5 +2837,5 @@
     void loadProfile().then(() => { if (screen === 'lesson' && LS && LS.l === l && LS.stage === 0) startLesson(l); });
     RETURN = null; startLesson(l);
   }
-  window.familyChessTraining = { open, close, openChapterId, openLessonId, recordGame, openMatches, _test: { reviewDue, reviewAdd, startThreat, startBlunder, startSpeed, openStyle, styleStats, transform, varyLine, LUCENA, PHILIDOR, SERIES, CHAPTERS, defenceOptions, genDefence, genQvP, openReview, openSpeed, startLesson, lessonById, td: () => TD, bd: () => BD, suggest, keepers, probe, genTable, loadTables, genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
+  window.familyChessTraining = { open, close, openChapterId, openLessonId, recordGame, openMatches, _test: { reviewDue, reviewAdd, startThreat, startBlunder, startSpeed, openStyle, styleStats, transform, varyLine, LUCENA, PHILIDOR, SERIES, CHAPTERS, defenseOptions, genDefense, genQvP, openReview, openSpeed, startLesson, lessonById, td: () => TD, bd: () => BD, suggest, keepers, probe, genTable, loadTables, genEnding, box, teacherMove, assess, LESSONS, CHALLENGES, nextPuzzle, P: () => P, judge, pz: () => PZ, ls: () => LS } };
 })();

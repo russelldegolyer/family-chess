@@ -18,6 +18,12 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Fixed**
+- Invite button turns back to the blue Invite as soon as the countdown reaches 0, and the "Waiting for…" line clears.
+- American spelling throughout: practice and defense (chapter progress carries over).
+
 ## 2026-11-17 — Stockfish analysis, online draws and takebacks, premoves, PGN, offline (deployed 11:05 AM)
 
 **Added**
@@ -133,7 +139,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - **Spot the threat**: tap the enemy piece about to strike, then play a move that stops it.
 - **Blunder check**: safe move or blunder? If it loses, tap the piece that punishes it.
 - **Speed rounds**: five easy puzzles on one pattern against a soft 15-second pace, with best times.
-- **4 defence chapters** in Your path (🛡): Guard your pieces, Back-rank danger, Forks and pins coming, Escaping mate threats.
+- **4 defense chapters** in Your path (🛡): Guard your pieces, Back-rank danger, Forks and pins coming, Escaping mate threats.
 - **9 new Academy lessons** (21 total): Queen vs pawn on the 7th, Lucena, Philidor, outside passed pawn, king activity, opposite-coloured bishops, trading down, and two defender-side lessons (survive the queen / the rook). Rook-ending lines move to new files so the idea is learned, not the squares.
 - **Your plan** on the end card: what you were trying to do in the opening, middlegame and endgame, how it went, one way to do it better, and a link to the drill that fixes it.
 - **Your style** in Training: plans you go for, mistakes that keep costing you, weakest phase, accuracy trend. Its top finding becomes your recommended chapter. Positions where you missed a much better move go into Review.
@@ -147,13 +153,13 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Voice chat: a soft ring sound for incoming calls; calls reach a friend anywhere in the app (Home, Challenges, review), not only inside the same game; a push notification ("Russell wants to talk") so a closed app can open and join; the caller keeps ringing for 35 s so a phone opened from the notification still catches it.
 - Voice chat can use a relay server for mobile networks that block direct calls, once one is configured (Edge Secrets `CHESS_TURN_URLS`, `CHESS_TURN_USERNAME`, `CHESS_TURN_CREDENTIAL`).
 - **Daily puzzle** on the Challenges page: one puzzle a day from the chapter you're on, with a 🔥 streak.
-- End card: when your biggest swing missed a checkmate, a free piece or a fork, a **Practise** link opens that chapter of Your path.
+- End card: when your biggest swing missed a checkmate, a free piece or a fork, a **Practice** link opens that chapter of Your path.
 - **Voice chat**: tap the mic in a live game; the other player gets "X wants to talk — Join / Not now". Once connected it stays on through the end of the game, review, Home and new games, until either of you taps the green mic or leaves the app. Separate mute button. No phone numbers; audio goes app to app, encrypted, never recorded; the handshake channel is private to the two friends.
 
 ## 2026-11-12 — Your path, desktop polish (deployed 11:11 PM)
 
 **Added**
-- **Your path** in Challenges: 16 chapters from checkmate basics to two-bishop mates. Each chapter is Learn → Practise → Prove it, using the existing lessons, themed puzzles and endgame challenges. All chapters are open; the first unfinished one is marked Recommended next. Progress is saved to your account.
+- **Your path** in Challenges: 16 chapters from checkmate basics to two-bishop mates. Each chapter is Learn → Practice → Prove it, using the existing lessons, themed puzzles and endgame challenges. All chapters are open; the first unfinished one is marked Recommended next. Progress is saved to your account.
 
 **Improved** (desktop)
 - Top right is now two matching pills, **Challenges** and **Online**, instead of the email / "Practice mode" strip (email and Sign out stay in Online → Settings).

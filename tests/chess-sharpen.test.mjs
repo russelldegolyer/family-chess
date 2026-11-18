@@ -21,7 +21,7 @@ test('threat and blunder drills use the board tap hook; speed rounds are five pu
  assert.match(tr,/parts\[1\] = other\(attacker\); parts\[3\] = '-';/);
 });
 
-test('defence chapters and new Academy lessons, scripted lines can move to another file',()=>{
+test('defense chapters and new Academy lessons, scripted lines can move to another file',()=>{
  for (const id of ['d1','d2','d3','d4']) assert.match(tr,new RegExp("\\{ id: '"+id+"', title: '[^']+', blurb: '[^']+', defend: true"));
  for (const id of ['q1','r1','r2','s1','s2','s3','s4','dq','dr']) assert.match(tr,new RegExp("\\{ id: '"+id+"', title:"));
  assert.match(tr,/function transform\(fen, moves\)/);
