@@ -385,12 +385,12 @@
         if(error)throw error;
         const {data:push,error:pushError}=await api.functions.invoke('chess-notify-challenge',{
           body:{challenge_id:id}});
-        if(pushError)throw new Error('Invitation sent, but the push service could not be reached.');
+        if(pushError)throw new Error('Invitation sent, but the notification service couldn’t be reached.');
         const sent=Number(push?.sent||0),failed=Number(push?.failed||0);
         status(sent>0?'Push accepted by '+sent+' device endpoint'+(sent===1?'':'s')+'.':
-          push?.configured===false?'Invitation saved, but server push is not configured.':
-          failed>0?'Invitation saved, but push delivery failed on '+failed+' device(s).':
-          'Invitation saved, but no subscribed device received the push.');
+          push?.configured===false?'Invitation saved, but notifications aren’t set up on the server.':
+          failed>0?'Invitation saved, but the notification failed on '+failed+' device(s).':
+          'Invitation saved, but none of their devices received the notification.');
       }catch(e){status('Could not notify player: '+(e?.message||'Unknown error'),true);}
       finally{button.disabled=false;}
     }
@@ -441,7 +441,7 @@
       const {data:moves,error:movesError}=await api.from('chess_moves')
         .select('ply,move_uci').eq('game_id',id).order('ply',{ascending:true}).limit(1001);
       if (movesError) throw movesError;
-      if (!moves || moves.length > 1000 || moves.some((m,i)=>m.ply!==i+1)) throw new Error('Move history is inconsistent.');
+      if (!moves || moves.length > 1000 || moves.some((m,i)=>m.ply!==i+1)) throw new Error('The move history doesn’t match. Refresh the match.');
       if (epoch !== syncToken || matchId !== id || player?.id !== uid) return;
       const {data:actions,error:actionsError}=await api.from('chess_clock_actions')
         .select('id,after_ply,kind,square,fen_after,actor_id')
@@ -523,8 +523,8 @@
     const {data,error}=await api.functions.invoke('chess-clock-action',{
       body:{game_id:id,action,pawn_square:square??null}
     });
-    if(error)throw new Error(data?.error||error.message||'Pawn action unavailable');
-    if(!data?.ok)throw new Error(data?.error||'Pawn choice rejected');
+    if(error)throw new Error(data?.error||error.message||'Pawn trades aren’t available right now');
+    if(!data?.ok)throw new Error(data?.error||'That pawn choice wasn’t accepted');
     await syncMatch();return data;
   };
   /* switch sides before the first move; either player may, and realtime moves the opponent too */
@@ -542,7 +542,7 @@
     await syncMatch();return data;
   };
   window.familyChessSaveClockPreference = async (mode,expiry) => {
-    if(!(window.ChessClock?.MODE_RE||/^off$/).test(mode))throw new Error('Invalid clock selection');
+    if(!(window.ChessClock?.MODE_RE||/^off$/).test(mode))throw new Error('That clock setting isn’t valid');
     if(!player)return false;
     const upd={clock_preference:mode}; if(['end','sec60','pawn'].includes(expiry))upd.clock_expiry=expiry;
     const {error}=await api.from('chess_profiles').update(upd).eq('id',player.id);
@@ -872,7 +872,7 @@
     if(error){status('Could not cancel the invite: '+error.message,true);return;}
     if(openInviteId===id){openInviteId=null;$('cgCreatedLink').hidden=true;$('cgNewInviteURL').href='#';$('cgNewInviteURL').textContent='';}
     if(matchId===id){stopMatch();window.familyChessNative?.leaveToPractice();}
-    status(data?'Invite cancelled. That link no longer works.':'That invite was already joined or closed.');
+    status(data?'Invite canceled. That link no longer works.':'That invite was already joined or closed.');
     void refresh();
   }
   $('cgCancelInvite').addEventListener('click',()=>{void cancelInvite(openInviteId);});
@@ -893,7 +893,7 @@
       a.textContent=url;
       $('cgCreatedLink').hidden=false;
       $('cgCreatedLink').scrollIntoView({block:'nearest',behavior:'smooth'});
-      status('Invitation ready. Earlier live games and unused invitation links have been ended.');
+      status('Invitation ready. Your earlier open games and unused invite links were closed.');
       await loadInviteRecipients();
       await refresh();
       return id;

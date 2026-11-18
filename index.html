@@ -46,21 +46,21 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <link rel="stylesheet" href="./auth.css?v=4">
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
-<script defer src="./auth-gate.js?v=2"></script>
+<script defer src="./auth-gate.js?v=3"></script>
 <script defer src="./chess-clock.js?v=16"></script>
-<script defer src="./chess-online.js?v=31"></script>
-<script defer src="./chess-chat.js?v=8"></script>
+<script defer src="./chess-online.js?v=32"></script>
+<script defer src="./chess-chat.js?v=9"></script>
 <script defer src="./chess-voice.js?v=5"></script>
 <script defer src="./chess-stockfish.js?v=1"></script>
-<script defer src="./chess-review-analysis.js?v=4"></script>
+<script defer src="./chess-review-analysis.js?v=5"></script>
 <link rel="stylesheet" href="./chess-social.css?v=6">
-<script defer src="./chess-social.js?v=25"></script>
+<script defer src="./chess-social.js?v=26"></script>
 <link rel="stylesheet" href="./chess-training.css?v=25">
 <link rel="stylesheet" href="./chess-plan.css?v=1">
 <link rel="stylesheet" href="./chess-stats.css?v=3">
-<script defer src="./chess-stats.js?v=6"></script>
-<script defer src="./chess-plan.js?v=2"></script>
-<script defer src="./chess-training.js?v=33"></script>
+<script defer src="./chess-stats.js?v=7"></script>
+<script defer src="./chess-plan.js?v=3"></script>
+<script defer src="./chess-training.js?v=34"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -1493,7 +1493,7 @@ body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
 </div>
 
 <div id="ui">
-  <div class="brand" id="brand" aria-hidden="true">Default<span>·</span>Your colours</div>
+  <div class="brand" id="brand" aria-hidden="true">Default<span>·</span>Your colors</div>
 
   <div class="plate plate-top" id="plateTop">
     <span class="orb"></span>
@@ -1509,7 +1509,7 @@ body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
         <span class="live-dot" title="Here now" hidden></span>
       </div>
       <button class="board-chip" id="btnCollection" type="button" aria-label="Choose your board" title="Choose your board"><img id="chipImg" alt=""><span class="chip-text"><span class="chip-name" id="chipName">Board</span><span class="chip-rec" id="chipRec"></span></span></button>
-      <button class="icon-btn round color-wheel-btn" id="btnSettings" type="button" aria-label="Piece colours" title="Piece colours"><span class="cw-dot" aria-hidden="true"></span></button>
+      <button class="icon-btn round color-wheel-btn" id="btnSettings" type="button" aria-label="Piece colors" title="Piece colors"><span class="cw-dot" aria-hidden="true"></span></button>
       <button class="ctl icon-only view2d-btn" id="btnView2d" type="button" aria-label="Switch to 2D view" title="2D view"><span>2D</span></button>
       <button class="icon-btn round" id="btnMenu" type="button" aria-label="Game options" aria-haspopup="menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg></button>
     </div>
@@ -3778,7 +3778,7 @@ const CHECK_TEX = { cats: MK.check.material.map, unnamed: radialTex('rgba(220,10
 /* Per-design presentation. Swapping never touches the game. */
 const THEMES = {
   cats: { geo: () => GEO_CATS, set: { get mat() { return CATS_SET.mat; }, get hi() { return CATS_SET.hi; }, get tray() { return CATS_SET.tray; } }, group: cats, bg: 0x1d1a17, env: () => ENV_STUDIO, envI: 0.75, hemi: [0.55, 0xfff1de, 0x2a1a0c], fill: 0.6, key: [2.1, 0xffe9cf], keyPos: [3.5, 13, 7], rim: [0.7, 0xffe2c0], rig: 0.25, blob: 0.55, shadows: true, last: 0xb06a2a, brand: ['Wooden', 'Hand-carved mahogany'], name: 'Wooden' },
-  unnamed: { geo: () => GEO_UNNAMED, set: { get mat() { return UNNAMED_SET.mat; }, get hi() { return UNNAMED_SET.hi; }, get tray() { return UNNAMED_SET.tray; } }, group: unnamed, bg: 0x232427, env: () => ENV_UNNAMED || ENV_GRAY, envI: 1.0, hemi: [0.1, 0xffffff, 0x2a2a2e], fill: 0.45, key: [2.4, 0xffffff], keyPos: [2, 14, 9], rim: [1.4, 0xffffff], rig: 0.6, blob: 0.7, shadows: true, last: 0xd8b0b4, camPolar: 0.8, brand: ['Default', 'Your colours'], name: 'Default' },
+  unnamed: { geo: () => GEO_UNNAMED, set: { get mat() { return UNNAMED_SET.mat; }, get hi() { return UNNAMED_SET.hi; }, get tray() { return UNNAMED_SET.tray; } }, group: unnamed, bg: 0x232427, env: () => ENV_UNNAMED || ENV_GRAY, envI: 1.0, hemi: [0.1, 0xffffff, 0x2a2a2e], fill: 0.45, key: [2.4, 0xffffff], keyPos: [2, 14, 9], rim: [1.4, 0xffffff], rig: 0.6, blob: 0.7, shadows: true, last: 0xd8b0b4, camPolar: 0.8, brand: ['Default', 'Your colors'], name: 'Default' },
 };
 function applyTheme(t) {
   THEME = themeId(t);
@@ -4042,11 +4042,11 @@ function openColorPicker(title, start, onSave, againstHex, tabs = null) {
   if (tabs) { start = tabs[0].get(); againstHex = tabs[0].against(); onSave = (hex) => tabs[tab].set(hex); }
   let [h, s, v] = hex2hsv(chromaOk(start) ? start : COLOR_DEF.mine);
   s = Math.max(s, COLOR_MIN.s); v = Math.max(v, COLOR_MIN.v);
-  const d = dialog(title, [], tabs ? [['Done', 'gold', null]] : [['Cancel', 'quiet', null], ['Save colour', 'gold', () => onSave(cur())]]);
+  const d = dialog(title, [], tabs ? [['Done', 'gold', null]] : [['Cancel', 'quiet', null], ['Save color', 'gold', () => onSave(cur())]]);
   d.card.classList.add('picker-card'); if (tabs) { d.card.classList.add('quick'); d.card.parentElement.classList.add('sheet'); }
   const body = el('div', 'picker');
   d.card.insertBefore(body, d.card.lastChild);
-  const W = 240, wheel = document.createElement('canvas'); wheel.width = wheel.height = W * 2; wheel.className = 'wheel'; wheel.setAttribute('aria-label', 'Colour wheel'); wheel.setAttribute('role', 'img');
+  const W = 240, wheel = document.createElement('canvas'); wheel.width = wheel.height = W * 2; wheel.className = 'wheel'; wheel.setAttribute('aria-label', 'Color wheel'); wheel.setAttribute('role', 'img');
   const knob = el('div', 'wheel-knob'), wrap = el('div', 'wheel-wrap'); wrap.append(wheel, knob);
   const prev = el('div', 'pick-preview'), sw = el('div', 'pick-swatch'), hexT = el('div', 'pick-hex'), warnP = el('p', 'set-warn');
   const slider = el('input'); slider.type = 'range'; slider.min = String(Math.round(COLOR_MIN.v * 100)); slider.max = '100'; slider.className = 'pick-v'; slider.setAttribute('aria-label', 'Brightness');
@@ -4054,7 +4054,7 @@ function openColorPicker(title, start, onSave, againstHex, tabs = null) {
   const side = el('div', 'pick-side'); side.append(prev, sw, hexT);
   /* neutrals the wheel can't reach in one tap */
   const neu = el('div', 'pick-neutrals');
-  for (const n of ['#ffffff', '#c8ccd2', '#6e7076', '#141414']) { const b = el('button', 'swatch'); b.type = 'button'; b.style.background = n; b.setAttribute('aria-label', n === '#ffffff' ? 'White' : n === '#141414' ? 'Black' : 'Grey'); b.addEventListener('click', () => { [h, s, v] = hex2hsv(n); schedule(true); }); neu.append(b); }
+  for (const n of ['#ffffff', '#c8ccd2', '#6e7076', '#141414']) { const b = el('button', 'swatch'); b.type = 'button'; b.style.background = n; b.setAttribute('aria-label', n === '#ffffff' ? 'White' : n === '#141414' ? 'Black' : 'Gray'); b.addEventListener('click', () => { [h, s, v] = hex2hsv(n); schedule(true); }); neu.append(b); }
   if (tabs) {
     const seg = el('div', 'opt-group pick-tabs');
     const load = () => { [h, s, v] = hex2hsv(tabs[tab].get()); againstHex = tabs[tab].against(); for (const [i, b] of [...seg.children].entries()) b.setAttribute('aria-checked', String(i === tab)); update(true); };
@@ -4077,8 +4077,8 @@ function openColorPicker(title, start, onSave, againstHex, tabs = null) {
     const hex = cur(), rr = (s - COLOR_MIN.s) / (1 - COLOR_MIN.s), a = h * Math.PI / 180;
     knob.style.left = (50 + Math.cos(a) * rr * 50) + '%'; knob.style.top = (50 + Math.sin(a) * rr * 50) + '%'; knob.style.background = hex;
     sw.style.background = hex; hexT.textContent = hex.toUpperCase(); slider.value = String(Math.round(v * 100));
-    prev.replaceChildren(); const img = new Image(); img.alt = 'Preview of a queen and knight in this colour'; img.src = piecePreview(hex).toDataURL(); prev.append(img);
-    warnP.hidden = !(againstHex && tooSimilar(hex, againstHex)); warnP.textContent = 'These piece colours may be difficult to distinguish.';
+    prev.replaceChildren(); const img = new Image(); img.alt = 'Preview of a queen and knight in this color'; img.src = piecePreview(hex).toDataURL(); prev.append(img);
+    warnP.hidden = !(againstHex && tooSimilar(hex, againstHex)); warnP.textContent = 'These piece colors may be hard to tell apart.';
     if (tabs && !applying) { applying = true; tabs[tab].set(hex); applying = false; }
   };
   let applying = false;
@@ -4900,7 +4900,7 @@ function clearPremove(note) {
 }
 function premoveTap(sq, piece) {
   const me = premoveSide();
-  if (premove) { clearPremove('Premove cancelled.'); if (!(piece && piece.color === me)) return; }
+  if (premove) { clearPremove('Premove canceled.'); if (!(piece && piece.color === me)) return; }
   if (piece && piece.color === me && sq !== preFrom) { liftSq(preFrom, false); preFrom = sq; liftSq(sq, true); return; }
   if (!preFrom || !sq || sq === preFrom) { clearPremove(); return; }
   /* plausible for that piece if it were my turn now (the real check happens on my turn) */
@@ -4986,7 +4986,7 @@ function playMove(uci, opts = {}) {
     const proposed = positionFrom([...G.moves, uci],G.moves.length+1,G.clockActions||[]);
     if (proposed.ply !== G.moves.length + 1) { toast('Illegal move.'); return; }
     const submit = window.familyChessSubmitMove;
-    if (typeof submit !== 'function') { toast('Online move service unavailable. Refresh the page.'); return; }
+    if (typeof submit !== 'function') { toast('Online moves aren’t available right now. Refresh the page.'); return; }
     G.onlineBusy = true; clearSelection();
     // Keep the confirmed piece at its destination while the server validates
     // the move. Returning to G.pos here made the piece visibly bounce backward
@@ -5008,7 +5008,7 @@ function playMove(uci, opts = {}) {
     return;
   }
   const r = applyMove(uci, opts);
-  if (!r) { toast("That move isn't legal here."); syncBoard(G.pos, { quick: true }); updateMarkers(); return; }
+  if (!r) { toast('That move isn’t legal here.'); syncBoard(G.pos, { quick: true }); updateMarkers(); return; }
   const { end } = r;
 
   updateAll();
@@ -5316,7 +5316,7 @@ function teachingBest(ply) {
     else if (chess.inCheck()) why = 'This puts the opposing king in check.';
     else if (move.captured) why = 'This captures the opposing ' + (PIECE[move.captured] || 'piece') + '.';
     else if (/[kq]/.test(move.flags || '')) why = 'This castles and moves the king to a safer square.';
-    else why = 'This keeps a stronger position in the engine’s search. Try the alternative on the board and compare.';
+    else why = 'This keeps a stronger position, according to the engine. Try it on the board and compare.';
     return { ...r, san:move.san, why, who:ply % 2 === 1 ? 'White' : 'Black' };
   } catch (_) { return null; }
 }
@@ -5453,8 +5453,8 @@ function renderHistory() {
         let lesson = 'Played ' + actualSan + '. ' + best.san +
           ' was stronger in this search. ';
         if (verdict.label === 'Allowed checkmate') {
-          lesson += 'The played move lets the opponent force checkmate. ' +
-            best.san + ' avoids that mating threat in the engine search.';
+          lesson += 'The move played lets the opponent force checkmate. ' +
+            best.san + ' avoids it.';
         } else if (verdict.label === 'Missed checkmate') {
           lesson += best.san + ' would have delivered a forced mate instead.';
         } else {
@@ -5489,7 +5489,7 @@ function renderHistory() {
         insight.append(p);
       } else if (verdict.kind === 'unknown') {
         const p = el('p', 'review-teaching');
-        p.textContent = 'The current search could not confidently evaluate this position.';
+        p.textContent = 'The engine couldn’t judge this position with confidence.';
         insight.append(p);
       }
       frag.append(insight);
@@ -5501,7 +5501,7 @@ function renderHistory() {
     if (engineHead) frag.append(engineHead);
     if (engineState) {
       const note = el('p', 'review-engine-note');
-      note.textContent = 'Quick offline estimates; deeper analysis may differ.';
+      note.textContent = 'Checked on this device. A deeper search could differ.';
       frag.append(note);
       /* Next and Previous skip ordinary moves and stop only on mistakes and strong replies, unless you ask for every move */
       const keys = analyzer.keyMoments ? analyzer.keyMoments() : [];
@@ -5696,7 +5696,7 @@ function resign() {
     const id = G.gid;
     if (pending) cancelPreview(false);
     Promise.resolve(window.familyChessResign?.(id) ??
-      Promise.reject(new Error('Online resignation is unavailable. Reload the app.')))
+      Promise.reject(new Error('Resigning online isn’t available right now. Reload the app.')))
       .then((r) => { if (r === 'deleted') toast('Game ended in the first 3 moves. It was removed and doesn’t count.', 4200); })
       .catch(e => toast(e?.message || 'Could not resign this game. Try again.', 4200))
       .finally(() => { G.onlineBusy = false; updateAll(); });
@@ -6054,7 +6054,7 @@ function maybeShowEndCard() {
     const hint = el('div', 'ec-hint'); hint.textContent = 'You can pick White or Black once they accept.'; acts.append(hint);
   }
   const row = el('div', 'ec-row');
-  if (G.mode !== 'live') row.append(ico(button('Swap colours', 'ec-tile', () => rematch(true)), '<path d="M7 7h11l-3-3M17 17H6l3 3"/>'));
+  if (G.mode !== 'live') row.append(ico(button('Swap colors', 'ec-tile', () => rematch(true)), '<path d="M7 7h11l-3-3M17 17H6l3 3"/>'));
   row.append(ico(button('Review', 'ec-tile', () => { endDismissed = endKey(); beginGameReview(); }), '<path d="M7 5l12 7-12 7z"/>'));
   acts.append(row);
   const links = el('div', 'ec-links');
@@ -6241,7 +6241,7 @@ $('btnChatClear').addEventListener('click', () => {
       ['Delete messages','gold',async()=>{
         try {
           await window.familyChessChat?.clear();
-          toast(spectator?'Your spectator messages deleted.':'Match chat cleared.');
+          toast(spectator?'Your spectator messages were deleted.':'Match chat cleared.');
         } catch(e){toast('Could not delete chat: '+(e?.message||'Try again.'));}
       }]]);
     return;
@@ -6250,12 +6250,12 @@ $('btnChatClear').addEventListener('click', () => {
 });
 /* the colour wheel and the name plates: your colour paints the White pieces; Black is always black */
 function openQuickColors() {
-  openColorPicker('White piece colour', myColor(), (hx) => { setMyColor(hx); updatePlates(); }, BLACK_PIECES);
-  toast(THEME !== 'unnamed' ? 'Piece colours show on the Default board.' : 'Your colour paints the White pieces. Black stays black.', 2600);
+  openColorPicker('White piece color', myColor(), (hx) => { setMyColor(hx); updatePlates(); }, BLACK_PIECES);
+  toast(THEME !== 'unnamed' ? 'Piece colors show on the Default board.' : 'Your color paints the White pieces. Black stays black.', 2600);
 }
 function plateColor(side) {
-  if (side === 'b') { toast('Black pieces are always black. Your colour paints the White pieces.', 2600); return; }
-  if (G.mode === 'live' && mySeat !== 'w') { toast('White wears the colour of whoever plays White.', 2600); return; }
+  if (side === 'b') { toast('Black pieces are always black. Your color paints the White pieces.', 2600); return; }
+  if (G.mode === 'live' && mySeat !== 'w') { toast('White wears the color of whoever plays White.', 2600); return; }
   openQuickColors();
 }
 $('plateTop').addEventListener('click', () => plateColor(other(viewSide)));
@@ -6513,7 +6513,7 @@ function registerBoard(def) {
 }
 /* Gold & Silver was retired: saved references to it resolve to the Default board */
 registerBoard({ id: 'cats', name: 'Wooden', subtitle: 'Hand-carved mahogany', sortOrder: 3, art: { bg: '#1d1a17', light: '#ecd0a2', dark: '#a8683a', frame: '#b47a48', w: '#d9a56c', b: '#7a2e16' } });
-registerBoard({ id: 'unnamed', name: 'Default', subtitle: 'Black & white marble · your colours', starter: true, sortOrder: 0, art: { bg: '#777779', light: '#ededef', dark: '#0c0c0e', frame: '#0c0c0e', w: '#c60018', b: '#101012', trim: '#ededef' } });
+registerBoard({ id: 'unnamed', name: 'Default', subtitle: 'Black & white marble · your colors', starter: true, sortOrder: 0, art: { bg: '#777779', light: '#ededef', dark: '#0c0c0e', frame: '#0c0c0e', w: '#c60018', b: '#101012', trim: '#ededef' } });
 const enabledBoards = () => BOARDS.filter((b) => b.enabled && THEMES[b.rendererKey]);
 
 /* which finished games count toward progression (configurable) */
@@ -6562,7 +6562,7 @@ function equippedInstance() {
 }
 let playerChain = Promise.resolve();
 function savePlayer(mut) {
-  playerChain = playerChain.then(async () => { mut(PROG.P); await S().doc('players/' + myId()).set(PROG.P); }).catch(() => toast("Couldn't save your progress. It will retry with your next game."));
+  playerChain = playerChain.then(async () => { mut(PROG.P); await S().doc('players/' + myId()).set(PROG.P); }).catch(() => toast('Couldn’t save your progress. It will try again after your next game.'));
   return playerChain;
 }
 function boardWrite(id, patch) { return S().doc('boards/' + id).update(patch).catch(() => {}); }
@@ -6745,7 +6745,7 @@ function openCollection(themeId, flat = false) {
   renderCollection();
 }
 function closeCollection() { document.body.classList.remove('col-open'); hide($('collection')); $('btnCollection').focus(); }
-const STYLE2D_NAME = { green: 'Classic Green', bw: 'Black & White', wood: 'Classic Wood', custom: 'Custom Colours' };
+const STYLE2D_NAME = { green: 'Classic Green', bw: 'Black & White', wood: 'Classic Wood', custom: 'Custom Colors' };
 function style2DArt(style, W = 160, H = 100) {
   const k = '2d-' + style + W + (style === 'custom' ? JSON.stringify(PREF2D.custom) : ''); if (artCache.has(k)) return artCache.get(k);
   const C = style2DFor({ ...PREF2D, style }), c = document.createElement('canvas'); c.width = W * 2; c.height = H * 2; const g = c.getContext('2d');
@@ -6776,7 +6776,7 @@ function renderCollection() {
       const r = el('button', 'color-row'); r.type = 'button';
       const dot = el('i', 'cswatch'); dot.style.background = PREF2D.custom[key] || (key === 'frame' ? C2.frame : '#000000');
       const t = el('span'); t.textContent = label; r.append(dot, t); box.append(r);
-      r.addEventListener('click', () => openColorPicker(label + ' colour', rgbHex(getComputedStyle(dot).backgroundColor),
+      r.addEventListener('click', () => openColorPicker(label + ' color', rgbHex(getComputedStyle(dot).backgroundColor),
         (hex) => { apply2D({ ...PREF2D, custom: { ...PREF2D.custom, [key]: hex.toLowerCase() } }); updateBoardChip(); dot.style.background = hex; renderCollection(); })
         || document.querySelectorAll('.picker-card').forEach((c) => c.classList.add('board-colour')));
     }
@@ -6826,7 +6826,7 @@ async function toggleChessPause(){
     if(!mySeat){toast('Only players can pause this game.');return;}
     G.onlineBusy=true;
     try {await window.familyChessPause?.(G.gid);}
-    catch(e){toast(e?.message||'Could not change pause state',4200);}
+    catch(e){toast(e?.message||'Could not pause or resume the game',4200);}
     finally{G.onlineBusy=false;updateAll();}
   }else{
     const state=window.ChessClock?.pauseLocal();
@@ -6880,7 +6880,7 @@ async function applyPawnTimeAction(kind,square){
     kind:kind==='penalty'&&!square?'waiver':kind,square,fen_after:fen};
   const actions=[...(G.clockActions||[]),action];
   const updated=positionFrom(G.moves,G.moves.length,actions);
-  if(updated.invalid||updated.chess.fen()!==fen){toast('Could not apply pawn choice.');return;}
+  if(updated.invalid||updated.chess.fen()!==fen){toast('Could not remove that pawn. Try again.');return;}
   if(kind==='sacrifice')window.ChessClock.endDecision?.();
   const applied=kind==='penalty'?window.ChessClock.resolveLocalPenalty():
     window.ChessClock.sacrificeLocal(updated.chess.turn(),G.moves.length);
@@ -7087,7 +7087,7 @@ function openSettings() {
     row('Computer speed', seg([['instant', 'Instant'], ['regular', '2.5s'], ['slow', '4.4s'], ['delayed', '10s']], cpuSpeed(), setCpuSpeed, 'Computer move speed'));
     row('Moving pieces', seg([['preview', 'Two taps'], ['instant', 'One tap']], moveMode, (v) => setMoveMode(v), 'Moving pieces'));
     row('2D pieces', seg([['classic', 'Pieces'], ['letters', 'Letters']], PREF2D.pieces, (v) => apply2D({ ...PREF2D, pieces: v }), '2D pieces'));
-    row('Show last move', toggle(showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }, "Show opponent's last move"));
+    row('Show last move', toggle(showLastPref(), (v) => { store.set('sg.lastMove', v); updateMarkers(); markers2D(); }, 'Show opponent’s last move'));
     { const b = el('button', 'set-pick'); b.type = 'button'; b.textContent = (BOARD[THEME]?.name || 'Default') + '  ›'; b.addEventListener('click', () => { d.close(); $('btnCollection').click(); }); row('Board', b); }
     row('Sound', toggle(Sound.on, (v) => { Sound.on = v; store.set('sg.sound', v); if (v) { Sound.ensure(); Sound.play('move'); } }, 'Sound'));
     { const box = el('div', 'set-pgn'); box.style.cssText = 'display:flex;gap:14px';
@@ -7103,7 +7103,7 @@ function openSettings() {
     const commit = (mode) => {
       if (!C) return; C.setPreference(mode); applyClockChange(mode);
       window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(mode, C.getExpiry()));
-      window.familyChessClockSavePromise.catch((e) => toast('Clock preference could not sync: ' + (e?.message || 'Try again'), 4200));
+      window.familyChessClockSavePromise.catch((e) => toast('Couldn’t save your clock setting: ' + (e?.message || 'Try again'), 4200));
     };
     const timer = el('div', 'set-timer');
     timer.append(seg([['off', 'None'], ['s', 'Seconds'], ['m', 'Minutes']], kind, (v) => commit(v === 'off' ? 'off' : v === 's' ? 's' + (kind === 's' ? amount : 60) : 'm' + (kind === 'm' ? amount : 10)), 'Timer'));
@@ -7136,8 +7136,8 @@ function openSettings() {
       const pt = C.pawnTerms?.(cur) || { at: '0:10', trade: '+1:30', back: '3:00', perMove: kind === 's' };
       note.textContent = exp === 'end' ? (kind === 's' ? 'Run out of seconds on a move and you lose.' : 'Run out of time and you lose.')
         : exp === 'sec60' ? 'Run out of time and both of you switch to 60 seconds per move.'
-        : kind === 's' ? 'At ' + pt.at + ' you can give up one of your pawns instead of moving; the next move starts with ' + pt.trade + '. Let it run out and your opponent removes any pawn of yours, then you get ' + pt.back + ' to move.'
-        : 'At 10 seconds you can trade one of your pawns for +1:30. Let it run out and your opponent removes any pawn of yours; your clock goes back to 3:00.';
+        : kind === 's' ? 'With ' + pt.at + ' left, you can give up one of your pawns instead of moving; the next move then starts with ' + pt.trade + '. If your time runs out, your opponent removes one of your pawns, then you get ' + pt.back + ' to move.'
+        : 'With 10 seconds left, you can trade one of your pawns for 1:30 more. If your time runs out, your opponent removes one of your pawns and your clock resets to 3:00.';
       body.append(note);
     }
   }
@@ -7431,7 +7431,7 @@ window.familyChessNative = {
     START_FEN = game.start_fen || null;
     const pos = positionFrom(moves,moves.length,actions);
     if (pos.invalid || pos.ply !== moves.length || pos.chess.fen() !== game.current_fen)
-      throw new Error('Online position mismatch. Refresh the match.');
+      throw new Error('The board is out of sync. Refresh the match.');
     const sameGame = G.onlineProvider === 'supabase' && G.gid === game.id;
     const sameMoves = sameGame && G.moves.length === moves.length && G.moves.every((m,i) => m === moves[i]);
     const oldActions=G.clockActions||[];

@@ -59,7 +59,7 @@
   }
   if (!window.supabase?.createClient) {
     submit.disabled = true;
-    setMessage('Unable to load the login service. Check the connection and reload.', true);
+    setMessage('Unable to load sign-in. Check your connection and reload.', true);
     return;
   }
   try { client = window.supabase.createClient(config.url, config.publishableKey, { auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true } }); }

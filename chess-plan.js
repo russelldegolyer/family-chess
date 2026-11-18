@@ -30,7 +30,7 @@
   };
   const ORDER = ['hung', 'forked', 'backRank', 'mated', 'missedMate', 'missedFree', 'missedFork', 'passiveKing', 'tradeBehind', 'drift', 'slowDev', 'earlyQueen', 'missedBest'];
   const PLAN_NAME = {
-    center: 'Took the centre', develop: 'Quick development', castle: 'Castled early',
+    center: 'Took the center', develop: 'Quick development', castle: 'Castled early',
     attackK: 'Kingside attack', attackQ: 'Queenside attack', wing: 'Play on one wing', centre: 'Central play',
     simplify: 'Traded down while ahead', trades: 'Traded pieces', hunt: 'Won material', checks: 'Lots of checks',
     defend: 'Defended under pressure', rooks: 'Rooks to open files', drift: 'No clear target',
@@ -147,7 +147,7 @@
         const center = own.filter((h) => h.mv.piece === 'p' && ['d4', 'e4', 'd5', 'e5', 'c4', 'c5'].includes(h.mv.to)).length;
         const queen = own.filter((h) => h.mv.piece === 'q' && h.ply <= 14).length;
         const flank = own.filter((h) => h.mv.piece === 'p' && 'abgh'.includes(h.mv.to[0]) && Math.abs(rankOf(h.mv.to) - rankOf(h.mv.from)) === 2).length + own.filter((h) => h.mv.piece === 'p' && 'ah'.includes(h.mv.to[0])).length;
-        if (center) { aims.push('take the centre with pawns'); P.plans.push('center'); }
+        if (center) { aims.push('take the center with pawns'); P.plans.push('center'); }
         if (dev >= 3) { aims.push('get your knights and bishops out'); P.plans.push('develop'); }
         if (castle) { aims.push('castle by move ' + moveNo(castle.ply)); P.plans.push('castle'); }
         if (!aims.length) aims.push('get your pieces moving');
@@ -157,8 +157,8 @@
         P.aim = 'You set out to ' + list(aims) + '.';
         P.better = probs.includes('slowDev') ? 'Bring out a knight or bishop with almost every early move, and castle before starting anything.'
           : probs.includes('earlyQueen') ? 'Keep the queen home for the first few moves; develop the small pieces first so she is not chased with tempo.'
-          : probs.includes('flank') ? 'Edge-pawn moves rarely help early on. Centre pawns, knights and bishops first.'
-          : !castle && to >= 16 ? 'Castle earlier — your king in the centre becomes a target once lines open.'
+          : probs.includes('flank') ? 'Edge-pawn moves rarely help early on. Move your center pawns, knights and bishops first.'
+          : !castle && to >= 16 ? 'Castle earlier — your king in the center becomes a target once lines open.'
           : 'Solid start. Next step: have a reason for each move — which square or piece does it aim at?';
       } else if (key === 'middlegame') {
         const opp = other(side), oppK = (() => { try { const x = new Chess(H[from - 1].before); for (const row of x.board()) for (const p of row) if (p && p.type === 'k' && p.color === opp) return p.square; } catch { } return 'e8'; })();
@@ -176,7 +176,7 @@
         const rooks = own.filter((h) => h.mv.piece === 'r' && (() => { try { const x = new Chess(h.after); for (let r = 1; r <= 8; r++) { const p = x.get(h.mv.to[0] + r); if (p && p.type === 'p') return false; } return true; } catch { return false; } })()).length;
         if (fwd.length >= 3 && kw !== 'c' && cnt[kw] / fwd.length >= 0.45) { aims.push('attack the king on the ' + (kw === 'k' ? 'kingside' : 'queenside') + (storm >= 2 ? ', with a pawn storm' : '')); P.plans.push(kw === 'k' ? 'attackK' : 'attackQ'); }
         else if (fwd.length >= 3 && (cnt.k / fwd.length >= 0.55 || cnt.q / fwd.length >= 0.55)) { aims.push('press on the ' + (cnt.k > cnt.q ? 'kingside' : 'queenside')); P.plans.push('wing'); }
-        else if (fwd.length >= 3 && cnt.c / fwd.length >= 0.5) { aims.push('play through the centre'); P.plans.push('centre'); }
+        else if (fwd.length >= 3 && cnt.c / fwd.length >= 0.5) { aims.push('play through the center'); P.plans.push('centre'); }
         if (trades.length >= 2) { aims.push(ahead ? 'trade pieces while ahead' : 'trade pieces off'); P.plans.push(ahead ? 'simplify' : 'trades'); if (behind) { probs.push('tradeBehind'); addIssue('tradeBehind', trades[0].ply, 'You traded ' + plural(trades.length, 'piece') + ' while behind in material, which makes the opponent\'s job easier.'); } }
         if (rooks >= 1) { aims.push('put rooks on open files'); P.plans.push('rooks'); }
         if (checks >= 4) { P.plans.push('checks'); probs.push('checks'); }
@@ -193,7 +193,7 @@
           : probs.includes('drift') || probs.includes('noPlan') ? 'Pick one target — a weak pawn, an open file, or the enemy king — and make each move bring a piece closer to it.'
           : probs.includes('checks') && verdict !== 'good' ? 'Checks feel strong but often just push the king to safety. Check only when it wins something or leads somewhere.'
           : main === 'defend' ? 'Under pressure, first ask what your opponent threatens, then answer it — and swap off their most dangerous attacker.'
-          : main === 'centre' ? 'Holding the centre is good. Next: use it — rooks to open files and pieces aimed at the king.'
+          : main === 'centre' ? 'Holding the center is good. Next, use it: put rooks on open files and aim pieces at the king.'
           : 'Keep asking each move: what is my opponent threatening, and which of my pieces is doing the least?';
       } else {
         const kingMoves = own.filter((h) => h.mv.piece === 'k').length;
@@ -206,9 +206,9 @@
         else if (own.length >= 6 && kingMoves <= 1) { probs.push('passiveKing'); addIssue('passiveKing', own[0].ply, 'In the endgame your king moved ' + plural(kingMoves, 'time') + ' in ' + own.length + ' moves.'); }
         if (!aims.length) aims.push('hold the position');
         P.aim = 'In the endgame you tried to ' + list(aims) + '.';
-        P.better = probs.includes('passiveKing') ? 'In the endgame the king is a strong piece. Walk it to the centre or toward the pawns early.'
+        P.better = probs.includes('passiveKing') ? 'In the endgame the king is a strong piece. Walk it to the center or toward the pawns early.'
           : P.plans.includes('passer') && !promo ? 'Passed pawns must be pushed — but escort them with your king or a rook behind them.'
-          : P.plans.includes('convert') ? 'When ahead, trade pieces (not pawns), create a passed pawn, and bring your king.'
+          : P.plans.includes('convert') ? 'When ahead, trade pieces (not pawns), create a passed pawn, and bring your king forward.'
           : 'Count pawns on each side; the side with a passed pawn or the more active king usually wins.';
       }
       /* how it went */

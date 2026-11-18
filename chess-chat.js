@@ -98,7 +98,7 @@
     const frag=document.createDocumentFragment();
     if(!state.id)frag.append(note('Messages','Open an online match to chat.'));
     else if(state.mode==='play'&&state.view?.mySeat==null)
-      frag.append(note('Private chat','Only the two players can view game messages.'));
+      frag.append(note('Private chat','Only the two players can see these messages.'));
     else if(!entries.length)frag.append(note(state.mode==='watch'?'Spectator chat':'Messages',
       state.loaded?'No messages yet. Say hello.':'Loading messages…'));
     let previous=null,lastDay='',lastGame=null;
@@ -246,7 +246,7 @@
         .order('created_at',{ascending:false})
         .limit(100);
       if (id!==state.id||generation!==state.generation) return;
-      if (error) {state.error='Messages could not load: '+error.message;paint();return;}
+      if (error) {state.error='Messages couldn’t load: '+error.message;paint();return;}
       state.error='';
       if(state.mode==='watch'&&data?.length){
         const ids=[...new Set(data.map(m=>m.sender_id))];
@@ -258,7 +258,7 @@
       accept((data||[]).reverse(),false,true);
     } catch(e) {
       if (id===state.id&&generation===state.generation) {
-        state.error='Messages could not load: '+(e?.message||'Check your connection.');
+        state.error='Messages couldn’t load: '+(e?.message||'Check your connection.');
         paint();
       }
     } finally {
@@ -331,7 +331,7 @@
       if(generation!==state.generation||id!==state.id)return;
       state.pending=state.pending.filter(m=>m.id!==messageId);
       if(!input.value)input.value=text;
-      state.error='Message not sent: '+(e?.message||'Please retry.');
+      state.error='Message not sent: '+(e?.message||'Try again.');
       paint();
     } finally {
       if(generation===state.generation){

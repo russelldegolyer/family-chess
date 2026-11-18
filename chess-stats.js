@@ -131,7 +131,7 @@
   }
   function row(k, v) { const r = el('div', 'st-row'); r.append(el('span', '', k), el('b', '', v)); return r; }
   function sideCard(games) {
-    const c = el('div', 'st-card'); c.append(el('span', 'st-label', 'By colour'));
+    const c = el('div', 'st-card'); c.append(el('span', 'st-label', 'By color'));
     for (const [col, name] of [['w', 'As White'], ['b', 'As Black']]) {
       const gs = games.filter((g) => g.color === col), w = gs.filter((g) => g.result === 'w').length, l = gs.filter((g) => g.result === 'l').length, d = gs.length - w - l;
       const r = el('div', 'st-side'); const dot = el('span', 'st-dot ' + col);
@@ -176,7 +176,7 @@
   }
   function qualityCard(games) {
     const c = el('div', 'st-card st-quality'); c.append(el('span', 'st-label', 'Your moves'));
-    const body = el('div', 'st-q-body'); const note = el('span', 'st-muted', games.length ? 'Analysing…' : 'Play a game to see this.');
+    const body = el('div', 'st-q-body'); const note = el('span', 'st-muted', games.length ? 'Analyzing…' : 'Play a game to see this.');
     c.append(body, note);
     const my = run;
     (async () => {
@@ -198,7 +198,7 @@
         if (my !== run) return;
         const q = await analyse(g, () => my !== run); if (!q) return;
         for (const k in tot) tot[k] += q[k] || 0; if (q.worst && (!worst || q.worst.loss > worst.loss)) worst = q.worst;
-        done++; note.textContent = done < games.length ? 'Analysing ' + done + ' of ' + games.length + ' games…' : 'Graded by the built-in engine on this device.';
+        done++; note.textContent = done < games.length ? 'Analyzing ' + done + ' of ' + games.length + ' games…' : 'Graded by the chess engine on this device.';
         draw();
       }
       if (!games.length) note.textContent = 'Play a game to see this.';

@@ -181,7 +181,7 @@
  $('cgMyCode').addEventListener('click',async()=>{if(!myCode){$('cgMyCodeText').textContent='Loading…';
   try{const r=await api.rpc('chess_my_friend_code');if(r?.data)showCode(r.data);else throw 0;}catch{$('cgMyCodeText').textContent='Tap to retry';message('Couldn’t load your friend code. Check your connection and tap again.');return;}}
   const t=myCode.slice(0,3)+'-'+myCode.slice(3);
-  Promise.resolve(navigator.clipboard?.writeText(t)).then(()=>message('Friend code '+t+' copied. Send it to someone you want to play.')).catch(()=>message('Your friend code is '+t+'.'));});
+  Promise.resolve(navigator.clipboard?.writeText(t)).then(()=>message('Friend code '+t+' copied. Send it to someone you want to play with.')).catch(()=>message('Your friend code is '+t+'.'));});
  async function watch(id){
   try {
    if(!window.familyChessOpenMatch)throw new Error('Chess board still loading. Try again.');
@@ -261,13 +261,13 @@
    // A backgrounded iPhone can retain a stale green presence indicator.
    const response=await api.functions.invoke('chess-notify-challenge',{body:{challenge_id:id}});
    const sent=Number(response.data?.sent||0),failed=Number(response.data?.failed||0);
-   if(response.error)message('Invite sent, but the push service could not be reached. Check the other device.');
-   else if(response.data?.configured===false)message('Invite sent. Server push credentials still need repair.');
+   if(response.error)message('Invite sent, but the notification service couldn’t be reached. They’ll see it when they open the app.');
+   else if(response.data?.configured===false)message('Invite sent, but notifications aren’t set up on the server. They’ll see it when they open the app.');
    else if(sent>0)message('Invite sent to '+nameFor(targetId)+'. Push accepted for '+sent+' device'+(sent===1?'':'s')+'. They have 60 seconds.');
-   else if(failed>0)message('Invite sent, but push delivery failed for '+failed+' device(s). Re-enable notifications on that phone.');
-   else if(response.data?.already_sent)message('Invite sent. A push was already attempted for this invitation.');
+   else if(failed>0)message('Invite sent, but the notification failed for '+failed+' device(s). Re-enable notifications on that phone.');
+   else if(response.data?.already_sent)message('Invite sent. A notification already went out for this invite.');
    else message('Invite sent. They have 60 seconds to accept in the app.');
-  }catch(e){message(e.message||'Unable to send challenge.');}
+  }catch(e){message(e.message||'Couldn’t send the invite.');}
   finally{requesting=false;}
  }
  async function refreshData({offerLobby=false}={}){
@@ -311,9 +311,9 @@
     openedGameIds.add(accepted.game_id);
     try{await window.familyChessOpenMatch(accepted.game_id,'play');lobby.hidden=true;
       message('Challenge accepted by '+nameFor(accepted.target_id)+'. Game started.');}
-    catch(e){message('Challenge accepted, but board could not open: '+e.message);}
+    catch(e){message('Challenge accepted, but the board couldn’t open: '+e.message);}
    }
-  }catch(e){message('Lobby unavailable: '+(e.message||'Try refreshing.'));}
+  }catch(e){message('Online games couldn’t load: '+(e.message||'Try refreshing.'));}
   finally{loading=false;}
  }
  function startPresence(){
@@ -368,7 +368,7 @@
  async function storePush(sub){
   if(!user)return;
   const obj=sub?.toJSON();const k=obj?.keys;
-  if(!obj?.endpoint||!k?.p256dh||!k?.auth)throw new Error('Push subscription missing encryption keys.');
+  if(!obj?.endpoint||!k?.p256dh||!k?.auth)throw new Error('This device’s notification setup is incomplete. Turn notifications off and on again.');
   const {error}=await api.from('chess_push_subscriptions').upsert({
    user_id:user.id,endpoint:obj.endpoint,p256dh:k.p256dh,auth:k.auth
   },{onConflict:'endpoint'});
@@ -383,12 +383,12 @@
    const registration=await navigator.serviceWorker.register('/chess-sw.js');
    const existing=await registration.pushManager.getSubscription();
    if(existing)await storePush(existing);
-   $('cgPushInfo').textContent=existing?'Notifications enabled on this device.':'Tap Enable to finish notifications.';
+   $('cgPushInfo').textContent=existing?'Notifications enabled on this device.':'Tap Enable to finish turning on notifications.';
   }catch(e){$('cgPushInfo').textContent='Could not restore notifications: '+e.message;}
  }
  $('cgAllowPush').addEventListener('click',async()=>{
   if(!user)return;
-  if(!supportsPush()){message('Push notifications are not supported in this browser.');return;}
+  if(!supportsPush()){message('This browser doesn’t support notifications.');return;}
   const ios=/iPad|iPhone|iPod/.test(navigator.userAgent);
   const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
   if(ios&&!standalone){message('On iPhone, use Safari Share → Add to Home Screen. Open the installed chess app, then enable notifications.');return;}
@@ -403,18 +403,18 @@
    });
    await storePush(sub);
    message('Challenge notifications enabled on this device.');
-   $('cgPushInfo').textContent='You can now receive a 60-second challenge while the app is closed, if server push is configured.';
-  }catch(e){message('Notifications: '+(e.message||'Cannot subscribe.'));}
+   $('cgPushInfo').textContent='You can now get 60-second challenges while the app is closed.';
+  }catch(e){message('Notifications: '+(e.message||'Couldn’t turn on notifications.'));}
  });
 
  $('cgTestPush').addEventListener('click',async()=>{
   if(!user)return;
   if(!supportsPush()||Notification.permission!=='granted'){
-    message('Enable challenge notifications on this installed Chess app first.');
+    message('Turn on challenge notifications in the installed app first.');
     return;
   }
   const button=$('cgTestPush');button.disabled=true;
-  message('Contacting Apple Push service for a test notification…');
+  message('Sending a test notification…');
   try{
     await restorePushSubscription();
     const {data,error}=await api.functions.invoke('chess-notify-challenge',{
@@ -422,13 +422,13 @@
     });
     if(error)throw error;
     if(data?.configured===false){
-      message('Server signing keys are unavailable. Please report this status.');
+      message('Notifications aren’t set up on the server yet.');
     }else if(Number(data?.sent||0)>0){
-      message('Apple Push accepted the test for '+data.sent+' registered device(s). Check Notification Center. Acceptance is not proof of display.');
+      message('Test sent to '+data.sent+' device(s). Check Notification Center. If nothing arrived, make sure notifications are on in Settings.');
     }else if(Number(data?.failed||0)>0){
-      message('Push provider rejected '+data.failed+' request(s). Code: '+(data.failureCodes||['unknown']).join(', ')+'.');
+      message('The notification service rejected '+data.failed+' request(s). Code: '+(data.failureCodes||['unknown']).join(', ')+'.');
     }else{
-      message('No registered push device found for this account. Tap Enable challenge notifications to register this phone.');
+      message('No devices are set up for notifications on this account. Tap Enable challenge notifications to add this phone.');
     }
   }catch(e){
     message('Test push failed: '+(e?.message||'Unknown error'));

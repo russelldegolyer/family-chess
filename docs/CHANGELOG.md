@@ -24,6 +24,9 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Invite button turns back to the blue Invite as soon as the countdown reaches 0, and the "Waiting for…" line clears.
 - American spelling throughout: practice and defense (chapter progress carries over).
 
+**Improved**
+- Wording pass over every message in the app: 116 fixes (71 clearer or more grammatical sentences, 45 American spellings such as color, center and gray).
+
 ## 2026-11-17 — Stockfish analysis, online draws and takebacks, premoves, PGN, offline (deployed 11:05 AM)
 
 **Added**

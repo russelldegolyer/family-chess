@@ -331,7 +331,7 @@
     card('Unlimited Puzzles', 'Tactics by rating, with hints', '♞', pz.solved ? pz.solved + ' solved' : '', () => openPuzzles());
     card('Endgame Academy', 'From the basics to checkmate', '♚', lessonsDone + '/' + LESSONS.length, () => openAcademy());
     card('Endgame Challenges', 'Win against a defending computer', '♜', chDone ? chDone + ' won' : '', () => openChallenges());
-    card('Saved games', 'Pick up a game where you left it', '★', savedCount ? String(savedCount) : '', () => openSaved());
+    card('Saved games', 'Pick up a game where you left off', '★', savedCount ? String(savedCount) : '', () => openSaved());
     card('Matches', 'Your record vs humans and the computer', '⚔', '', () => void openMatchesPage());
     const you = el('div', 'tr-cards');
     const ng = (P.games || []).length;
@@ -550,7 +550,7 @@
       row.append(under, go); box.append(row);
       swipeRow(row, go, { canSend, onDelete: () => swipeDelete(row, g), onSend: () => swipeSend(row, g) });
     }
-    hub.append(box, el('p', 'tr-about-foot', 'Swipe left to delete · right to send back · ★ kept games stay'));
+    hub.append(box, el('p', 'tr-about-foot', 'Swipe left to delete or right to send back. Games marked ★ are kept.'));
   }
   /* swipe a saved game: left (red) deletes, right (green) re-sends it exactly as it was to the same opponent */
   function swipeRow(row, go, { canSend, onDelete, onSend }) {
@@ -660,10 +660,10 @@
     // Keep + delete
     const keepRow = el('label', 'tr-sg-keep');
     const keep = el('input'); keep.type = 'checkbox'; keep.checked = !!g.keep;
-    const kt = el('span', 'tr-card-text'); kt.append(el('b', '', 'Keep'), el('span', '', g.keep ? 'On: stays to replay any time' : 'Off: removed once picked up'));
+    const kt = el('span', 'tr-card-text'); kt.append(el('b', '', 'Keep'), el('span', '', g.keep ? 'On: kept so you can replay it any time' : 'Off: removed once picked up'));
     keepRow.append(kt, keep, el('i', 'tr-switch'));
     keep.addEventListener('change', async () => { const c = api(); const { error } = await c.rpc('chess_saved_set_keep', { p_id: g.id, p_keep: keep.checked });
-      if (error) { keep.checked = !keep.checked; say('Could not update: ' + error.message, true); } else { g.keep = keep.checked; kt.lastChild.textContent = keep.checked ? 'On: stays to replay any time' : 'Off: removed once picked up'; } });
+      if (error) { keep.checked = !keep.checked; say('Could not update: ' + error.message, true); } else { g.keep = keep.checked; kt.lastChild.textContent = keep.checked ? 'On: kept so you can replay it any time' : 'Off: removed once picked up'; } });
     const del = btn('Delete', 'tr-sg-delete', async () => {
       if (!del.classList.contains('arm')) { del.classList.add('arm'); del.textContent = 'Tap to confirm'; setTimeout(() => { if (del.isConnected) { del.classList.remove('arm'); del.textContent = 'Delete'; } }, 2500); return; }
       const { error } = await api().from('chess_saved_games').delete().eq('id', g.id);
@@ -704,7 +704,7 @@
     };
     const n = Math.round(P.puzzle.rating);
     sec('Puzzle rating', [
-      ['Starts at 1200', 'Everyone begins at 1200, a standard chess starting point (Chess.com uses 400–1200 by skill, Lichess uses 1500). It lands your first puzzles in the Easy range. You are at ' + n + ' now.'],
+      ['Starts at 1200', 'Everyone starts at 1200, a common starting rating (Chess.com uses 400–1200 depending on skill; Lichess uses 1500). That puts your first puzzles in the Easy range. You are at ' + n + ' now.'],
       ['Comparable to Lichess', 'Every puzzle comes from the Lichess database and carries its official difficulty, measured from millions of attempts, so your number lines up roughly with Lichess puzzle ratings.'],
       ['Peak', 'Your highest rating so far. It never goes down.'],
     ]);
@@ -720,9 +720,9 @@
       ['Categories', 'Mixed gives every theme. Pick one (mates, forks, pins and more) to drill a single idea.'],
     ]);
     sec('Sharpen', [
-      ['Review', 'Every puzzle, drill or game move you miss comes back: the next day, then after 3 days, then after a week. Get it right three times in a row and it is learned. Review cards never change your rating.'],
-      ['Spot the threat', 'Your opponent has a tactic ready. Tap the piece that would strike, then play a move that stops it. Trains seeing the moves being laid against you.'],
-      ['Blunder check', 'You are shown a move you are thinking about. Decide: safe, or does it lose something? If it loses, show why by tapping the punishing piece.'],
+      ['Review', 'Every puzzle, drill or game move you miss comes back: the next day, then after 3 days, then after a week. Get it right three times in a row and it counts as learned. Review cards never change your rating.'],
+      ['Spot the threat', 'Your opponent has a tactic ready. Tap the piece that would strike, then play a move that stops it. This trains you to spot the threats being set up against you.'],
+      ['Blunder check', 'You’re shown a move you might play. Decide whether it’s safe or loses something. If it loses something, show why by tapping the piece that punishes it.'],
       ['Speed rounds', 'Five easy puzzles on one pattern with a soft clock (aim for under 15 seconds each). Quick, correct repetition is what makes a pattern automatic. Unrated.'],
     ]);
     sec('Endgames', [
@@ -753,14 +753,14 @@
   const IDEA = {
     mateIn1: 'There is a checkmate right now. Look at every check.', mateIn2: 'Checkmate in two: a forcing first move leaves the king no escape.',
     mateIn3: 'A forced mate: keep checking and take away flight squares.', mateIn4: 'A long forced mate: every move should check or threaten mate.',
-    fork: 'One piece can attack two targets at once.', pin: 'A piece is stuck in front of something more valuable. Use or win it.',
+    fork: 'One piece can attack two targets at once.', pin: 'A piece is stuck in front of something more valuable. Attack it or win it.',
     skewer: 'Attack a valuable piece so that it moves and exposes the piece behind it.', discoveredAttack: 'Move one piece out of the way to unleash an attack from the piece behind it.',
     doubleCheck: 'Two pieces can give check at once; only a king move answers that.', sacrifice: 'Giving up material here opens the way to something bigger.',
     defensiveMove: 'You are under threat. Find the move that defends everything.', promotion: 'A pawn is close to queening. Clear its path or force it through.',
     advancedPawn: 'An advanced pawn is the key. Push it or support it.', hangingPiece: 'Something is unprotected. Win it.', trappedPiece: 'A piece has no safe squares. Attack it.',
     backRankMate: "The king is stuck behind its own pawns. Use the back rank.", deflection: 'Lure a defender away from what it protects.', attraction: 'Drag the king or a piece onto a square where it can be hit.',
     clearance: 'Clear a square or line for another piece.', interference: 'Put a piece between a defender and what it guards.', xRayAttack: 'Attack through an enemy piece.',
-    zugzwang: 'Every move makes the opponent worse. Find the quiet waiting move.', quietMove: 'The strongest move is quiet: no check, no capture, but a big threat.',
+    zugzwang: 'Any move your opponent makes will hurt their position. Find the quiet waiting move.', quietMove: 'The strongest move is quiet: no check, no capture, but a big threat.',
     intermezzo: 'Before recapturing, insert a stronger in-between move.', capturingDefender: 'Take the piece that defends the key square.', exposedKing: 'The king is exposed. Attack it.',
     endgame: 'Endgame tactic: count tempi and use your king actively.', crushing: 'A strong blow decides the game.',
   };
@@ -1057,7 +1057,7 @@
     if (out.missedMate) return { ...out, kind: 'inefficient', text: 'Still winning, but you had checkmate with ' + sanOf(fenBefore, out.missedMate[0]) + '.' };
     if (goal === 'promote' || goal === 'win') return { ...out, kind: 'good', text: m.promotion ? 'Promoted!' : 'Good — still winning.' };
     if (bxAfter < bxBefore) return { ...out, kind: 'good', text: 'Good — the king\'s box shrinks to ' + bxAfter + ' squares.' };
-    if (bxAfter > bxBefore) return { ...out, kind: 'inefficient', text: (c.inCheck() ? 'You checked the king, but ' : '') + 'the box grew to ' + bxAfter + ' squares — the king escapes toward the centre. Restrict a rank or file first.' };
+    if (bxAfter > bxBefore) return { ...out, kind: 'inefficient', text: (c.inCheck() ? 'You checked the king, but ' : '') + 'the box grew to ' + bxAfter + ' squares — the king escapes toward the center. Restrict a rank or file first.' };
     if (m.piece === 'k') return { ...out, kind: 'good', text: 'Good — your king joins the attack.' };
     return { ...out, kind: 'ok', text: c.inCheck() ? 'Check, but the red zone did not shrink. Checks alone rarely help.' : 'Still winning. Look for a move that takes squares away.' };
   }
@@ -1171,11 +1171,11 @@
   ] };
   /* mastery series pools (s2 king activity, s3 blockade, s4 trading) */
   const SERIES = {
-    s2a: { fen: '8/p4pk1/1p4p1/8/8/1P4P1/P4PK1/8 w - - 0 1', type: 'best', prefer: ['g2f3'], vary: true, task: 'Best plan?', why: 'King to the centre.' },
-    s2b: { fen: '8/5k2/1p3p2/p1p3p1/P1P3P1/1P3P2/5K2/8 w - - 0 1', type: 'best', prefer: ['f2e3'], vary: true, task: 'Best plan?', why: 'King to the centre.' },
-    s2c: { fen: '8/pp3k2/2p5/8/8/2P5/PP3K2/8 w - - 0 1', type: 'best', prefer: ['f2e3', 'f2f3'], vary: true, task: 'Best plan?', why: 'King to the centre.' },
-    s2d: { fen: '8/1p3pk1/6p1/8/8/6P1/1P3PK1/8 w - - 0 1', type: 'best', prefer: ['g2f3'], vary: true, task: 'Best plan?', why: 'King to the centre.' },
-    s3a: { fen: '8/4k3/8/3P4/2K5/8/4B3/2b5 b - - 0 1', side: 'b', type: 'best', prefer: ['e7d6'], vary: true, task: 'Blockade square?', why: 'King in front of the pawn, on your bishop\'s colour.' },
+    s2a: { fen: '8/p4pk1/1p4p1/8/8/1P4P1/P4PK1/8 w - - 0 1', type: 'best', prefer: ['g2f3'], vary: true, task: 'Best plan?', why: 'King to the center.' },
+    s2b: { fen: '8/5k2/1p3p2/p1p3p1/P1P3P1/1P3P2/5K2/8 w - - 0 1', type: 'best', prefer: ['f2e3'], vary: true, task: 'Best plan?', why: 'King to the center.' },
+    s2c: { fen: '8/pp3k2/2p5/8/8/2P5/PP3K2/8 w - - 0 1', type: 'best', prefer: ['f2e3', 'f2f3'], vary: true, task: 'Best plan?', why: 'King to the center.' },
+    s2d: { fen: '8/1p3pk1/6p1/8/8/6P1/1P3PK1/8 w - - 0 1', type: 'best', prefer: ['g2f3'], vary: true, task: 'Best plan?', why: 'King to the center.' },
+    s3a: { fen: '8/4k3/8/3P4/2K5/8/4B3/2b5 b - - 0 1', side: 'b', type: 'best', prefer: ['e7d6'], vary: true, task: 'Blockade square?', why: 'King in front of the pawn, on your bishop\'s color.' },
     s4a: { fen: '4r1k1/5pp1/4q2p/8/8/P3Q2P/5PP1/4R1K1 w - - 0 1', type: 'best', prefer: ['e3e6'], vary: true, task: 'You are ahead. Best move?', why: 'Trade queens.' },
     s4b: { fen: '3r4/4kpp1/7p/8/8/2N4P/5PP1/3R2K1 w - - 0 1', type: 'best', prefer: ['d1d8'], vary: true, task: 'You are ahead. Best move?', why: 'Trade rooks.' },
     s4c: { fen: '3rk3/5ppp/8/8/8/8/P4PPP/3R2K1 w - - 0 1', type: 'best', prefer: ['d1d8'], vary: true, task: 'You are ahead. Best move?', why: 'Trade into a won pawn ending.' },
@@ -1210,7 +1210,7 @@
       harder: { fen: '8/8/8/2k5/8/8/2K1P3/8 w - - 0 1', task: 'Opposition from far away — find the only winning move.', type: 'keep' },
       mastery: { table: 'p', minPlies: 22, task: 'Win the pawn ending against perfect defense.', goal: 'promote', kind: 'engine' } },
     { id: 'f4', title: 'The square rule',
-      intro: ['Draw a square from the pawn to its queening rank. If the defending king can step into that square, it catches the pawn. If not, the pawn runs home alone.', 'A pawn on its starting square may move two — count the square from where it lands. And it matters whose move it is.'],
+      intro: ['Draw a square from the pawn to its queening rank. If the defending king can step into that square, it catches the pawn. If not, the pawn runs home alone.', 'A pawn on its starting square can move two squares, so count the square from where it lands. And it matters whose move it is.'],
       demo: { fen: '8/8/8/3P4/k7/8/8/6K1 w - - 0 1', steps: [
         { say: 'The d5-pawn\'s square: d5–d8–a8–a5. The king on a4 is just outside it.', tint: ['a5', 'b5', 'c5', 'd5', 'a6', 'b6', 'c6', 'd6', 'a7', 'b7', 'c7', 'd7', 'a8', 'b8', 'c8', 'd8'] },
         { move: 'd5d6', say: 'd6! The square shrinks to d6–d8–b8–b6. The king cannot step into it.', tint: ['b6', 'c6', 'd6', 'b7', 'c7', 'd7', 'b8', 'c8', 'd8'] },
@@ -1236,7 +1236,7 @@
       mastery: { table: 'p', minPlies: 26, task: 'Win from a fresh position — key squares first, pawn second.', goal: 'promote', kind: 'engine' } },
     { group: 'Basic checkmates' },
     { id: 'l4', title: 'King and queen vs king',
-      intro: ['The box method: put the queen a knight\'s jump from the king and follow it, shrinking the box each move.', 'When the king is on the edge, STOP shrinking — bring your king next to it, then mate. A queen move that leaves no squares but no check is stalemate.'],
+      intro: ['The box method: put the queen a knight\'s jump from the king and follow it, shrinking the box each move.', 'When the king is on the edge, STOP shrinking — bring your king next to it, then mate. A queen move that takes away every square without giving check is stalemate.'],
       demo: { fen: '8/8/8/4k3/8/8/8/1Q2K3 w - - 0 1', auto: 'teacher', plies: 30, say: 'The queen shadows the king; the white king walks up; mate on the edge.' },
       guided: [{ fen: '8/8/8/2k5/8/8/8/4K2Q w - - 0 1', task: 'Make the red zone smaller with the queen.', type: 'shrink' }],
       harder: { fen: 'k7/8/1K6/8/8/8/7Q/8 w - - 0 1', task: 'Mate in one — one wrong queen move is stalemate.', type: 'mate1' },
@@ -1275,7 +1275,7 @@
       harder: { table: 'p', minPlies: 30, task: 'Win against perfect defense.', goal: 'promote', kind: 'engine' },
       mastery: { table: 'p', minPlies: 36, task: 'Mastery: a long win against perfect defense.', goal: 'promote', kind: 'engine' } },
     { id: 'p2', title: 'Defending against the pawn',
-      intro: ['With the lone king, stand IN FRONT of the pawn. When the kings face each other, keep the opposition; when the pawn reaches your back rank\'s neighbour, step straight back.', 'Every endgame of king and pawn against king is either a forced win or a draw — your job is to make no mistake.'],
+      intro: ['With the lone king, stand IN FRONT of the pawn. When the kings face each other, keep the opposition; when the pawn reaches the rank next to your back rank, step straight back.', 'Every endgame of king and pawn against king is either a forced win or a draw — your job is to make no mistake.'],
       demo: { fen: '4k3/8/4K3/4P3/8/8/8/8 b - - 0 1', auto: 'engine', plies: 6, say: 'When the attacker already owns a key square, nothing helps — so stop it earlier.' },
       guided: [
         { fen: '5k2/8/2K5/8/4P3/8/8/8 b - - 0 1', task: 'You are Black. Only one move holds the draw.', type: 'keep', side: 'b' },
@@ -1292,7 +1292,7 @@
       harder: { fen: '7k/8/5K2/4BB2/8/8/8/8 w - - 0 1', task: 'Finish it: checkmate in the corner.', goal: 'mate', kind: 'engine' },
       mastery: { gen: ['b', 'b'], bk: CORNER, task: 'Mate with two bishops.', goal: 'mate', kind: 'engine' } },
     { id: 'l7', title: 'Bishop and knight',
-      intro: ['The hardest basic mate. It only works in a corner of the SAME colour as your bishop.', 'Drive the king to the edge, then walk it along the edge toward the right corner with the knight\'s "W" manoeuvre.'],
+      intro: ['The hardest basic mate. It only works in a corner of the SAME color as your bishop.', 'Drive the king to the edge, then walk it along the edge toward the right corner with the knight\'s "W" maneuver.'],
       demo: { fen: 'k7/3N4/1K6/8/8/8/8/5B2 w - - 0 1', steps: [
         { say: 'Light-squared bishop → mate happens on a8 or h1 (light corners).', rings: ['a8', 'h1'] },
         { say: 'Here a7 and b7 are covered by the king, b8 by the knight on d7.', rings: ['a7', 'b7', 'b8'] },
@@ -1354,24 +1354,24 @@
       harder: { fen: '8/5p2/6p1/P7/1k6/6P1/5PK1/8 w - - 0 1', type: 'best', prefer: ['a5a6'], task: 'The black king is coming. Keep it busy.', why: 'Push on: the king must chase the pawn, and your king gets the other side.' },
       mastery: { make: () => pick(['8/5pk1/6p1/8/P7/6P1/5PK1/8 w - - 0 1', '8/5pk1/6p1/8/1P6/6P1/5PK1/8 w - - 0 1', '8/5p2/6p1/P7/1k6/6P1/5PK1/8 w - - 0 1']), task: 'Win it: make a new queen.', goal: 'promote', kind: 'engine', intro: 'Your move. Push the outside pawn to drag the king away, then take the other side with your king.' } },
     { id: 's2', title: 'King activity', noBox: true,
-      intro: ['In the endgame the king stops hiding and becomes a fighting piece. A king in the centre reaches both sides of the board.', 'When there is nothing urgent, ask: can my king come closer to the centre or to the pawns? It is usually the best move on the board.'],
-      demo: { fen: '8/5k2/1p3p2/p1p3p1/P1P3P1/1P3P2/5K2/8 w - - 0 1', auto: 'engine', plies: 10, say: 'Both kings race for the centre: whoever arrives first gets to the pawns.' },
+      intro: ['In the endgame the king stops hiding and becomes a fighting piece. A king in the center reaches both sides of the board.', 'When there is nothing urgent, ask: can my king come closer to the center or to the pawns? It is usually the best move on the board.'],
+      demo: { fen: '8/5k2/1p3p2/p1p3p1/P1P3P1/1P3P2/5K2/8 w - - 0 1', auto: 'engine', plies: 10, say: 'Both kings race for the center: whoever arrives first gets to the pawns.' },
       guided: [
-        { fen: '8/p4pk1/1p4p1/8/8/1P4P1/P4PK1/8 w - - 0 1', type: 'best', prefer: ['g2f3'], task: 'Nothing is attacked. Find the best plan.', why: 'Kf3 — the king heads for the centre, where it will be needed.' },
-        { fen: '8/5k2/1p3p2/p1p3p1/P1P3P1/1P3P2/5K2/8 w - - 0 1', type: 'best', prefer: ['f2e3'], task: 'The pawns are locked. Which piece matters now?', why: 'Ke3 — the king walks to the centre, toward the squares it needs.' },
+        { fen: '8/p4pk1/1p4p1/8/8/1P4P1/P4PK1/8 w - - 0 1', type: 'best', prefer: ['g2f3'], task: 'Nothing is attacked. Find the best plan.', why: 'Kf3 — the king heads for the center, where it will be needed.' },
+        { fen: '8/5k2/1p3p2/p1p3p1/P1P3P1/1P3P2/5K2/8 w - - 0 1', type: 'best', prefer: ['f2e3'], task: 'The pawns are locked. Which piece matters now?', why: 'Ke3 — the king walks to the center, toward the squares it needs.' },
       ],
-      harder: { fen: '8/pp3k2/2p5/8/8/2P5/PP3K2/8 w - - 0 1', type: 'best', prefer: ['f2e3', 'f2f3'], task: 'Find the move that matters most.', why: 'The king comes to the centre first — then it can go to whichever side needs it.' },
+      harder: { fen: '8/pp3k2/2p5/8/8/2P5/PP3K2/8 w - - 0 1', type: 'best', prefer: ['f2e3', 'f2f3'], task: 'Find the move that matters most.', why: 'The king comes to the center first — then it can go to whichever side needs it.' },
       mastery: { series: ['s2a', 's2b', 's2c', 's2d'], need: 3, task: 'Three positions in a row, first try, no hints.' } },
-    { id: 's3', title: 'Opposite-coloured bishops', side: 'b', noBox: true,
-      intro: ['When each side has one bishop and they run on different colours, the defender can often hold even a pawn down.', 'Build a blockade: put your king in front of the passed pawn, on a square your bishop also guards. The other bishop can never chase you away from it.'],
+    { id: 's3', title: 'Opposite-colored bishops', side: 'b', noBox: true,
+      intro: ['When each side has one bishop and they run on different colors, the defender can often hold even a pawn down.', 'Build a blockade: put your king in front of the passed pawn, on a square your bishop also guards. The other bishop can never chase you away from it.'],
       demo: { fen: '8/4k3/8/3P4/2K5/8/4B3/2b5 b - - 0 1', steps: [
-        { say: 'You are Black, a pawn down. The bishops run on opposite colours.' },
+        { say: 'You are Black, a pawn down. The bishops run on opposite colors.' },
         { move: 'e7d6', say: 'Kd6! The king stands in front of the pawn — on a dark square your bishop controls. The light bishop can never attack it.' },
         { move: 'c4b5', say: 'White tries to go around…' }, { move: 'c1g5', say: '…and your bishop simply keeps guarding. Nothing gets through: a draw.' },
       ] },
       guided: [
-        { fen: '8/4k3/8/3P4/2K5/8/4B3/2b5 b - - 0 1', side: 'b', type: 'best', prefer: ['e7d6'], task: 'You are a pawn down. Set up the blockade.', why: 'King in front of the pawn, on your bishop\'s colour. White\'s bishop can never chase it away.' },
-        { fen: '8/4k3/8/3P4/2K5/8/4B3/2b5 b - - 0 1', side: 'b', type: 'best', prefer: ['e7d6'], vary: true, task: 'Same idea, new place.', why: 'King in front of the pawn, on your bishop\'s colour.' },
+        { fen: '8/4k3/8/3P4/2K5/8/4B3/2b5 b - - 0 1', side: 'b', type: 'best', prefer: ['e7d6'], task: 'You are a pawn down. Set up the blockade.', why: 'King in front of the pawn, on your bishop\'s color. White\'s bishop can never chase it away.' },
+        { fen: '8/4k3/8/3P4/2K5/8/4B3/2b5 b - - 0 1', side: 'b', type: 'best', prefer: ['e7d6'], vary: true, task: 'Same idea, new place.', why: 'King in front of the pawn, on your bishop\'s color.' },
       ],
       harder: { fen: '8/4k3/8/3P4/2K5/8/4B3/2b5 b - - 0 1', side: 'b', type: 'best', prefer: ['e7d6'], vary: true, task: 'Find the blockade square.', why: 'The blockade holds: the pawn cannot move and nothing can chase your king.' },
       mastery: { series: ['s3a', 's3a', 's3a'], need: 3, task: 'Three blockades in a row, first try, no hints.' } },
@@ -1390,14 +1390,14 @@
       mastery: { series: ['s4a', 's4b', 's4c'], need: 3, task: 'Three positions in a row, first try, no hints.' } },
     { group: 'Defender\'s side' },
     { id: 'dq', title: 'Survive the queen', side: 'b', noBox: true,
-      intro: ['Play the lone king against king and queen. You will lose — but seeing the mate from the other side teaches you how it works.', 'Stay in the middle of the board and keep away from the edges and corners. Stay close to the enemy king\'s side: the queen alone can\'t mate you.'],
-      demo: { fen: '8/8/8/3k4/8/8/8/1Q2K3 w - - 0 1', auto: 'engine', plies: 16, say: 'The best defense heads for the centre every time it gets the chance.' },
+      intro: ['Play the lone king against king and queen. You will lose — but seeing the mate from the other side teaches you how it works.', 'Stay in the middle of the board, away from the edges and corners, and keep close to the enemy king: the queen can\'t mate you on her own.'],
+      demo: { fen: '8/8/8/3k4/8/8/8/1Q2K3 w - - 0 1', auto: 'engine', plies: 16, say: 'The best defense heads for the center every time it gets the chance.' },
       guided: [{ type: 'longest', table: 'q', minPlies: 12, task: 'You are the lone king. Pick the move that survives longest.' }, { type: 'longest', table: 'q', minPlies: 14, task: 'Again: the longest defense.' }],
       harder: { type: 'longest', table: 'q', minPlies: 16, task: 'Find the longest defense.' },
       mastery: { survive: 'q', task: 'Survive as long as you can: 7 of every 10 moves must be the longest defense.' } },
     { id: 'dr', title: 'Survive the rook', side: 'b', noBox: true,
       intro: ['Now the lone king against king and rook. The rook mate takes longer — make it as long as possible.', 'Attack the rook when you can, step away from the rook\'s line, and avoid facing the white king (opposition) on the edge.'],
-      demo: { fen: '8/8/8/4k3/8/8/8/R3K3 w - - 0 1', auto: 'engine', plies: 16, say: 'The defending king keeps to the centre and makes the rook work for every square.' },
+      demo: { fen: '8/8/8/4k3/8/8/8/R3K3 w - - 0 1', auto: 'engine', plies: 16, say: 'The defending king keeps to the center and makes the rook work for every square.' },
       guided: [{ type: 'longest', table: 'r', minPlies: 20, task: 'Pick the move that survives longest.' }, { type: 'longest', table: 'r', minPlies: 24, task: 'Again: the longest defense.' }],
       harder: { type: 'longest', table: 'r', minPlies: 28, task: 'Find the longest defense.' },
       mastery: { survive: 'r', task: 'Survive as long as you can: 7 of every 10 moves must be the longest defense.' } },
@@ -1565,7 +1565,7 @@
       const C = B().Chess, after = new C(B().fen());
       if (g.type === 'mate1') {
         if (after.isCheckmate()) { say(msg, 'Checkmate! ' + (g.type === 'mate1' ? 'Every escape square is covered.' : ''), 'good'); mark({}); await sleep(900); if (my === session) done(); return; }
-        const text = after.isStalemate() ? 'Stalemate! The king has no move but is not in check — a draw. Give check while taking the last squares.' : after.inCheck() ? 'Check, but the king escapes to ' + after.moves({ verbose: true }).filter((m) => m.piece === 'k').map((m) => m.to).join(', ') + '.' : 'That is not even check. Look for a check that leaves no escape.';
+        const text = after.isStalemate() ? 'Stalemate! The king has no move but is not in check — a draw. Give check while taking the last squares.' : after.inCheck() ? 'Check, but the king escapes to ' + after.moves({ verbose: true }).filter((m) => m.piece === 'k').map((m) => m.to).join(', ') + '.' : 'That isn’t check. Look for a check that leaves no escape.';
         say(msg, text, after.isStalemate() ? 'bad' : 'warn'); await sleep(1300); if (my !== session) return;
         B().takeBack(1); tintBox(); B().busy(false); return;
       }
@@ -1766,7 +1766,7 @@
       learn: learn(['Most games between beginners are lost to a piece left unprotected, not to a deep plan.', 'Before every move, look at your opponent\'s pieces one by one: what can each of them capture next move? If something of yours is attacked and not defended — or attacked more times than defended — deal with it first.'], ['Your pieces with no defender', 'What the opponent\'s last move attacks', 'Captures your opponent has next move']),
       practice: { drill: 'threat', theme: ['hangingPiece'], count: 5 }, prove: { drill: 'blunder', theme: ['hangingPiece', 'fork'], count: 4 } },
     { id: 'c3', title: 'Forks', blurb: 'One piece attacking two things at once.',
-      learn: learn(['A fork is one move that attacks two targets. They can only save one.', 'Knights are the classic forkers, but queens, pawns and even kings fork too. Look for a square that touches two loose pieces, or the king and a piece.'], ['Knight jumps near the king', 'Two pieces on the same colour square', 'Checks that also attack']),
+      learn: learn(['A fork is one move that attacks two targets. They can only save one.', 'Knights are the classic forkers, but queens, pawns and even kings fork too. Look for a square that touches two loose pieces, or the king and a piece.'], ['Knight jumps near the king', 'Two pieces on the same color square', 'Checks that also attack']),
       practice: { theme: 'fork', lo: 600, hi: 1400, count: 6 }, prove: { theme: 'fork', lo: 1000, hi: 1700, count: 3 } },
     { id: 'c4', title: 'King and queen mate', blurb: 'The first mate everyone needs: push the king to the edge.',
       learn: { lesson: 'l2' }, practice: { lesson: 'l4' }, prove: { challenge: 'kq' } },
@@ -2019,7 +2019,7 @@
     session++; screen = 'review'; PATH = null; RETURN = null; RV = null; top.hidden = true; panel.hidden = true; B().onMove(null); B().onTap(null); mark({});
     hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
     const due = reviewDue(), all = P.review || [], soon = all.filter((x) => x.due === addDays(1)).length;
-    hub.append(backHead('Review', openHub), el('p', 'tr-note', 'Everything you miss comes back: the next day, then after 3 days, then after a week. Get it right three times and it is learned.'));
+    hub.append(backHead('Review', openHub), el('p', 'tr-note', 'Everything you miss comes back: the next day, then after 3 days, then after a week. Get it right three times in a row and it counts as learned.'));
     const mini = el('div', 'tr-mini');
     const m = (v, l) => { const d = el('div'); d.append(el('b', '', String(v)), el('span', '', l)); mini.append(d); };
     m(due.length, 'Due now'); m(soon, 'Tomorrow'); m(all.length, 'In the deck'); m(P.learned || 0, 'Learned');
@@ -2088,7 +2088,7 @@
         return;
       }
       misses++;
-      say(msg, uci === d.played ? 'That is what you played in the game. Look again — something stronger is there.' : 'Not it. Look at checks, captures and threats first.', 'bad');
+      say(msg, uci === d.played ? 'That’s the move you played in the game. Look again — there’s something stronger.' : 'Not it. Look at checks, captures and threats first.', 'bad');
       await sleep(1500); if (my !== session) return; B().takeBack(1); B().busy(false);
     });
   }
@@ -2219,11 +2219,11 @@
     B().setup({ fen: pos.fen, side: pos.defender, opponent: 'Opponent' }); B().busy(true);
     const lastSan = sanOf(pos.p.fen, pos.last);
     const grey = [[pos.last.slice(0, 2), pos.last.slice(2, 4), 'rgba(170,170,180,.6)']];
-    mark({ arrows: grey, legend: [['arrow grey', 'Grey arrow: your last move']] });
+    mark({ arrows: grey, legend: [['arrow grey', 'Gray arrow: your last move']] });
     TD.msg = lessonPanel('You are ' + (pos.defender === 'w' ? 'White' : 'Black') + ' · what’s the threat?', [
       btn('Hint', 'hint', () => threatHint(), 'hint'), btn('Show me', 'quiet', () => { TD.misses++; threatReveal('Here it is.'); }, 'eye'),
       btn(opts.review ? 'Next card' : 'Skip', 'quiet', () => { if (opts.review) { reviewResult(opts.review, false); return reviewNext(); } if (PATH && PATH.drill && PATH.step === 'prove') { pathState(PATH.ch).streak = 0; save(); } startThreat(); }, 'skip')],
-      'Your last move was ' + lastSan + ' (grey arrow). Now your opponent has a strong threat. Tap the enemy piece that would strike.');
+      'Your last move was ' + lastSan + ' (gray arrow). Now your opponent has a strong threat. Tap the enemy piece that would strike.');
     B().onTap((sq) => threatTap(sq, my));
   }
   function threatHint() {
@@ -2370,7 +2370,7 @@
       return void blunderShow(false, 'It loses: ' + punSan + ' — ' + BD.idea + ' Before every move, check what your opponent can do next.');
     }
     const e = BD.reply ? { move: BD.reply } : await engine(B().fen(), 5, 700); if (my !== session || !BD) return;
-    if (e && e.move) mark({ arrows: [[e.move.slice(0, 2), e.move.slice(2, 4), 'rgba(170,170,180,.7)']], legend: [['arrow grey', 'Grey arrow: their best reply']] });
+    if (e && e.move) mark({ arrows: [[e.move.slice(0, 2), e.move.slice(2, 4), 'rgba(170,170,180,.7)']], legend: [['arrow grey', 'Gray arrow: their best reply']] });
     blunderDone(right, right ? 'Right — ' + candSan + ' is safe. Their best reply' + (e && e.move ? ', ' + sanOf(B().fen(), e.move) + ',' : '') + ' doesn’t win anything.'
       : 'Actually it’s safe: their best reply' + (e && e.move ? ', ' + sanOf(B().fen(), e.move) + ',' : '') + ' wins nothing. Not every move is a trap — check, then trust it.');
   }
@@ -2561,14 +2561,14 @@
   }
   function runLongest(g, my, done) {
     let hints = 0, tries = 0;
-    const msg = lessonPanel(g.task, [btn('Hint', 'hint', () => { hints++; const o = defenseOptions(B().fen()); if (!o.length) return; mark(hints === 1 ? { lift: o[0].m.from } : { lift: o[0].m.from, arrows: [[o[0].m.from, o[0].m.to]] }); say(msg, hints === 1 ? 'Hint: move the highlighted piece.' : 'Hint: the arrow is the longest defense.'); }, 'hint'), btn('Skip', 'quiet', done, 'skip')],
+    const msg = lessonPanel(g.task, [btn('Hint', 'hint', () => { hints++; const o = defenseOptions(B().fen()); if (!o.length) return; mark(hints === 1 ? { lift: o[0].m.from } : { lift: o[0].m.from, arrows: [[o[0].m.from, o[0].m.to]] }); say(msg, hints === 1 ? 'Hint: move the highlighted piece.' : 'Hint: the arrow shows the longest defense.'); }, 'hint'), btn('Skip', 'quiet', done, 'skip')],
       'Mate is coming. Make it take as long as possible.');
     B().onMove(async (uci) => {
       if (my !== session) return; B().busy(true); mark({});
       const fenBefore = B().prevFen(), o = defenseOptions(fenBefore), best = o[0], mine = o.find((x) => x.uci === uci.slice(0, 4) || x.uci === uci);
       if (best && mine && mine.plies >= best.plies - 2) { say(msg, 'Longest defense — mate is still ' + Math.ceil(mine.plies / 2) + ' moves away. ' + (dist(kingSq(new (B().Chess)(B().fen()), 'b'), 'e4') <= 2 ? 'Staying central is what makes it last.' : ''), 'good'); await sleep(1900); if (my === session) done(); return; }
       tries++;
-      say(msg, 'This shortens it: mate in ' + Math.ceil((mine?.plies || 0) / 2) + ' now — the best defense lasts ' + Math.ceil((best?.plies || 0) / 2) + '. ' + (tries > 1 ? 'Head for the centre, away from the edge.' : 'Try again.'), 'bad');
+      say(msg, 'This shortens it: mate in ' + Math.ceil((mine?.plies || 0) / 2) + ' now — the best defense lasts ' + Math.ceil((best?.plies || 0) / 2) + '. ' + (tries > 1 ? 'Head for the center, away from the edge.' : 'Try again.'), 'bad');
       await sleep(2000); if (my !== session) return; B().takeBack(1); B().busy(false);
     });
   }

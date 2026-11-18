@@ -141,7 +141,7 @@
     notify();
     if (!steps.length || results.every(Boolean)) return;
     if (!window.Worker || !window.Blob) {
-      error = 'This browser cannot run offline move analysis.';
+      error = 'This browser can’t run move analysis.';
       notify();
       return;
     }
