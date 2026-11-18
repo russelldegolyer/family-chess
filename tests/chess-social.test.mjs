@@ -61,7 +61,7 @@ test('offline push is opt-in, encrypted, service-role-only and expiry-limited',(
 test('offline challenge links prioritize the intended invite and explain expiry',()=>{
  assert.match(social,/available\.find\(c=>c\.id===deepLink\)\|\|available\[0\]/);
  assert.match(social,/url\.searchParams\.delete\('challenge'\)/);
- assert.match(social,/That invitation has expired or was already answered/);
+ assert.match(social,/That invite expired or was already answered/);
 });
 
 test('players in active games can still receive separate direct challenges',()=>{

@@ -183,7 +183,7 @@
   const signOut = document.getElementById('authSignOut');
   accountActions.insertBefore(launch, signOut);
   const root = document.createElement('div');
-  root.id = 'cgLobby'; root.hidden = true; root.setAttribute('role','dialog'); root.setAttribute('aria-modal','true'); root.setAttribute('aria-label','Chess online games');
+  root.id = 'cgLobby'; root.hidden = true; root.setAttribute('role','dialog'); root.setAttribute('aria-modal','true'); root.setAttribute('aria-label','Play online');
   root.innerHTML = `
     <div class="cgShade"></div><section class="cgPanel">
       <div class="cgGrab" aria-hidden="true"></div>
@@ -225,7 +225,7 @@
       <details class="cgSettings" id="cgSettings">
         <summary>Settings<span class="cgSettingsName" id="cgNameValue" hidden>Loading…</span></summary>
         <div class="cgSettingsBody">
-          <div id="cgNotifySlot"><span class="cgLabel">Challenge notifications</span></div>
+          <div id="cgNotifySlot"><span class="cgLabel">Invite notifications</span></div>
           <form id="cgJoinForm"><label class="cgLabel" for="cgJoinId">Join with a link</label>
             <div class="cgRow"><input id="cgJoinId" class="cgInput" type="text" placeholder="Paste a game link" required>
             <button class="cgButton" type="submit">Join</button></div></form>
@@ -291,7 +291,7 @@
       const {error}=await api.from('chess_profiles')
         .update({[column]:hex.toLowerCase()}).eq('id',id);
       if(error){
-        if(player?.id===id)status('Could not sync your saved colors: '+error.message,true);
+        if(player?.id===id)status('Couldn’t sync your saved colors: '+error.message,true);
         return;
       }
       clearPendingColor(kind,id,hex);
@@ -327,7 +327,7 @@
     try { return new URL(trimmed).searchParams.get('game') || ''; } catch { return ''; }
   }
   async function copy(value) {
-    try { await navigator.clipboard.writeText(value); status('Invitation copied.'); }
+    try { await navigator.clipboard.writeText(value); status('Invite link copied.'); }
     catch { status('Copy this link manually: ' + value); }
   }
   function show() {
@@ -355,8 +355,8 @@
     const url=$('cgNewInviteURL').href;
     if(!url||url==='#')return;
     if(navigator.share) {
-      try {await navigator.share({title:'Chess invitation',text:'Join me for a chess game.',url});}
-      catch(e){if(e?.name!=='AbortError')status('Unable to share: '+e.message,true);}
+      try {await navigator.share({title:'Chess invite',text:'Join me for a chess game.',url});}
+      catch(e){if(e?.name!=='AbortError')status('Couldn’t share: '+e.message,true);}
     } else void copy(url);
   });
 
@@ -365,7 +365,7 @@
     const selected=$('cgInviteRecipient').value;
     const {data,error}=await api.from('chess_profiles')
       .select('id,display_name').neq('id',player.id).order('display_name').limit(100);
-    if(error){status('Could not list players: '+error.message,true);return;}
+    if(error){status('Couldn’t list players: '+error.message,true);return;}
     const el=$('cgInviteRecipient');
     el.replaceChildren(new Option('Choose a player…',''));
     for(const p of data||[])el.add(new Option(p.display_name,p.id));
@@ -385,13 +385,13 @@
         if(error)throw error;
         const {data:push,error:pushError}=await api.functions.invoke('chess-notify-challenge',{
           body:{challenge_id:id}});
-        if(pushError)throw new Error('Invitation sent, but the notification service couldn’t be reached.');
+        if(pushError)throw new Error('Invite sent, but the notification service couldn’t be reached.');
         const sent=Number(push?.sent||0),failed=Number(push?.failed||0);
         status(sent>0?'Push accepted by '+sent+' device endpoint'+(sent===1?'':'s')+'.':
-          push?.configured===false?'Invitation saved, but notifications aren’t set up on the server.':
-          failed>0?'Invitation saved, but the notification failed on '+failed+' device(s).':
-          'Invitation saved, but none of their devices received the notification.');
-      }catch(e){status('Could not notify player: '+(e?.message||'Unknown error'),true);}
+          push?.configured===false?'Invite saved, but notifications aren’t set up on the server.':
+          failed>0?'Invite saved, but the notification failed on '+failed+' device(s).':
+          'Invite saved, but none of their devices received the notification.');
+      }catch(e){status('Couldn’t notify player: '+(e?.message||'Unknown error'),true);}
       finally{button.disabled=false;}
     }
   });
@@ -414,7 +414,7 @@
       window.addEventListener('familyChessNativeReady',resolve,{once:true});
       setTimeout(resolve,15000);
     });
-    if (!window.familyChessNative) throw new Error('The chess board did not load. Refresh the page.');
+    if (!window.familyChessNative) throw new Error('The chess board didn’t load. Refresh the page.');
     return window.familyChessNative;
   }
 
@@ -435,9 +435,9 @@
       const isPlayer=g.white_player_id===uid||g.black_player_id===uid;
       const isWatcher=matchMode==='watch';
       if(isWatcher){
-        if(g.status!=='active'&&g.status!=='finished')throw new Error('This game is not available to watch.');
-        if(!g.black_player_id)throw new Error('The second player has not joined yet.');
-      }else if(!isPlayer)throw new Error('You are not a player in this match. Use Watch live to spectate.');
+        if(g.status!=='active'&&g.status!=='finished')throw new Error('This game isn’t available to watch.');
+        if(!g.black_player_id)throw new Error('The second player hasn’t joined yet.');
+      }else if(!isPlayer)throw new Error('You’re not a player in this match. Use Watch live to spectate.');
       const {data:moves,error:movesError}=await api.from('chess_moves')
         .select('ply,move_uci').eq('game_id',id).order('ply',{ascending:true}).limit(1001);
       if (movesError) throw movesError;
@@ -466,11 +466,11 @@
         spectatorBar.hidden=false;
       }
       if(isWatcher)status(`${g.status==='finished'?'Final':'Live'} · Watching ${labels[g.white_player_id]||'White'} vs ${labels[g.black_player_id]||'Black'} · read-only`);
-      else if (g.status==='waiting') status('Waiting for your opponent to join. Share the invitation link.');
+      else if (g.status==='waiting') status('Waiting for your opponent to join. Share the invite link.');
       else status('Live match connected · '+moves.length+' half-moves saved.');
       return true;
     } catch(e) {
-      if (epoch === syncToken) status('Could not sync board: '+(e?.message||'Unknown error'),true);
+      if (epoch === syncToken) status('Couldn’t sync board: '+(e?.message||'Unknown error'),true);
       return false;
     } finally {
       pendingRead = false;
@@ -493,7 +493,7 @@
     if (!loaded || matchId !== id) {
       stopMatch();
       root.hidden = false;
-      throw new Error($('cgMessage').textContent || 'Unable to open this match.');
+      throw new Error($('cgMessage').textContent || 'Couldn’t open this match.');
     }
     root.hidden = true;
     if (reviewAfterLoad) window.familyChessNative?.openReview?.();
@@ -508,14 +508,14 @@
   window.familyChessClaimTimeout = async (id) => {
     if (!player || !matchId || matchId!==id || matchMode!=='play') return false;
     const {data,error}=await api.rpc('chess_claim_timeout',{p_game_id:id});
-    if(error)throw new Error(error.message || 'Could not verify game clock.');
+    if(error)throw new Error(error.message || 'Couldn’t verify game clock.');
     if(data && matchId===id) await syncMatch();
     return !!data;
   };
   window.familyChessPause = async id => {
     if(!player||matchId!==id||matchMode!=='play')throw new Error('Sign in as a player');
     const {data,error}=await api.rpc('chess_toggle_clock_pause',{p_game_id:id});
-    if(error)throw new Error(error.message||'Could not pause game');
+    if(error)throw new Error(error.message||'Couldn’t pause game');
     await syncMatch();return data;
   };
   window.familyChessPawnAction = async (id,action,square) => {
@@ -531,14 +531,14 @@
   window.familyChessSwapSides = async id => {
     if(!player||matchId!==id||matchMode!=='play')throw new Error('Only a player can switch sides');
     const {data,error}=await api.rpc('chess_swap_sides',{p_game_id:id});
-    if(error)throw new Error(error.message||'Could not switch sides');
+    if(error)throw new Error(error.message||'Couldn’t switch sides');
     await syncMatch();return data;
   };
   /* change the clock of the open online match; the server shifts both clocks and realtime syncs the opponent */
   window.familyChessChangeClock = async (id,mode,expiry) => {
     if(!player||matchId!==id||matchMode!=='play')throw new Error('Only a player can change this clock');
     const {data,error}=await api.rpc('chess_change_clock',{p_game_id:id,p_mode:mode,...(expiry?{p_expiry:expiry}:{})});
-    if(error)throw new Error(/function|schema cache/i.test(error.message||'')?'Live clock changes need the new database update.':(error.message||'Could not change the clock'));
+    if(error)throw new Error(error.message||'Couldn’t change the clock');
     await syncMatch();return data;
   };
   window.familyChessSaveClockPreference = async (mode,expiry) => {
@@ -546,13 +546,13 @@
     if(!player)return false;
     const upd={clock_preference:mode}; if(['end','sec60','pawn'].includes(expiry))upd.clock_expiry=expiry;
     const {error}=await api.from('chess_profiles').update(upd).eq('id',player.id);
-    if(error)throw new Error(error.message||'Could not save clock preference');
+    if(error)throw new Error(error.message||'Couldn’t save clock preference');
     return true;
   };
   /* End: the game stops for both players, never counts, and is deleted shortly after */
   window.familyChessEndGame = async id => {
     const {error}=await api.rpc('chess_end_game',{p_game_id:id});
-    if(error)throw new Error(/function|schema cache/i.test(error.message||'')?'Ending games needs the new database update.':(error.message||'Could not end the game'));
+    if(error)throw new Error(error.message||'Couldn’t end the game');
     void refresh();
     return true;
   };
@@ -565,7 +565,7 @@
       throw new Error('Open your active online match to resign.');
     }
     const {data,error}=await api.rpc('chess_resign_game',{p_game_id:id});
-    if(error) throw new Error(error.message || 'Could not resign the game.');
+    if(error) throw new Error(error.message || 'Couldn’t resign the game.');
     await syncMatch();
     return data;
   };
@@ -574,13 +574,13 @@
   window.familyChessOffer = async (kind) => {
     if(!player||!matchId||matchMode!=='play')throw new Error('Open your online match first.');
     const {data,error}=await api.rpc('chess_offer',{p_game_id:matchId,p_kind:kind});
-    if(error)throw new Error(/function|schema cache/i.test(error.message||'')?'This needs the new database update.':(error.message||'Could not send that.'));
+    if(error)throw new Error(error.message||'Couldn’t send that.');
     await syncMatch(); return data;
   };
   window.familyChessAnswerOffer = async (kind,accept) => {
     if(!player||!matchId||matchMode!=='play')throw new Error('Open your online match first.');
     const {data,error}=await api.rpc('chess_answer_offer',{p_game_id:matchId,p_kind:kind,p_accept:!!accept});
-    if(error)throw new Error(error.message||'Could not answer that.');
+    if(error)throw new Error(error.message||'Couldn’t answer that.');
     await syncMatch(); return data;
   };
 
@@ -590,12 +590,12 @@
       body:{game_id:id,move_uci:move}
     });
     if (error) {
-      let message = error.message || 'Move was not saved.';
+      let message = error.message || 'Move wasn’t saved.';
       try { const details=await error.context?.json(); if(details?.error)message=details.error; } catch {}
       await syncMatch();
       throw new Error(message);
     }
-    if (!data?.ok) {await syncMatch();throw new Error(data?.error||'Move was not saved.');}
+    if (!data?.ok) {await syncMatch();throw new Error(data?.error||'Move wasn’t saved.');}
     await syncMatch();
     return data;
   };
@@ -648,14 +648,14 @@
     // The signed-in profile then overrides its cache, except for unsynced edits.
     let native;
     try{native=await nativeBoard();}
-    catch(e){status('Could not open your saved color settings: '+e.message,true);return;}
+    catch(e){status('Couldn’t open your saved color settings: '+e.message,true);return;}
     if(player?.id!==id)return;
     native.activateColorProfile?.(id);
     const {data,error}=await api.from('chess_profiles')
       .select('display_name,piece_color,clock_preference,clock_expiry')
       .eq('id',id).maybeSingle();
     if(player?.id!==id)return;
-    if(error){status('Could not load chess profile: '+error.message,true);return;}
+    if(error){status('Couldn’t load chess profile: '+error.message,true);return;}
     if(data){
       if(window.ChessClock&&data.clock_preference)
         window.ChessClock.setPreference(data.clock_preference);
@@ -690,7 +690,7 @@
       clock_expiry:window.ChessClock?.getExpiry?.()||'pawn'
     });
     if(created.error && created.error.code!=='23505'){
-      status('Could not create chess profile: '+created.error.message,true);return;
+      status('Couldn’t create chess profile: '+created.error.message,true);return;
     }
     $('cgDisplayName').value=display_name;nameSaved(display_name);
     $('cgNameValue').textContent=display_name;
@@ -708,7 +708,7 @@
     saveButton.disabled=true;
     try {
       const {error} = await api.from('chess_profiles').update({display_name}).eq('id',player.id);
-      if(error){status('Could not save your name: '+error.message,true);return;}
+      if(error){status('Couldn’t save your name: '+error.message,true);return;}
       $('cgNameValue').textContent=display_name;nameSaved(display_name);
       $('cgSettings').open=false;
       status('Chess name updated to '+display_name+'.');
@@ -727,7 +727,7 @@
       .order('updated_at',{ascending:false}).limit(20);
     if(player?.id!==uid)return;
     if(error){
-      if(!root.hidden)container.textContent='Could not load live matches: '+error.message;
+      if(!root.hidden)container.textContent='Couldn’t load live matches: '+error.message;
       return;
     }
     /* live = two people in a game that has moved in the last 20 minutes (abandoned games don't count) */
@@ -785,7 +785,7 @@
       .or('white_player_id.eq.'+player.id+',black_player_id.eq.'+player.id)
       .order('created_at',{ascending:false}).limit(20);
     if (!player) return;
-    if (error) { games.textContent = 'Could not load matches: ' + error.message; return; }
+    if (error) { games.textContent = 'Couldn’t load matches: ' + error.message; return; }
     games.replaceChildren();
     /* abandoned matches (closed by a newer invite) are not kept */
     /* Online shows only games you can get back into; finished matches (W/L/D) live in Challenges → Matches */
@@ -869,7 +869,7 @@
   async function cancelInvite(id){
     if(!player||!id)return;
     const {data,error}=await api.rpc('chess_cancel_invite',{p_game_id:id});
-    if(error){status('Could not cancel the invite: '+error.message,true);return;}
+    if(error){status('Couldn’t cancel the invite: '+error.message,true);return;}
     if(openInviteId===id){openInviteId=null;$('cgCreatedLink').hidden=true;$('cgNewInviteURL').href='#';$('cgNewInviteURL').textContent='';}
     if(matchId===id){stopMatch();window.familyChessNative?.leaveToPractice();}
     status(data?'Invite canceled. That link no longer works.':'That invite was already joined or closed.');
@@ -882,7 +882,7 @@
     const b=$('cgCreate');
     b.disabled=true;
     try {
-      status('Creating your private chess invitation…');
+      status('Creating your invite link…');
       await window.familyChessClockSavePromise;
       const {data:id,error}=await api.rpc('chess_create_private_game');
       if(error)throw error;
@@ -893,19 +893,19 @@
       a.textContent=url;
       $('cgCreatedLink').hidden=false;
       $('cgCreatedLink').scrollIntoView({block:'nearest',behavior:'smooth'});
-      status('Invitation ready. Your earlier open games and unused invite links were closed.');
+      status('Invite link ready. Your earlier open games and unused invite links were closed.');
       await loadInviteRecipients();
       await refresh();
       return id;
     } catch(e) {
-      status('Could not create invitation: '+(e?.message||'Try again.'),true);
+      status('Couldn’t create the invite: '+(e?.message||'Try again.'),true);
     } finally {creating=false;b.disabled=false;}
   }
   $('cgCreate').addEventListener('click',()=>{void createInvite();});
   $('cgJoinForm').addEventListener('submit', async ev => {
     ev.preventDefault(); if (!player) return;
     const id=getId($('cgJoinId').value);
-    if (!pattern.test(id)) { status('Enter a valid game invitation link or ID.',true); return; }
+    if (!pattern.test(id)) { status('Enter a valid invite link or game ID.',true); return; }
     const button=$('cgJoinForm').querySelector('button');button.disabled=true;
     try {
       const {data:already}=await api.from('chess_games')
@@ -917,7 +917,7 @@
       }
       if(!participant){
         const {error}=await api.rpc('chess_join_game',{p_game_id:id});
-        if(error){status('Could not join: '+error.message,true);return;}
+        if(error){status('Couldn’t join: '+error.message,true);return;}
       }
       status('Opening your game board…');
       await refresh();
@@ -961,14 +961,14 @@
         if(part){
           if(part.status==='finished' && !part.black_player_id){
             show();
-            status('This invitation expired because a newer game was created. Ask for a fresh link.',true);
+            status('This invite expired because a newer game was created. Ask for a fresh link.',true);
             return;
           }
           const member=part.white_player_id===player.id||part.black_player_id===player.id;
           if(member)await startMatch(invite,'play');
           else if(['active','finished'].includes(part.status)&&part.black_player_id)await startMatch(invite,'watch');
-          else{show();status('Invitation found. Press Join to play as Black.');}
-        }else{show();status('Invitation found. Press Join to play as Black.');}
+          else{show();status('Invite found. Press Join to play as Black.');}
+        }else{show();status('Invite found. Press Join to play as Black.');}
       }else if(!pattern.test(invite)){void refreshLive(true);}
     }
   }

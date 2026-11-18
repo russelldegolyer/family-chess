@@ -218,7 +218,7 @@
     mount(); root.replaceChildren(el('div', 'st-loading', 'Loading your games…')); root.hidden = false; run++;
     const my = run;
     try { const games = await onlineGames(api, pid); if (my !== run) return; render('vs Players', 'All your online games', games); }
-    catch (e) { root.replaceChildren(header('vs Players', ''), el('div', 'st-loading', 'Could not load games: ' + (e.message || e))); }
+    catch (e) { root.replaceChildren(header('vs Players', ''), el('div', 'st-loading', 'Couldn’t load games: ' + (e.message || e))); }
   }
   function openComputer(level = 0) {
     mount();

@@ -29,6 +29,8 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - American spelling throughout: practice and defense (chapter progress carries over).
 
 **Improved**
+- One name for each thing: asking someone to play is always an "invite" (Challenges is only the training hub), the online sheet is "Play online" and messages point to the Online button, and messages say "Couldn’t…" consistently. End-of-game headings read like sentences ("Checkmate — White wins").
+- Removed leftover setup messages ("needs the new database update") and the old voice-call notification from the server.
 - Wording pass over every message in the app: 116 fixes (71 clearer or more grammatical sentences, 45 American spellings such as color, center and gray).
 
 ## 2026-11-17 — Stockfish analysis, online draws and takebacks, premoves, PGN, offline (deployed 11:05 AM)

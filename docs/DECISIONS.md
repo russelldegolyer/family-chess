@@ -96,3 +96,8 @@ engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
 - Replaces the tap-and-accept call (D-31). While both players are in the same online game, the apps link up in the background (lower user id makes the offer); no ringing or Join.
 - Hold the mic button to talk: the mic track is attached to the connection only while held (`replaceTrack`), so nothing is sent otherwise. The other player's button lights green with "<name> is talking" (`talk` signal, refreshed every 2 s, clears after 5 s).
 - The mic closes after 45 s without talking, when the game changes or ends, or when the app is left. Same private channel and friendship rule as D-31; `navigator.audioSession` is set to play-and-record while the mic is open.
+
+## D-41 Names in the app (2026-11-17)
+- Asking someone to play is an "invite" everywhere (buttons, messages, notifications). "Challenges" means only the training hub.
+- The online sheet is titled "Play online" and opened by the "Online" button; messages tell players to "tap Online".
+- Status and error messages use contractions ("Couldn’t…", "isn’t"); lesson text keeps its own wording. End-of-game headings use sentence case.

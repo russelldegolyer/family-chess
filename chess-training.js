@@ -480,7 +480,7 @@
     hub.append(boardEl, pal, turnSeg, note, bottom);
     draw();
     async function pickSaved() {
-      let rows; try { rows = await loadSavedRows(); } catch (e) { say('Could not load saved games.', true); return; }
+      let rows; try { rows = await loadSavedRows(); } catch (e) { say('Couldn’t load saved games.', true); return; }
       if (!rows || !rows.length) { say('No saved games to load yet.', true); return; }
       const ov = el('div', 'tr-pop-ov'), card = el('div', 'tr-pop'), close = () => ov.remove();
       ov.addEventListener('pointerdown', (e) => { if (e.target === ov) close(); });
@@ -504,7 +504,7 @@
         say('Saving…');
         const { error } = await c.rpc('chess_save_local_game', { p_source: 'custom', p_moves: [], p_sans: [], p_fen: fen, p_side: turn, p_level: 2,
           p_white: 'White', p_black: 'Black', p_replace: replace, p_start_fen: fen });
-        if (error) { say('Could not save: ' + error.message, true); return; }
+        if (error) { say('Couldn’t save: ' + error.message, true); return; }
         hub.classList.remove('tr-ed-page'); openSaved();
       };
       if (!editing) { await write(null); return; }
@@ -522,7 +522,7 @@
     session++; hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren(); hub.append(subHead('Saved games', () => openHub()));
     const loading = el('p', 'tr-about-foot', 'Loading…'); hub.append(loading);
     let rows;
-    try { rows = await loadSavedRows(); } catch (e) { loading.textContent = 'Could not load saved games. ' + (e?.message || ''); return; }
+    try { rows = await loadSavedRows(); } catch (e) { loading.textContent = 'Couldn’t load saved games. ' + (e?.message || ''); return; }
     loading.remove();
     if (rows === null) { const e = el('div', 'tr-saved-empty'); e.append(el('b', '', 'Sign in to use saved games'), el('p', '', 'Saved games live in your account so you can pick them up on any device.')); hub.append(e); return; }
     const create = btn('', 'tr-create', () => openEditor(null));
@@ -584,7 +584,7 @@
     setTimeout(async () => {
       if (undone) return;
       const { error } = await api().from('chess_saved_games').delete().eq('id', g.id);
-      if (error) { window.familyChessToast?.('Could not delete: ' + error.message); if (screen === 'saved' || hub.contains(row)) openSaved(); return; }
+      if (error) { window.familyChessToast?.('Couldn’t delete: ' + error.message); if (screen === 'saved' || hub.contains(row)) openSaved(); return; }
       savedCount = Math.max(0, savedCount - 1);
       row.classList.add('gone'); setTimeout(() => row.remove(), 260);
     }, 3500);
@@ -663,11 +663,11 @@
     const kt = el('span', 'tr-card-text'); kt.append(el('b', '', 'Keep'), el('span', '', g.keep ? 'On: kept so you can replay it any time' : 'Off: removed once picked up'));
     keepRow.append(kt, keep, el('i', 'tr-switch'));
     keep.addEventListener('change', async () => { const c = api(); const { error } = await c.rpc('chess_saved_set_keep', { p_id: g.id, p_keep: keep.checked });
-      if (error) { keep.checked = !keep.checked; say('Could not update: ' + error.message, true); } else { g.keep = keep.checked; kt.lastChild.textContent = keep.checked ? 'On: kept so you can replay it any time' : 'Off: removed once picked up'; } });
+      if (error) { keep.checked = !keep.checked; say('Couldn’t update: ' + error.message, true); } else { g.keep = keep.checked; kt.lastChild.textContent = keep.checked ? 'On: kept so you can replay it any time' : 'Off: removed once picked up'; } });
     const del = btn('Delete', 'tr-sg-delete', async () => {
       if (!del.classList.contains('arm')) { del.classList.add('arm'); del.textContent = 'Tap to confirm'; setTimeout(() => { if (del.isConnected) { del.classList.remove('arm'); del.textContent = 'Delete'; } }, 2500); return; }
       const { error } = await api().from('chess_saved_games').delete().eq('id', g.id);
-      if (error) say('Could not delete: ' + error.message, true); else openSaved();
+      if (error) say('Couldn’t delete: ' + error.message, true); else openSaved();
     });
     const foot = el('div', 'tr-sg-foot'); foot.append(keepRow, del); hub.append(foot);
     hub.classList.add('tr-sg-page'); hub.scrollTop = 0;
@@ -683,12 +683,12 @@
     say('Sending…');
     try {
       const { data, error } = await c.functions.invoke('chess-saved-game', { body: { saved_id: g.id, target_id: target, side } });
-      if (error || !data?.ok) throw new Error(data?.error || (error && (await error.context?.json?.().catch(() => null))?.error) || error?.message || 'Could not send.');
+      if (error || !data?.ok) throw new Error(data?.error || (error && (await error.context?.json?.().catch(() => null))?.error) || error?.message || 'Couldn’t send.');
       void c.functions.invoke('chess-notify-challenge', { body: { challenge_id: data.challenge_id } }).catch(() => {});
       close();
       await window.familyChessOpenMatch?.(data.game_id, 'play');
       window.familyChessToast?.('Invite sent to ' + name + '. They have 10 minutes to accept.');
-    } catch (e) { say(e.message || 'Could not send.', true); }
+    } catch (e) { say(e.message || 'Couldn’t send.', true); }
   }
   function openAbout() {
     hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
@@ -1613,7 +1613,7 @@
   /* ------------------------------------------------------------------ play an ending against the defending computer */
   async function playEnding({ fen, goal, kind = 'engine', task, limit, mode = 'practice', side = 'w', onDone, intro, noBox }) {
     const my = ++session;
-    if (!fen) { lessonPanel('Could not create a position. Try again.', [btn('Try again', 'primary', () => runStage())]); return; }
+    if (!fen) { lessonPanel('Couldn’t create a position. Try again.', [btn('Try again', 'primary', () => runStage())]); return; }
     const C = B().Chess;
     const start = new C(fen);
     B().setup({ fen, side, opponent: 'Computer' }); B().busy(true);
@@ -2576,7 +2576,7 @@
   async function playSurvive(type, task, onDone) {
     const my = ++session; await loadTables(); if (my !== session) return;
     const fen = genDefense(type, type === 'q' ? 16 : 30);
-    if (!fen) { lessonPanel('Could not create a position.', [btn('Try again', 'primary', () => runStage())]); return; }
+    if (!fen) { lessonPanel('Couldn’t create a position.', [btn('Try again', 'primary', () => runStage())]); return; }
     B().setup({ fen, side: 'b', opponent: 'Computer' }); B().busy(false); mark({});
     const start = probe(fen); let good = 0, moves = 0;
     const msg = lessonPanel(task, [btn('Give up', 'quiet', () => onDone({ win: false, summary: 'You stopped this attempt.' }), 'flag')], 'Best defense lasts ' + Math.ceil((start?.plies || 0) / 2) + ' moves. Make it last.');
@@ -2759,7 +2759,7 @@
     const cpu = MATCH_FILTER !== 'human' ? computerMatches() : [];
     const list = (MATCH_FILTER === 'human' ? human : MATCH_FILTER === 'cpu' ? cpu : human.concat(cpu)).sort((a, b) => b.at - a.at);
     body.replaceChildren();
-    if (err) body.append(el('p', 'tr-note', 'Could not load online games: ' + (err.message || err)));
+    if (err) body.append(el('p', 'tr-note', 'Couldn’t load online games: ' + (err.message || err)));
     const w = list.filter((g) => g.res === 'w').length, l = list.filter((g) => g.res === 'l').length, d = list.filter((g) => g.res === 'd').length, n = w + l + d;
     const accs = list.map((g) => g.acc).filter((v) => Number.isFinite(v));
     const rec = el('div', 'tr-record');

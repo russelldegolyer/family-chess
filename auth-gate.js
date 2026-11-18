@@ -59,11 +59,11 @@
   }
   if (!window.supabase?.createClient) {
     submit.disabled = true;
-    setMessage('Unable to load sign-in. Check your connection and reload.', true);
+    setMessage('Couldn’t load sign-in. Check your connection and reload.', true);
     return;
   }
   try { client = window.supabase.createClient(config.url, config.publishableKey, { auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true } }); }
-  catch (e) { submit.disabled = true; setMessage('The login service could not start: ' + e.message, true); return; }
+  catch (e) { submit.disabled = true; setMessage('The login service couldn’t start: ' + e.message, true); return; }
   window.chessSupabase = client;
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -96,7 +96,7 @@
         showUser(data.user);
       }
     } catch (e) {
-      setMessage(e?.message || 'Unable to complete that request. Try again.', true);
+      setMessage(e?.message || 'Couldn’t complete that request. Try again.', true);
     } finally { busy(false); }
   });
   $('authSignOut').addEventListener('click', async () => {
@@ -117,7 +117,7 @@
   // online features reconnect when the signal returns.
   const storedUser = () => { try { for (const k of Object.keys(localStorage)) if (/^sb-.*-auth-token$/.test(k)) { const u = JSON.parse(localStorage.getItem(k))?.user; if (u?.id) return u; } } catch {} return null; };
   client.auth.getSession().then(({data,error}) => {
-    if (error) { const u = !navigator.onLine && storedUser(); if (u) { showUser(u); return; } setMessage('Unable to check your account. Try reloading.', true); return; }
+    if (error) { const u = !navigator.onLine && storedUser(); if (u) { showUser(u); return; } setMessage('Couldn’t check your account. Try reloading.', true); return; }
     if (!recovering) showUser(data.session?.user || null);
-  }).catch((e) => { const u = !navigator.onLine && storedUser(); if (u) showUser(u); else setMessage('Unable to check your account: ' + e.message, true); });
+  }).catch((e) => { const u = !navigator.onLine && storedUser(); if (u) showUser(u); else setMessage('Couldn’t check your account: ' + e.message, true); });
 })();

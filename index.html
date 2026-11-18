@@ -46,21 +46,21 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <link rel="stylesheet" href="./auth.css?v=4">
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
-<script defer src="./auth-gate.js?v=3"></script>
+<script defer src="./auth-gate.js?v=4"></script>
 <script defer src="./chess-clock.js?v=16"></script>
-<script defer src="./chess-online.js?v=32"></script>
+<script defer src="./chess-online.js?v=33"></script>
 <script defer src="./chess-chat.js?v=9"></script>
 <script defer src="./chess-voice.js?v=7"></script>
 <script defer src="./chess-stockfish.js?v=1"></script>
-<script defer src="./chess-review-analysis.js?v=5"></script>
+<script defer src="./chess-review-analysis.js?v=6"></script>
 <link rel="stylesheet" href="./chess-social.css?v=6">
-<script defer src="./chess-social.js?v=26"></script>
+<script defer src="./chess-social.js?v=27"></script>
 <link rel="stylesheet" href="./chess-training.css?v=25">
 <link rel="stylesheet" href="./chess-plan.css?v=1">
 <link rel="stylesheet" href="./chess-stats.css?v=3">
-<script defer src="./chess-stats.js?v=7"></script>
+<script defer src="./chess-stats.js?v=8"></script>
 <script defer src="./chess-plan.js?v=3"></script>
-<script defer src="./chess-training.js?v=34"></script>
+<script defer src="./chess-training.js?v=35"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -3630,7 +3630,7 @@ function renderSidePick() {
     el.addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-s]'); if (!btn || btn.dataset.s === mySeat || el.dataset.busy) return;
       el.dataset.busy = '1'; el.classList.add('busy');
-      try { await window.familyChessSwapSides?.(G.gid); } catch (err) { toast(err?.message || 'Could not switch sides'); }
+      try { await window.familyChessSwapSides?.(G.gid); } catch (err) { toast(err?.message || 'Couldn’t switch sides'); }
       delete el.dataset.busy; el.classList.remove('busy'); renderSidePick();
     });
     document.body.append(el);
@@ -5003,7 +5003,7 @@ function playMove(uci, opts = {}) {
         syncBoard(G.pos, {animate:true,quick:true});
         updateMarkers();
       }
-      toast(e?.message || 'Move could not be saved. Check your connection.', 4600);
+      toast(e?.message || 'Move couldn’t be saved. Check your connection.', 4600);
     }).finally(() => {
       G.onlineBusy = false;
       updateAll();
@@ -5649,7 +5649,7 @@ function renderChat(forceBottom = false) {
     const heading=el('strong','chat-empty-title'),detail=el('p','chat-empty-description');
   heading.textContent=G.mode==='connecting'?'Connecting to chess…':'Practice game';
   detail.textContent=G.mode==='connecting'?'Setting up your chess board.':
-    'Play against the computer or open Online games to invite someone to a private match.';
+    'Play against the computer, or tap Online to invite someone to a private match.';
   n.append(heading,detail);list.replaceChildren(n);
 }
 function chatVisible() { if (historyOpen || document.hidden) return false; return compact ? sheetOpen : !focusMode; }
@@ -5677,7 +5677,7 @@ function updateChatEnabled() {
     return;
   }
   $('chatInput').disabled = $('chatSend').disabled = true;
-  $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : 'Messaging is not connected yet';
+  $('chatInput').placeholder = G.mode === 'connecting' ? 'Connecting…' : 'Messaging isn’t connected yet';
 }
 
 /* your name: saved to your player record */
@@ -5701,7 +5701,7 @@ function resign() {
     Promise.resolve(window.familyChessResign?.(id) ??
       Promise.reject(new Error('Resigning online isn’t available right now. Reload the app.')))
       .then((r) => { if (r === 'deleted') toast('Game ended in the first 3 moves. It was removed and doesn’t count.', 4200); })
-      .catch(e => toast(e?.message || 'Could not resign this game. Try again.', 4200))
+      .catch(e => toast(e?.message || 'Couldn’t resign this game. Try again.', 4200))
       .finally(() => { G.onlineBusy = false; updateAll(); });
     return;
   }
@@ -5798,7 +5798,7 @@ let endingByMe = false;
 async function endOnlineGame() {
   endingByMe = true;
   try { await window.familyChessEndGame?.(G.gid); }
-  catch (e) { endingByMe = false; toast(e?.message || 'Could not end the game', 4200); return; }
+  catch (e) { endingByMe = false; toast(e?.message || 'Couldn’t end the game', 4200); return; }
   endDismissed = endKey(); goHome();
 }
 function newGame() {
@@ -5814,7 +5814,7 @@ function newGame() {
   if (!playing) { goHome(); return; }
   const online = G.onlineProvider === 'supabase';
   dialog(online ? 'Leave this match?' : 'Go back home?',
-    [online ? 'You can come back to it from Play online.' : 'This game will end and you’ll go back to the start screen.'],
+    [online ? 'You can come back to it by tapping Online.' : 'This game will end and you’ll go back to the start screen.'],
     [['Keep playing', 'quiet', null], [online ? 'Leave match' : 'Go home', 'gold', goHome]]);
 }
 
@@ -5882,7 +5882,7 @@ async function doSave(api, key, replace) {
     lastSave[key] = id; G.savedPly = G.moves.length; G.savedKey = key;
     toast((replace ? 'Save updated.' : 'Game saved.') + ' Find it in Challenges → Saved games.', 3200);
     updateResignBtn();
-  } catch (e) { toast('Could not save: ' + (e?.message || 'try again.')); }
+  } catch (e) { toast('Couldn’t save: ' + (e?.message || 'try again.')); }
   finally { saving = false; }
 }
 /* Resume a saved row on this device: against the computer (mode 'cpu') or two players here ('local'). */
@@ -5961,16 +5961,16 @@ $('btnView2d').addEventListener('click', () => {
 });
 
 /* end card */
-const DRAW_TITLE = { stalemate: 'Stalemate — Draw', 'insufficient material': 'Draw — Insufficient Material', 'threefold repetition': 'Draw — Threefold Repetition', 'the fifty-move rule': 'Draw — Fifty-Move Rule', agreement: 'Draw — Agreed' };
+const DRAW_TITLE = { stalemate: 'Stalemate — draw', 'insufficient material': 'Draw — insufficient material', 'threefold repetition': 'Draw — threefold repetition', 'the fifty-move rule': 'Draw — fifty-move rule', agreement: 'Draw — agreed' };
 function describeResult() {
   if (G.reason === 'replaced') return {title:'Game ended',line:'A player started a new game. This match has been closed.'};
   if (G.reason === 'ended') return {title:'Game ended',line:'The game was ended. It doesn’t count for anyone.'};
   const winner = G.result === '1-0' ? 'w' : G.result === '0-1' ? 'b' : null;
   if (!winner) return { title: DRAW_TITLE[G.reason] || 'Draw', line: G.reason === 'agreement' ? 'Both sides called it even.' : '' };
   const loser = other(winner);
-  const title = G.reason === 'timeout' ? `${SIDE[loser]} Ran Out of Time — ${SIDE[winner]} Wins`
-    : G.reason === 'resignation' ? `${SIDE[loser]} Resigned — ${SIDE[winner]} Wins`
-    : G.reason === 'checkmate' ? `Checkmate — ${SIDE[winner]} Wins` : `${SIDE[winner]} Wins`;
+  const title = G.reason === 'timeout' ? `${SIDE[loser]} ran out of time — ${SIDE[winner]} wins`
+    : G.reason === 'resignation' ? `${SIDE[loser]} resigned — ${SIDE[winner]} wins`
+    : G.reason === 'checkmate' ? `Checkmate — ${SIDE[winner]} wins` : `${SIDE[winner]} wins`;
   let line = '';
   if (G.mode === 'cpu') line = winner === cpu.human ? 'You beat the computer.' : 'The computer takes this one.';
   else if (G.mode === 'live') line = `${seatName(winner)} wins with ${SIDE[winner]}.`;
@@ -6239,13 +6239,13 @@ $('btnChatClear').addEventListener('click', () => {
     const title=spectator?'Delete your spectator messages?':'Clear this match chat?';
     const explanation=spectator
       ? 'This deletes messages you sent to spectator chat. Other spectators’ messages remain.'
-      : 'This deletes every message in this match for both players. This cannot be undone.';
+      : 'This deletes every message in this match for both players. This can’t be undone.';
     dialog(title,[explanation],[['Keep messages','quiet',null],
       ['Delete messages','gold',async()=>{
         try {
           await window.familyChessChat?.clear();
           toast(spectator?'Your spectator messages were deleted.':'Match chat cleared.');
-        } catch(e){toast('Could not delete chat: '+(e?.message||'Try again.'));}
+        } catch(e){toast('Couldn’t delete chat: '+(e?.message||'Try again.'));}
       }]]);
     return;
   }
@@ -6281,7 +6281,7 @@ function askToResign() {
     dialog('Resign this game?', ['Resigning gives your opponent the win. You can offer a draw or ask to take back your last move instead.'], acts);
     return;
   }
-  dialog('Resign this game?', ['Your opponent will be given the win. This cannot be undone.'],
+  dialog('Resign this game?', ['Your opponent will be given the win. This can’t be undone.'],
     [['Keep playing','quiet',null],['Resign','gold',()=>resign()]]);
 }
 /* online draw offers and takeback requests (server: chess_offer / chess_answer_offer) */
@@ -6292,13 +6292,13 @@ function sendOffer(kind) {
   G.onlineBusy = true;
   Promise.resolve(window.familyChessOffer?.(kind) ?? Promise.reject(new Error('Reload the app to use this.')))
     .then((r) => toast(r === 'agreed' ? 'Draw agreed.' : kind === 'draw' ? 'Draw offered. It stays open until they move.' : 'Takeback requested.', 3200))
-    .catch((e) => toast(e?.message || 'Could not send that.', 4200))
+    .catch((e) => toast(e?.message || 'Couldn’t send that.', 4200))
     .finally(() => { G.onlineBusy = false; updateAll(); });
 }
 function answerOffer(kind, accept) {
   Promise.resolve(window.familyChessAnswerOffer?.(kind, accept))
     .then((r) => { if (r === 'taken') toast('Move taken back.', 2400); })
-    .catch((e) => toast(e?.message || 'Could not answer that.', 4200));
+    .catch((e) => toast(e?.message || 'Couldn’t answer that.', 4200));
 }
 function setOffers(o) {
   const prevMine = OFFERS.mine;
@@ -6829,7 +6829,7 @@ async function toggleChessPause(){
     if(!mySeat){toast('Only players can pause this game.');return;}
     G.onlineBusy=true;
     try {await window.familyChessPause?.(G.gid);}
-    catch(e){toast(e?.message||'Could not pause or resume the game',4200);}
+    catch(e){toast(e?.message||'Couldn’t pause or resume the game',4200);}
     finally{G.onlineBusy=false;updateAll();}
   }else{
     const state=window.ChessClock?.pauseLocal();
@@ -6846,10 +6846,10 @@ async function applyPawnTimeAction(kind,square){
   if(!clock||G.status!=='active'||G.onlineBusy)return;
   if(!window.ChessClock?.pawnRule?.())return;
   if(G.onlineProvider==='supabase'){
-    if(!mySeat){toast('Spectators cannot choose pawns.');return;}
+    if(!mySeat){toast('Spectators can’t choose pawns.');return;}
     G.onlineBusy=true;
     try {await window.familyChessPawnAction(G.gid,kind,square);}
-    catch(e){toast(e?.message||'Could not trade the pawn',4500);}
+    catch(e){toast(e?.message||'Couldn’t trade the pawn',4500);}
     finally{G.onlineBusy=false;updateAll();}
     return;
   }
@@ -6878,12 +6878,12 @@ async function applyPawnTimeAction(kind,square){
     if(victim==='b')bits[5]=String(Number(bits[5])+1);
   }
   const fen=bits.join(' ');
-  try{new Chess(fen);}catch{toast('That pawn cannot be removed safely.');return;}
+  try{new Chess(fen);}catch{toast('That pawn can’t be removed safely.');return;}
   const action={id:Date.now()+Math.random(),after_ply:G.moves.length,
     kind:kind==='penalty'&&!square?'waiver':kind,square,fen_after:fen};
   const actions=[...(G.clockActions||[]),action];
   const updated=positionFrom(G.moves,G.moves.length,actions);
-  if(updated.invalid||updated.chess.fen()!==fen){toast('Could not remove that pawn. Try again.');return;}
+  if(updated.invalid||updated.chess.fen()!==fen){toast('Couldn’t remove that pawn. Try again.');return;}
   if(kind==='sacrifice')window.ChessClock.endDecision?.();
   const applied=kind==='penalty'?window.ChessClock.resolveLocalPenalty():
     window.ChessClock.sacrificeLocal(updated.chess.turn(),G.moves.length);
@@ -6964,7 +6964,7 @@ function trainExit() {
   syncBoard(G.pos, { animate: true, quick: true }); fitCamera(true); updateAll();
   if (sv.pausedClock && window.ChessClock?.snapshot?.().clockState === 'paused') { window.ChessClock.pauseLocal(); updateAll(); }
   if (sv.pregame) openPregame();
-  if (sv.online) Promise.resolve(window.familyChessOpenMatch?.(sv.online.gid, sv.online.mode)).catch((e) => toast(e?.message || 'Could not reopen your online match', 4200));
+  if (sv.online) Promise.resolve(window.familyChessOpenMatch?.(sv.online.gid, sv.online.mode)).catch((e) => toast(e?.message || 'Couldn’t reopen your online match', 4200));
   else if (G.mode === 'cpu' && G.status === 'active' && G.pos.chess.turn() !== cpu.human) requestComputer();
 }
 /* The game's own 2D pieces and board colours, for Saved games and Create game (same look as the 2D board). */
@@ -7059,7 +7059,7 @@ function applyClockChange(mode) {
   if (G.onlineProvider === 'supabase') {
     if (!mySeat || !G.gid) return;
     Promise.resolve(window.familyChessChangeClock?.(G.gid, mode)).then(() => updateAll())
-      .catch((e) => toast(e?.message || 'Could not change the clock', 4200));
+      .catch((e) => toast(e?.message || 'Couldn’t change the clock', 4200));
     return;
   }
   if ((G.mode === 'cpu' || G.mode === 'local') && window.ChessClock?.changeLocalMode?.(mode)) { updateAll(); window.dispatchEvent(new Event('resize')); }
@@ -7132,7 +7132,7 @@ function openSettings() {
       row('When time runs out', seg(opts, exp, (v) => {
         C.setExpiry(v);
         window.familyChessClockSavePromise = Promise.resolve(window.familyChessSaveClockPreference?.(C.getPreference(), v));
-        if (G.onlineProvider === 'supabase' && G.status === 'active' && mySeat && G.gid) Promise.resolve(window.familyChessChangeClock?.(G.gid, C.getPreference(), v)).catch((e) => toast(e?.message || 'Could not change the rule', 4200));
+        if (G.onlineProvider === 'supabase' && G.status === 'active' && mySeat && G.gid) Promise.resolve(window.familyChessChangeClock?.(G.gid, C.getPreference(), v)).catch((e) => toast(e?.message || 'Couldn’t change the rule', 4200));
       }, 'When time runs out'));
       body.lastChild.classList.add('set-row-stack');   /* the choices get the full width */
       const note = el('p', 'set-note');
@@ -7259,7 +7259,7 @@ async function boot() {
   updatePlates();
   renderChat();
   openPregame();
-  goLocal('Practice against the computer, or use Online games to invite someone to play online.'); initProgress();
+  goLocal('Practice against the computer, or tap Online to invite someone to play.'); initProgress();
   requestRender();
 }
 
@@ -7427,9 +7427,9 @@ window.familyChessNative = {
     dismissPregame();
     const isPlayer=game.white_player_id===userId||game.black_player_id===userId;
     const watching=options.spectating===true;
-    if(!isPlayer&&!watching)throw new Error('You are not a player in this match');
+    if(!isPlayer&&!watching)throw new Error('You’re not a player in this match');
     if(watching&&(!game.black_player_id||!['active','finished'].includes(game.status)))
-      throw new Error('This match is not open for spectators');
+      throw new Error('This match isn’t open for spectators');
     const actions=Array.isArray(options.actions)?options.actions:[];
     START_FEN = game.start_fen || null;
     const pos = positionFrom(moves,moves.length,actions);
@@ -7609,7 +7609,7 @@ document.addEventListener('dblclick', (e) => {
 </div>
 <div id="accountControl" class="auth-account" hidden>
   <button id="authAccountToggle" class="auth-account-toggle" type="button"
-    aria-label="Open Online Games" aria-haspopup="dialog" aria-expanded="false" aria-controls="cgLobby">
+    aria-label="Open Play online" aria-haspopup="dialog" aria-expanded="false" aria-controls="cgLobby">
     <span class="auth-online-label">Online</span>
   </button>
   <div id="authAccountActions" class="auth-account-actions">

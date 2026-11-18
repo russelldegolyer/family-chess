@@ -17,9 +17,9 @@ test('Chess 3D/2D inline module has valid JavaScript syntax',()=>{
    assert.equal(result.status,0,result.stderr);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
-test('profile icon opens Online Games directly and Sign out lives in account settings',()=>{
+test('profile icon opens Play online directly and Sign out lives in account settings',()=>{
  assert.match(html,/id="authAccountToggle"/);
- assert.match(html,/aria-label="Open Online Games"/);
+ assert.match(html,/aria-label="Open Play online"/);
  assert.match(html,/aria-controls="cgLobby"/);
  assert.match(css,/@media\(max-width:899px\)/);
  assert.match(css,/bottom:auto!important/);

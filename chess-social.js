@@ -20,12 +20,12 @@
  /* notification set-up lives in Settings, out of the way of choosing an opponent */
  const notifySlot=document.getElementById('cgNotifySlot')||mount;
  notifySlot.insertAdjacentHTML('beforeend',`
-  <button id="cgAllowPush" class="cgButton" type="button">Enable challenge notifications</button>
+  <button id="cgAllowPush" class="cgButton" type="button">Turn on invite notifications</button>
   <button id="cgTestPush" class="cgButton" type="button">Send a test notification</button>
   <span class="cgSocialSub" id="cgPushInfo">On iPhone, add this site to your Home Screen first.</span>`);
  const alert=document.createElement('div');
  alert.id='cgChallengeAlert';alert.hidden=true;alert.setAttribute('role','dialog');
- alert.setAttribute('aria-modal','true');alert.setAttribute('aria-label','Incoming chess challenge');
+ alert.setAttribute('aria-modal','true');alert.setAttribute('aria-label','Chess invite');
  alert.innerHTML=`<div class="cgAlertCard">
  <div style="font-size:31px" aria-hidden="true">♞</div>
  <h2>Chess challenge</h2>
@@ -191,7 +191,7 @@
    await window.familyChessOpenMatch(id,participant?'play':'watch');
    lobby.hidden=true;
    message('Now spectating the match. Flip the board to change views.');
-  }catch(e){message(e.message||'Could not spectate this match.');}
+  }catch(e){message(e.message||'Couldn’t spectate this match.');}
  }
  function renderOutgoing(){
   const mine=challenges.filter(c=>c.challenger_id===user?.id&&c.status==='pending'&&visible(c)>0)[0];
@@ -219,7 +219,7 @@
   if(!user)return;
   if(openAlertId){
    const c=challenges.find(x=>x.id===openAlertId);
-   if(!c||remaining(c)<=0){alert.hidden=true;openAlertId=null;message('Challenge expired.');}
+   if(!c||remaining(c)<=0){alert.hidden=true;openAlertId=null;message('Invite expired.');}
    else $('cgAlertCountdown').textContent=left(c)+' remaining';
   }
   renderOutgoing();
@@ -234,13 +234,13 @@
    if(error)throw error;
    alert.hidden=true;openAlertId=null;clearDeepLink();
    if(accept){
-    if(!data)throw new Error('Challenge expired.');
+    if(!data)throw new Error('Invite expired.');
     await window.familyChessOpenMatch(data,'play');
     openedGameIds.add(data);
     lobby.hidden=true;message('Game started against '+nameFor(c.challenger_id)+'.');
-   } else message('Challenge declined.');
+   } else message('Invite declined.');
    await refreshData();
-  }catch(e){$('cgAlertError').textContent=e.message||'Could not respond.';}
+  }catch(e){$('cgAlertError').textContent=e.message||'Couldn’t respond.';}
   finally{requesting=false;$('cgAccept').disabled=false;$('cgDecline').disabled=false;}
  }
  $('cgAccept').addEventListener('click',()=>{void answer(true)});
@@ -297,7 +297,7 @@
    if(deepLink&&!incoming()){
     const linked=challenges.find(c=>c.id===deepLink&&c.target_id===uid);
     if(linked&&(linked.status!=='pending'||remaining(linked)===0))
-      message('That invitation has expired or was already answered. Ask the player to send another.');
+      message('That invite expired or was already answered. Ask them to send another.');
    }
    // A declined saved-game invite: say so (the waiting board closes; the save stays in Saved games).
    const declined=challenges.find(c=>c.challenger_id===uid&&c.kind==='saved'&&c.status==='declined'&&c.responded_at
@@ -310,10 +310,10 @@
    if(accepted&&accepted.game_id&&currentMatch()!==accepted.game_id){
     openedGameIds.add(accepted.game_id);
     try{await window.familyChessOpenMatch(accepted.game_id,'play');lobby.hidden=true;
-      message('Challenge accepted by '+nameFor(accepted.target_id)+'. Game started.');}
-    catch(e){message('Challenge accepted, but the board couldn’t open: '+e.message);}
+      message('Invite accepted by '+nameFor(accepted.target_id)+'. Game started.');}
+    catch(e){message('Invite accepted, but the board couldn’t open: '+e.message);}
    }
-  }catch(e){message('Online games couldn’t load: '+(e.message||'Try refreshing.'));}
+  }catch(e){message('Couldn’t load Play online: '+(e.message||'Try refreshing.'));}
   finally{loading=false;}
  }
  function startPresence(){
@@ -384,7 +384,7 @@
    const existing=await registration.pushManager.getSubscription();
    if(existing)await storePush(existing);
    $('cgPushInfo').textContent=existing?'Notifications enabled on this device.':'Tap Enable to finish turning on notifications.';
-  }catch(e){$('cgPushInfo').textContent='Could not restore notifications: '+e.message;}
+  }catch(e){$('cgPushInfo').textContent='Couldn’t restore notifications: '+e.message;}
  }
  $('cgAllowPush').addEventListener('click',async()=>{
   if(!user)return;
@@ -402,15 +402,15 @@
     userVisibleOnly:true,applicationServerKey:urlBase64ToUInt8(VAPID_PUBLIC_KEY)
    });
    await storePush(sub);
-   message('Challenge notifications enabled on this device.');
-   $('cgPushInfo').textContent='You can now get 60-second challenges while the app is closed.';
+   message('Invite notifications are on for this device.');
+   $('cgPushInfo').textContent='You can now get 60-second invites while the app is closed.';
   }catch(e){message('Notifications: '+(e.message||'Couldn’t turn on notifications.'));}
  });
 
  $('cgTestPush').addEventListener('click',async()=>{
   if(!user)return;
   if(!supportsPush()||Notification.permission!=='granted'){
-    message('Turn on challenge notifications in the installed app first.');
+    message('Turn on invite notifications in the installed app first.');
     return;
   }
   const button=$('cgTestPush');button.disabled=true;
@@ -428,7 +428,7 @@
     }else if(Number(data?.failed||0)>0){
       message('The notification service rejected '+data.failed+' request(s). Code: '+(data.failureCodes||['unknown']).join(', ')+'.');
     }else{
-      message('No devices are set up for notifications on this account. Tap Enable challenge notifications to add this phone.');
+      message('No devices are set up for notifications on this account. Tap Turn on invite notifications to add this phone.');
     }
   }catch(e){
     message('Test push failed: '+(e?.message||'Unknown error'));

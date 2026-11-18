@@ -150,7 +150,7 @@
       worker = stockfishWorker(source);
       worker.onerror = () => {
         if (run !== token) return;
-        error = 'Move analysis could not start. Replay still works.';
+        error = 'Move analysis couldn’t start. Replay still works.';
         stop(); notify();
       };
       worker.onmessage = (event) => {
@@ -167,7 +167,7 @@
           forced: !!data.forced
         };
         if (data.error) {
-          error = 'The engine could not evaluate all positions.';
+          error = 'The engine couldn’t evaluate all positions.';
           stop(); notify(); return;
         }
         activeIndex = -1;
@@ -177,7 +177,7 @@
       };
       next(run);
     } catch (_) {
-      error = 'This browser cannot start the review engine.';
+      error = 'This browser can’t start the review engine.';
       stop(); notify();
     }
   }
