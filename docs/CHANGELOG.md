@@ -21,6 +21,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Fixed**
+- Voice chat on iPhone: the microphone failed to start ("InvalidStateError") because move sounds had switched the phone's audio to playback-only. Calls now switch it to play-and-record, and move sounds leave it alone during a call.
 - Invite button turns back to the blue Invite as soon as the countdown reaches 0, and the "Waiting for…" line clears.
 - American spelling throughout: practice and defense (chapter progress carries over).
 

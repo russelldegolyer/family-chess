@@ -29,6 +29,9 @@
   const api = () => window.chessSupabase;
   const toast = (m) => window.familyChessToast?.(m);
   const supported = () => !!(navigator.mediaDevices?.getUserMedia && window.RTCPeerConnection);
+  /* iPhone: move sounds put the audio session in 'playback', and Safari refuses the microphone in that mode
+     (InvalidStateError). A call switches it to 'play-and-record'; hanging up hands it back ('auto'). */
+  const session = (t) => { try { if (navigator.audioSession && navigator.audioSession.type !== t) navigator.audioSession.type = t; } catch { /* older Safari */ } };
 
   /* ---------------- UI ---------------- */
   const MIC = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
@@ -178,12 +181,14 @@
     if (S.local && S.local.getAudioTracks().some((t) => t.readyState === 'live')) return S.local;
     S.local = null;
     if (!supported()) { const e = new Error('unsupported'); e.name = 'NotSupportedError'; throw e; }
+    session('play-and-record');
     try { S.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
     catch (e) {
       if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) throw e;
       /* some phones refuse the tuned settings or a busy audio session: try once more with the plainest request */
       console.warn('voice mic (tuned)', e && e.name, e && e.message);
       try { await actx?.suspend?.(); } catch { /* no shared audio */ }
+      session('play-and-record');
       S.local = await navigator.mediaDevices.getUserMedia({ audio: true });
       try { await actx?.resume?.(); } catch { /* ignore */ }
     }
@@ -251,7 +256,7 @@
     console.warn('voice mic', n, e && e.message);
     toast(n === 'NotAllowedError' || n === 'SecurityError' ? 'Microphone is blocked. Allow it for this site in Settings to talk.'
       : n === 'NotFoundError' ? 'No microphone found on this device.'
-      : n === 'NotReadableError' || n === 'AbortError' ? 'The microphone is busy — close other apps using it (calls, recordings) and try again.'
+      : n === 'NotReadableError' || n === 'AbortError' || n === 'InvalidStateError' ? 'The microphone is busy — close other apps using it (calls, recordings) and try again.'
       : n === 'NotSupportedError' ? 'This browser can’t do voice chat. Try Safari or Chrome.'
       : 'Voice chat could not start (' + n + '). Try again.');
     if (S.state !== 'idle') send(S.state === 'calling' ? 'cancel' : 'end');
@@ -266,6 +271,7 @@
     try { S.pc?.close(); } catch { /* closed */ }
     S.pc = null; S.pendingIce = [];
     for (const t of S.local?.getTracks() || []) t.stop();
+    if (S.local || S.pc) session('auto');
     S.local = null; S.remote = null; if (audio) { try { audio.pause(); } catch { /* not playing */ } audio.srcObject = null; }
     stopMeter(); S.needTap = false; S.state = 'idle'; S.muted = false; S.callId = null;
     if (lastView !== undefined) update(lastView); else paint();

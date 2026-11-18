@@ -50,7 +50,7 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="./chess-clock.js?v=16"></script>
 <script defer src="./chess-online.js?v=32"></script>
 <script defer src="./chess-chat.js?v=9"></script>
-<script defer src="./chess-voice.js?v=5"></script>
+<script defer src="./chess-voice.js?v=6"></script>
 <script defer src="./chess-stockfish.js?v=1"></script>
 <script defer src="./chess-review-analysis.js?v=5"></script>
 <link rel="stylesheet" href="./chess-social.css?v=6">
@@ -3367,7 +3367,10 @@ const Sound = {
   on: store.get('sg.sound', true) !== false,
   ensure() {
     /* iPhone: let move sounds play like a game's audio rather than being silenced as page ambience */
-    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch { /* older Safari */ }
+    /* …but never during a voice call: Safari won't keep the microphone open in 'playback' */
+    const vs = window.familyChessVoice?.state?.();
+    if (!vs || vs === 'idle' || vs === 'ringing')
+      try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch { /* older Safari */ }
     if (!this.ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { this.ctx = new C(); } catch { return null; } }
     /* Safari also leaves the context 'interrupted' after a call or after the app was in the background */
     if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
