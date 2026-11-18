@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-17 | 13 |
+| 2026-11-17 | 19 |
 | 2026-11-16 | 1 |
 | 2026-11-14 | 11 |
 | 2026-11-13 | 27 |
@@ -18,7 +18,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-17 — Walkie-talkie voice, names and wording polish (deployed 7:20 PM)
 
 **Changed**
 - Voice chat is now a walkie-talkie: while you're both in an online game, hold the mic button to talk and let go when you're done. While you hold it, the other player's mic button lights up green with "<name> is talking". No more ringing or Join; the line connects quietly in the background, and the mic turns off after 45 seconds without talking.
