@@ -49,7 +49,7 @@ Setup, deployment and secrets: see README.md (not repeated here).
 | Players, presence, challenges, push | `chess-social.js`, `chess-sw.js` | |
 | Chat | `chess-chat.js` (+ `renderChat`/`sendChat` delegates in `index.html`) | |
 | Your plan / style | `chess-plan.js` / `.css` (`familyChessPlan.read/open`), `fillEndPlan` in `index.html`; profile + review deck in `chess-training.js` (`recordGame`, `styleStats`, `P.review`, `P.games`) | per-move drops come from `chess-stats.js` accuracy |
-| Voice chat | `chess-voice.js` (WebRTC; `familyChessVoice.update` called from `renderChat`) | |
+| Voice chat (walkie-talkie) | `chess-voice.js` (WebRTC; `familyChessVoice.update` called from `renderChat`) | hold the mic to talk; background link while both are in the same online game (D-40) |
 | Sign-in | `auth-gate.js`, `auth.css`, `config.js` | |
 | Training (puzzles, Endgame Academy, Endgame Challenges, Review, threat/blunder drills, speed rounds) | `chess-training.js` / `.css`; board bridge `window.familyChessBoard` + `TRAIN`/`START_FEN` (`G.mode === 'train'`) in `index.html`; dev puzzles `chess-puzzles-dev.json`; loader `tools/import-lichess-puzzles.py`; exact endgame tables `endgame-k{q,r,p}k.bin` built by `tools/build-endgame-tables.mjs` (verified against the Lichess tablebase) | "Challenges" button at the top right beside the profile button; saves and restores the current game; progress in localStorage + `chess_training_progress` |
 | Live clock change | `ChessClock.changeLocalMode` (practice), `applyClockChange` in `index.html`, `familyChessChangeClock` → RPC `chess_change_clock` (online) | total→total shifts both clocks by the difference |

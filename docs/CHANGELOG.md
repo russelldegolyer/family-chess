@@ -20,6 +20,9 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ## Unreleased
 
+**Changed**
+- Voice chat is now a walkie-talkie: while you're both in an online game, hold the mic button to talk and let go when you're done. While you hold it, the other player's mic button lights up green with "<name> is talking". No more ringing or Join; the line connects quietly in the background, and the mic turns off after 45 seconds without talking.
+
 **Fixed**
 - Voice chat on iPhone: the microphone failed to start ("InvalidStateError") because move sounds had switched the phone's audio to playback-only. Calls now switch it to play-and-record, and move sounds leave it alone during a call.
 - Invite button turns back to the blue Invite as soon as the countdown reaches 0, and the "Waiting for…" line clears.

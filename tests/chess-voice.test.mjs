@@ -4,35 +4,39 @@ import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const voice=read('chess-voice.js'),page=read('index.html'),vercel=read('vercel.json');
 
-test('voice chat: players only, accept to join, phone-to-phone audio',()=>{
+test('walkie-talkie: players only, phone-to-phone audio, hold to talk',()=>{
  assert.match(voice,/new RTCPeerConnection/);
  assert.match(voice,/echoCancellation: true/);
  assert.match(voice,/if \(m\.from !== friend \|\| m\.to !== S\.me\) return;/);
- assert.match(voice,/wants to talk/);
+ assert.match(voice,/mainBtn\.addEventListener\('pointerdown'/);
+ assert.match(voice,/for \(const ev of \['pointerup', 'pointercancel', 'lostpointercapture'\]\) mainBtn\.addEventListener\(ev, \(\) => pressEnd\(\)\)/);
  assert.match(page,/<script defer src="\.\/chess-voice\.js\?v=\d+"><\/script>/);
  assert.match(page,/window\.familyChessVoice\?\.update\(G\.mode === 'live' && mySeat/);
  assert.match(vercel,/microphone=\(self\)/);
 });
 
-test('voice chat: private pair channel, survives game changes, mic ends it, mic released on end',()=>{
- const voice=readFileSync(new URL('../chess-voice.js',import.meta.url),'utf8');
- const sql=readFileSync(new URL('../database/chess-voice-private-channel-2026-11-13.sql',import.meta.url),'utf8');
+test('walkie-talkie: the other player sees who is talking',()=>{
+ assert.match(voice,/send\('talk', \{ on: true \}\)/);
+ assert.match(voice,/send\('talk', \{ on: false \}\)/);
+ assert.match(voice,/S\.oppName \+ ' is talking'/);
+ assert.match(voice,/S\.theyTimer = setTimeout\(\(\) => \{ S\.theyTalk = false; paint\(\); \}, 5000\)/);
+});
+
+test('walkie-talkie: private pair channel, nothing sent while released, mic closed when idle or leaving',()=>{
+ const sql=read('database/chess-voice-private-channel-2026-11-13.sql');
  assert.match(voice,/c\.channel\('chess-voice:' \+ \[S\.me, friend\]\.sort\(\)\.join\(':'\), \{ config: \{ private: true/);
- assert.match(voice,/if \(S\.state !== 'idle'\) \{ paint\(\); return; \}/);
- assert.match(voice,/hangUp\(true\);   \/\* on a call \(or calling\): the mic button ends it \*\//);
+ assert.match(voice,/const track = S\.holding && S\.local \? S\.local\.getAudioTracks\(\)\[0\] \|\| null : null;/);
  assert.match(voice,/for \(const t of S\.local\?\.getTracks\(\) \|\| \[\]\) t\.stop\(\);/);
+ assert.match(voice,/const MIC_IDLE_MS = 45000;/);
+ assert.match(voice,/window\.addEventListener\('pagehide', \(\) => leave\(true\)\)/);
  assert.doesNotMatch(voice,/MediaRecorder|getUserMedia\([^)]*video: true/);
  assert.match(sql,/chess_are_friends/);
 });
 
-test('voice chat: ring sound, re-ring, push to closed apps, optional relay from secrets',()=>{
- const voice=readFileSync(new URL('../chess-voice.js',import.meta.url),'utf8');
- const notify=readFileSync(new URL('../supabase/functions/chess-notify-challenge/index.ts',import.meta.url),'utf8');
- const ice=readFileSync(new URL('../supabase/functions/chess-voice-ice/index.ts',import.meta.url),'utf8');
- assert.match(voice,/function startRingSound\(\)/);
- assert.match(voice,/S\.ringTick = setInterval/);
- assert.match(voice,/action: 'voice_call', target_id: S\.opp/);
- assert.match(notify,/You can only call friends/);
+test('walkie-talkie: lower id makes the offer, optional relay from secrets',()=>{
+ const ice=read('supabase/functions/chess-voice-ice/index.ts');
+ assert.match(voice,/if \(S\.me < S\.opp\) void makeOffer\(\); else send\('hello'\);/);
+ assert.match(voice,/addTransceiver\('audio', \{ direction: 'sendrecv' \}\)/);
  assert.match(ice,/CHESS_TURN_URLS/);
  assert.match(ice,/Sign in first\./);
 });
