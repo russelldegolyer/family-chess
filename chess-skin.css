@@ -64,3 +64,7 @@ html body #ui > .overlay:has(> .settings-card) > .settings-card { max-height: ca
 
 /* while a pop-up is open, the top controls (Challenges, Online, the opponent's plate) step back too; they sat over the Settings title */
 html body:has(#ui > .overlay:not([hidden])) .train-top, html body:has(#ui > .overlay:not([hidden])) .auth-account, html body:has(#ui > .overlay:not([hidden])) #plateTop { visibility: hidden !important; }
+
+/* while a pop-up is open, the side picker (before an online game's first move) and the mic step back too */
+html body:has(#ui > .overlay:not([hidden])) #sidePick, html body:has(#ui > .overlay:not([hidden])) #voiceBox:not(.inline),
+html body:has(#collection:not([hidden])) #sidePick, html body:has(#collection:not([hidden])) #voiceBox:not(.inline) { visibility: hidden !important; }

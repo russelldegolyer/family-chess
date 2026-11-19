@@ -21,6 +21,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Improved**
+- Fixed: "Pick your side" and the mic button no longer sit on top of Settings (or other pop-ups) before an online game starts.
 - The invite status fits on one line: "Waiting for Lindsay · 53s left".
 
 ## 2026-11-17 — Walkie-talkie voice, names and wording polish (deployed 7:20 PM)
