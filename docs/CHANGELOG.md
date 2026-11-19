@@ -6,6 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
+| 2026-11-18 | 4 |
 | 2026-11-17 | 19 |
 | 2026-11-16 | 1 |
 | 2026-11-14 | 11 |
@@ -18,7 +19,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-18 — Audit cleanup, invite line, pop-up overlap (deployed 7:33 PM)
 
 **Improved**
 - Fixed: "Pick your side" and the mic button no longer sit on top of Settings (or other pop-ups) before an online game starts.
