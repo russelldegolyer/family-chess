@@ -44,16 +44,13 @@
     }
     #cgSignOutSlot #authSignOut.cgAccountSignOut:disabled{opacity:.5;cursor:wait}
     .cgInput {font-size:16px!important}
-    #cgWatchShortcut{display:none!important}
 
     #cgLaunch {background:#f2f2f2;color:#111;border:0;border-radius:7px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
     #cgLobby[hidden]{display:none!important}
     #cgLobby{position:fixed;inset:0;z-index:180;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f5f5f5}
     .cgShade{position:absolute;inset:0;background:#000c}
     .cgPanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 24px));max-height:calc(100dvh - 24px);overflow:auto;background:#111;border:1px solid #383838;border-radius:16px;padding:22px;box-shadow:0 20px 60px #000c}
-    .cgHeader,.cgRow{display:flex;gap:9px;align-items:center}
-    .cgHeader{justify-content:space-between}
-    .cgHeader h2{font-size:23px;margin:0 0 6px}
+    .cgRow{display:flex;gap:9px;align-items:center}
     .cgMuted{color:#aaa;font-size:12px;line-height:1.6}
     .cgLabel{display:block;color:#ccc;font-size:12px;font-weight:650;margin:17px 0 7px}
     .cgInput{flex:1;min-width:0;width:100%;min-height:43px;background:#1c1c1c;border:1px solid #444;border-radius:9px;color:#fff;padding:10px;font:inherit}
@@ -89,13 +86,7 @@
     .cgLiveMeta{display:block;color:#8e8e93;font-size:12px}
     .cgLiveTag{flex:none;width:9px;height:9px;margin:0 6px;border-radius:50%;background:#30d158;box-shadow:0 0 0 4px rgba(48,209,88,.15)}
     .cgWatch{width:100%;background:#e9f2eb;color:#101811;border:0;font-weight:700}
-    #cgWatchShortcut{position:fixed;z-index:70;top:max(72px,calc(env(safe-area-inset-top,0px) + 62px));left:max(12px,env(safe-area-inset-left,0px));
-      border:1px solid #3b7650;border-radius:999px;padding:10px 14px;background:#15251b;color:#d8f9e4;
-      box-shadow:0 6px 25px #0009;cursor:pointer;font:650 12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    #cgSpectatorBar{position:fixed;z-index:70;top:max(72px,calc(env(safe-area-inset-top,0px) + 62px));left:max(12px,env(safe-area-inset-left,0px));
-      max-width:calc(100vw - 24px);display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:7px 8px 7px 11px;
-      border:1px solid #38443c;border-radius:12px;background:#142019;color:#def4e5;font-size:12px;box-shadow:0 8px 28px #0009}
-    #cgSpectatorBar .cgLeave{border:0;border-radius:8px;background:#303b33;color:#fff;padding:8px 11px;min-height:34px;cursor:pointer}
+    /* #cgSpectatorBar is never shown: index.html's watch bar reads its name and uses its Exit */
     .cgCols{display:contents}@media(min-width:900px){.cgPanel{width:min(920px,calc(100% - 48px))!important}.cgCols{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;align-items:start}.cgColL,.cgColR{min-width:0}}
 @media(max-width:600px){.cgPanel{top:auto;bottom:0;left:0;transform:none;width:100%;border-radius:16px 16px 0 0;max-height:calc(100dvh - 15px);padding-bottom:max(22px,env(safe-area-inset-bottom,0px))}}
     /* ---- simplified lobby: one sheet, players first, everything else quiet ---- */
@@ -247,10 +238,6 @@
   // button into the new Online Games account settings.
   signOut.classList.add('cgAccountSignOut');
   document.getElementById('cgSignOutSlot').appendChild(signOut);
-  const watchShortcut=document.createElement('button');
-  watchShortcut.id='cgWatchShortcut';watchShortcut.type='button';watchShortcut.hidden=true;
-  watchShortcut.textContent='● Live games';watchShortcut.addEventListener('click',show);
-  document.body.appendChild(watchShortcut);
   const spectatorBar=document.createElement('div');
   spectatorBar.id='cgSpectatorBar';spectatorBar.hidden=true;
   const spectatorLabel=document.createElement('strong');
@@ -261,7 +248,7 @@
   const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let player = null, invitePresented = false;
   let shownMatch = null, matchId = null, matchMode = null, timer = null, subscription = null, pendingRead = false, again = false, syncToken = 0;
-  let livePromptSeen=false, liveCount=0, livePoll=null;
+  let livePromptSeen=false, livePoll=null;
   const validColor=(v)=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
   const colorColumns={mine:'piece_color'};
   const colorSaveTimers={mine:null};
@@ -401,7 +388,6 @@
     matchId=null;matchMode=null;
     window.dispatchEvent(new CustomEvent('familyChessMatchChanged',{detail:{id:null}}));
     spectatorBar.hidden=true;
-    watchShortcut.hidden=!player||liveCount===0;
     syncToken++;
     if (timer) { clearInterval(timer); timer = null; }
     if (subscription) { const old=subscription; subscription=null; void api.removeChannel(old); }
@@ -487,7 +473,6 @@
     window.familyChessNative?.endPractice?.();
     matchId=id;matchMode=mode;
     window.dispatchEvent(new CustomEvent('familyChessMatchChanged',{detail:{id,mode}}));
-    watchShortcut.hidden=true;
     status(mode==='watch'?'Connecting to live spectator view…':'Loading shared board…');
     const loaded = await syncMatch();
     if (!loaded || matchId !== id) {
@@ -741,10 +726,7 @@
       if(player?.id!==uid)return;
       names=Object.fromEntries((profiles||[]).map(p=>[p.id,p.display_name]));
     }
-    liveCount=others.length;
     counter.textContent=others.length?`${others.length} to watch`:'';
-    watchShortcut.textContent=`● Watch live${others.length>1?` · ${others.length}`:''}`;
-    watchShortcut.hidden=others.length===0||!!matchId;
     container.replaceChildren();
     if(!matches.length){
       const n=document.createElement('span');n.className='cgMuted';
@@ -945,7 +927,7 @@
       document.getElementById('authAccountToggle')?.setAttribute('aria-expanded','false');
       stopMatch();
       if(livePoll){clearInterval(livePoll);livePoll=null;}
-      liveCount=0;livePromptSeen=false;watchShortcut.hidden=true;
+      livePromptSeen=false;
       window.familyChessNative?.leaveToPractice();
       root.hidden=true; return;
     }

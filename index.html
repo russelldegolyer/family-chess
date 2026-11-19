@@ -43,12 +43,12 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Chess">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="stylesheet" href="./auth.css?v=4">
+<link rel="stylesheet" href="./auth.css?v=5">
 <script defer src="./config.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
-<script defer src="./auth-gate.js?v=4"></script>
+<script defer src="./auth-gate.js?v=5"></script>
 <script defer src="./chess-clock.js?v=16"></script>
-<script defer src="./chess-online.js?v=33"></script>
+<script defer src="./chess-online.js?v=34"></script>
 <script defer src="./chess-chat.js?v=9"></script>
 <script defer src="./chess-voice.js?v=7"></script>
 <script defer src="./chess-stockfish.js?v=1"></script>
@@ -129,7 +129,6 @@ body.tight .brand, body.compact .brand { display: none; }
 .swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; box-shadow: inset 0 -5px 9px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.2); cursor: pointer; padding: 0; }
 .swatch.on { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.35); }
 .swatch.more { background: conic-gradient(#f33, #fc3, #3c6, #3cf, #36f, #c3f, #f33); color: #fff; font: 700 18px/1 var(--body); text-shadow: 0 1px 2px #000; }
-#modeInstant, #modePreview, #btnHistory, .panel-head .vr { display: none !important; }
 .chat-title { color: var(--ink); }
 .panel-head .head-gap { flex: 1; }
 body.compact .chat-close { display: none; }
@@ -194,7 +193,6 @@ body.focus:not(.compact) .panel { display: none; }
 .chip { cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease; }
 .chip:hover { color: var(--ink); border-color: var(--line-2); }
 .chip[aria-pressed="true"] { border-color: var(--gold); }
-.vr { width: 1px; height: 26px; margin: 0 4px; background: var(--line-2); }
 .head-gap { flex: 1; }
 .sheet-close { display: none; }
 .panel-body { position: relative; flex: 1; min-height: 0; }
@@ -1468,7 +1466,7 @@ body.clock-in-chat #plateTop .chess-clock, body.clock-in-plate #plateTop .chess-
 body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
 </style>
 
-<link rel="stylesheet" href="./chess-skin.css?v=11">
+<link rel="stylesheet" href="./chess-skin.css?v=12">
 </head>
 <body>
 <canvas id="stage" role="img" aria-label="Three-dimensional chess board"></canvas>
@@ -1545,12 +1543,7 @@ body.pregame .watch-bar, body.training-open .watch-bar { display: none; }
 
   <aside class="panel" id="panel" aria-label="Chat and game history">
     <div class="panel-head">
-      <div class="seg" role="group" aria-label="How moves are sent">
-        <button class="chip" id="modeInstant" type="button" aria-pressed="false" title="Moves go through as soon as you place them">Instant</button>
-        <button class="chip" id="modePreview" type="button" aria-pressed="true" title="Place a move, look at it, then confirm">Preview</button>
-      </div>
-      <span class="vr" aria-hidden="true"></span>
-      <button class="chip" id="btnHistory" type="button" aria-pressed="false">History</button>
+      <div class="seg" aria-hidden="true"></div>
       <button class="chip" id="btnFocus" type="button" hidden>Focus</button><span class="chat-title">Chat</span>
       <span class="head-gap"></span>
       <span class="chat-tools" role="group" aria-label="Game controls">
@@ -3369,7 +3362,7 @@ const Sound = {
     /* iPhone: let move sounds play like a game's audio rather than being silenced as page ambience */
     /* …but never during a voice call: Safari won't keep the microphone open in 'playback' */
     const vs = window.familyChessVoice?.state?.();
-    if (!vs || vs === 'idle' || vs === 'ringing')
+    if (vs !== 'mic')
       try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch { /* older Safari */ }
     if (!this.ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { this.ctx = new C(); } catch { return null; } }
     /* Safari also leaves the context 'interrupted' after a call or after the app was in the background */
@@ -5346,7 +5339,7 @@ function toggleTeachingMove() {
 function fullReviewVisible() { return historyOpen && (compact ? sheetOpen : !$('panel').hidden && getComputedStyle($('panel')).display !== 'none' && !focusMode); }
 function openFullReview() {
   if (focusMode && !compact) setFocus(false);
-  if (!historyOpen) { const r = review; historyOpen = true; $('btnHistory').setAttribute('aria-pressed', 'true'); $('historyView').hidden = false; $('chatList').hidden = true; $('chatForm').hidden = true; $('typing').hidden = true; review = r; }
+  if (!historyOpen) { const r = review; historyOpen = true; $('historyView').hidden = false; $('chatList').hidden = true; $('chatForm').hidden = true; $('typing').hidden = true; review = r; }
   if (compact) setSheet(true);
   renderHistory(); updateBanner();
 }
@@ -5609,7 +5602,6 @@ function renderHistory() {
 
 function openHistory(on = !historyOpen) {
   historyOpen = on;
-  $('btnHistory').setAttribute('aria-pressed', String(on));
   $('historyView').hidden = !on;
   $('chatList').hidden = on;
   $('chatForm').hidden = on;
@@ -5720,8 +5712,6 @@ function resetLocalGame(mode, n) {
     window.familyChessOnlineStop?.();
     G.onlineProvider = null;
     G.onlineBusy = false;
-    const label = document.querySelector('.auth-practice');
-    if (label) label.textContent = 'Practice mode';
   }
   cancelComputer();
   if (pending) pending = null;
@@ -6214,14 +6204,8 @@ document.addEventListener('pointerdown', (e) => { if (!$('menu').hidden && !$('m
 function setMoveMode(mode) {
   moveMode = mode;
   store.set('sg.mode', mode);
-  if (!$('modeInstant')) return;
-  $('modeInstant').setAttribute('aria-pressed', String(mode === 'instant'));
-  $('modePreview').setAttribute('aria-pressed', String(mode === 'preview'));
 }
-$('modeInstant').addEventListener('click', () => setMoveMode('instant'));
-$('modePreview').addEventListener('click', () => setMoveMode('preview'));
 setMoveMode(moveMode);
-$('btnHistory').addEventListener('click', () => openHistory());
 function setFocus(on) {
   focusMode = on;
   document.body.classList.toggle('focus', on);
@@ -7472,9 +7456,6 @@ window.familyChessNative = {
     mySeat = watching ? null : white === userId ? 'w' : 'b';
     window.ChessClock?.showOnline(game,pos.chess.turn(),
       watching?null:window.familyChessClaimTimeout);
-    const label = document.querySelector('.auth-practice');
-    if(label)label.textContent=watching?'Spectating · '+G.names.w+' vs '+G.names.b:
-      'Online · '+(mySeat==='w'?'White':'Black');
     const seatChanged = priorSeat !== mySeat || !sameGame;
     /* a new match never opens inside the last game's review: close it so the chat shows again */
     if (!sameGame && historyOpen) openHistory(false);
@@ -7613,7 +7594,6 @@ document.addEventListener('dblclick', (e) => {
     <span class="auth-online-label">Online</span>
   </button>
   <div id="authAccountActions" class="auth-account-actions">
-    <span id="authAccountName"></span><span class="auth-practice">Practice mode</span>
     <button id="authSignOut" type="button">Sign out</button>
   </div>
 </div>

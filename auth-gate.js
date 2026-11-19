@@ -5,7 +5,7 @@
   const gate = $('authGate'), form = $('authForm'), email = $('authEmail'), password = $('authPassword');
   const submit = $('authSubmit'), tabs = $('authTabs'), siTab = $('authSignInTab'), suTab = $('authSignUpTab');
   const msg = $('authMessage'), subtitle = $('authSubtitle'), aux = $('authAux'), cancel = $('authCancel');
-  const acc = $('accountControl'), accName = $('authAccountName');
+  const acc = $('accountControl');
   const accToggle=$('authAccountToggle');
   // The profile icon opens Online Games directly. The old intermediate
   // account dropdown is no longer used; Sign out lives in lobby settings.
@@ -25,7 +25,6 @@
     gate.hidden = !!user;
     acc.hidden = !user;
     if(!user)accToggle.setAttribute('aria-expanded','false');
-    accName.textContent = user?.email || '';
     if (user) setMessage('');
   };
   const setMode = (next) => {

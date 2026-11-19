@@ -75,7 +75,6 @@ test('signed-in members see active games, saved display names and watch actions'
  assert.match(online,/void refreshLive\(true\)/);
  assert.match(online,/livePoll=setInterval\(/);
  assert.match(online,/id="cgLiveGames"/);
- assert.match(online,/cgWatchShortcut/);
 });
 test('spectator mode never submits a move, changes seats or joins games',()=>{
  assert.match(online,/matchMode!=='play'\) throw new Error\('Only participating players can submit moves\.'/);
