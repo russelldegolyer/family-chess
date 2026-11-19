@@ -18,6 +18,11 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Improved**
+- The invite status fits on one line: "Waiting for Lindsay · 53s left".
+
 ## 2026-11-17 — Walkie-talkie voice, names and wording polish (deployed 7:20 PM)
 
 **Changed**

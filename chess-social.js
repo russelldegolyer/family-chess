@@ -74,7 +74,7 @@
  const validUid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(v);
  const nameFor=id=>profiles.find(p=>p.id===id)?.display_name||'Family player';
  let toastMode=false;
- const message=(msg)=>{$('cgChallengeStatus').textContent=msg;if(toastMode&&msg)window.familyChessToast?.(msg.replace(/ Push accepted for \d+ devices?\./,''),4500);};
+ const message=(msg)=>{const st=$('cgChallengeStatus');st.textContent=msg;st.style.cssText=/^Waiting for /.test(msg)?'white-space:nowrap;overflow:hidden;text-overflow:ellipsis':'';if(toastMode&&msg)window.familyChessToast?.(msg.replace(/ Push accepted for \d+ devices?\./,''),4500);};
  const remaining=c=>Math.max(0,Math.ceil((Date.parse(c.expires_at)-Date.now())/1000));
  // what the player sees: play invites show 60 s of their 70 s (the extra 10 s covers notification delay)
  const visible=c=>c.kind==='saved'?remaining(c):Math.max(0,remaining(c)-10);
@@ -195,12 +195,12 @@
  }
  function renderOutgoing(){
   const mine=challenges.filter(c=>c.challenger_id===user?.id&&c.status==='pending'&&visible(c)>0)[0];
-  if(mine)message('Waiting for '+nameFor(mine.target_id)+' · '+left(mine)+' remaining. They can accept or decline.');
+  if(mine)message('Waiting for '+nameFor(mine.target_id)+' · '+left(mine)+' left');
   else if(/^Waiting for /.test($('cgChallengeStatus').textContent))message('');
  }
  // Play invites stay open 70 s but show 60 s (the extra 10 s covers notification delay).
  function shown(r,kind){return kind==='saved'?r:Math.max(1,Math.min(60,r-10));}
- function left(c){const r=shown(remaining(c),c.kind);return r>=90?Math.floor(r/60)+':'+String(r%60).padStart(2,'0'):r+(r===1?' second':' seconds');}
+ function left(c){const r=shown(remaining(c),c.kind);return r>=90?Math.floor(r/60)+':'+String(r%60).padStart(2,'0'):r+'s';}
  function incoming(){
   const available=challenges.filter(c=>c.target_id===user?.id&&c.status==='pending'&&remaining(c)>0);
   return available.find(c=>c.id===deepLink)||available[0]||null;
