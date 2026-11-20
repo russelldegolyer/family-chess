@@ -2917,6 +2917,10 @@
     }
     return { play: out, finish: fin, ahead: F.length };
   }
+  /* which end of a slider is a strength, which is costing you games, and which is just a style */
+  const TRAIT_GOOD = new Set(['Solid', 'Punishes mistakes', 'Quick development', 'Closes out wins', 'Boxes the king in', 'Finishes fast', 'King joins in']);
+  const TRAIT_BAD = new Set(['Loose', 'Misses chances', 'Slow start', 'Lets wins slip', 'Chases with checks', 'Slow to finish', 'King hides']);
+  const traitTone = (t) => (TRAIT_GOOD.has(t) ? 'good' : TRAIT_BAD.has(t) ? 'bad' : '');
   /* games read before finishing was tracked: read computer games again (their positions are on this device) */
   function fillFinish() {
     const PL = window.familyChessPlan, C = B()?.Chess, log = window.familyChessCpuGames?.() || []; if (!PL || !C) return;
@@ -3051,6 +3055,13 @@
     const says = S.style.map((f) => f.says);
     kind.append(el('p', '', says.length ? 'Across these games, ' + (says.length > 1 ? says[0] + ', and ' + says[1] : says[0]) + '.' : 'No style stands out yet — it sharpens as you play.'));
     hero.append(kind);
+    /* your clearest traits from the sliders below, as chips: green = a strength, red = costing you games */
+    const traits = [...S.axes.play, ...S.axes.finish].filter((x) => x.pos < 35 || x.pos > 65).map((x) => (x.pos < 35 ? x.l : x.r));
+    if (traits.length) {
+      const tw = el('div', 'tr-traits'), rank = { bad: 0, good: 1, '': 2 };
+      for (const t of traits.sort((a, b) => rank[traitTone(a)] - rank[traitTone(b)]).slice(0, 6)) tw.append(el('span', 'tr-trait ' + traitTone(t), t));
+      hero.append(tw);
+    }
     const n = S.res.w + S.res.l + S.res.d, avg = S.accs.length ? S.accs.reduce((a, b) => a + b, 0) / S.accs.length : null;
     const stats = el('div', 'tr-style-stats');
     const stat = (big, small, cls) => { const x = el('div', cls || ''); x.append(el('b', '', big), el('span', '', small)); stats.append(x); };
@@ -3069,15 +3080,23 @@
       sp.append(head, chart, key, cap); hero.append(sp);
     }
 
-    /* how you play: five sliders between opposites */
+    /* focus: the one thing to work on */
+    const F = focusPick(S);
+    if (F) {
+      const f = el('div', 'tr-focus'); f.append(el('span', 'tr-label', 'Focus next'), el('b', '', F.fix.what), el('p', '', 'Showed up in ' + F.n + ' of your last ' + S.N + ' games. ' + (F.ch ? 'The "' + F.ch.title + '" chapter drills exactly this' + (F.strict ? ', so it is now your recommended next step.' : '.') : 'The "' + F.fix.title + '" lesson in the Academy covers it.')));
+      f.append(btn('Practice: ' + (F.ch ? F.ch.title : F.fix.title), 'primary', () => (F.ch ? openChapter(F.ch) : (() => { const l = lessonById(F.lesson); if (l) startLesson(l); })()), 'play'));
+      hub.append(f);
+    }
+
+    /* how you play and how you finish: sliders between opposites */
     const sliders = (title, list, note) => {
       const hp = card(title, 'tr-axes');
       if (note) hp.append(el('p', 'tr-muted tr-axes-note', note));
       for (const x of list) {
-        const lean = x.pos < 35 ? 'l' : x.pos > 65 ? 'r' : 'm';
+        const lean = x.pos < 35 ? 'l' : x.pos > 65 ? 'r' : 'm', tone = lean === 'm' ? '' : traitTone(lean === 'l' ? x.l : x.r);
         const row = el('div', 'tr-axis');
-        const ends = el('div', 'tr-axis-ends'); ends.append(el('b', lean === 'l' ? 'on' : '', x.l), el('b', lean === 'r' ? 'on' : '', x.r));
-        const track = el('div', 'tr-axis-track'), at = Math.max(4, Math.min(96, x.pos)), dot = el('i'), fill = el('em');
+        const ends = el('div', 'tr-axis-ends'); ends.append(el('b', lean === 'l' ? 'on ' + tone : '', x.l), el('b', lean === 'r' ? 'on ' + tone : '', x.r));
+        const track = el('div', 'tr-axis-track'), at = Math.max(4, Math.min(96, x.pos)), dot = el('i'), fill = el('em', tone);
         dot.style.left = at + '%'; fill.style.left = Math.min(50, at) + '%'; fill.style.width = Math.abs(at - 50) + '%'; track.append(el('span'), fill, dot);
         track.setAttribute('role', 'img'); track.setAttribute('aria-label', x.l + ' to ' + x.r + ': ' + (lean === 'm' ? 'in between' : 'leans ' + (lean === 'l' ? x.l : x.r).toLowerCase()));
         row.append(ends, track, el('p', '', x.say), el('p', 'tr-axis-why', x.why));
@@ -3086,14 +3105,6 @@
     };
     if (S.axes.play.length) sliders('How you play', S.axes.play);
     if (S.N >= 3) sliders('How you finish', S.axes.finish, S.axes.finish.length < 2 ? 'These fill in from games where you get a rook or more ahead' + (S.axes.ahead ? ' — ' + (2 - Math.min(2, S.axes.ahead)) + ' more to go.' : '. Every game from now on counts.') : '');
-
-    /* focus: the one thing to work on */
-    const F = focusPick(S);
-    if (F) {
-      const f = el('div', 'tr-focus'); f.append(el('span', 'tr-label', 'Focus next'), el('b', '', F.fix.what), el('p', '', 'Showed up in ' + F.n + ' of your last ' + S.N + ' games. ' + (F.ch ? 'The "' + F.ch.title + '" chapter drills exactly this' + (F.strict ? ', so it is now your recommended next step.' : '.') : 'The "' + F.fix.title + '" lesson in the Academy covers it.')));
-      f.append(btn('Practice: ' + (F.ch ? F.ch.title : F.fix.title), 'primary', () => (F.ch ? openChapter(F.ch) : (() => { const l = lessonById(F.lesson); if (l) startLesson(l); })()), 'play'));
-      hub.append(f);
-    }
 
     const c1 = card('What you go for');
     S.goes.filter((g) => g.code !== 'drift').slice(0, 5).forEach((g) => {

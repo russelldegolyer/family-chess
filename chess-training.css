@@ -625,3 +625,11 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-axis p { margin: 0; font-size: 14px; line-height: 1.45; color: #d1d1d6; }
 .tr-axis p.tr-axis-why { margin-top: -2px; font-size: 12px; color: #8e8e93; }
 .tr-axes-note { margin: 4px 0 2px; }
+.tr-axis-track em.good { background: var(--tr-good); }
+.tr-axis-track em.bad { background: #ff453a; }
+.tr-axis-ends b.on.good { color: var(--tr-good); }
+.tr-axis-ends b.on.bad { color: #ff6961; }
+.tr-traits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -2px; }
+.tr-trait { padding: 5px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: rgba(10,132,255,.16); color: #64a8ff; }
+.tr-trait.good { background: rgba(48,209,88,.15); color: var(--tr-good); }
+.tr-trait.bad { background: rgba(255,69,58,.15); color: #ff6961; }
