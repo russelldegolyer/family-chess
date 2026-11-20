@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-19 | 8 |
+| 2026-11-19 | 13 |
 | 2026-11-18 | 4 |
 | 2026-11-17 | 19 |
 | 2026-11-16 | 1 |
@@ -20,7 +20,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-19 — How you finish, Your style visual pass, cleanup (deployed 9:14 PM)
 
 **Added**
 - Your style: a "How you finish" card with sliders for how you trap the king once you're winning — Lets wins slip ↔ Closes out wins, Chases with checks ↔ Boxes the king in, Slow to finish ↔ Finishes fast, and King hides ↔ King joins in. They read games where you got a rook or more ahead (computer games already on your phone count; online games count from now on).
