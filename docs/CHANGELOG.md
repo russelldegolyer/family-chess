@@ -6,6 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
+| 2026-11-19 | 5 |
 | 2026-11-18 | 4 |
 | 2026-11-17 | 19 |
 | 2026-11-16 | 1 |
@@ -19,7 +20,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-19 — Skewers, Your style, walkie-talkie polish, app badge (deployed 8:52 PM)
 
 **Fixed**
 - Walkie-talkie: the microphone turns off the moment you let go (about 0.2 seconds: your last syllable still goes out, then it closes and the iPhone's mic light goes out). The button lets go instantly.
