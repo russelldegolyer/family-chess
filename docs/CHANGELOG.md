@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-19 | 13 |
+| 2026-11-19 | 15 |
 | 2026-11-18 | 4 |
 | 2026-11-17 | 19 |
 | 2026-11-16 | 1 |
@@ -19,6 +19,14 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 | 2026-11-08 | 8 |
 
 ---
+
+## 2026-11-19 — Your path: filter, steps, goals (deployed 11:15 PM)
+
+**Improved**
+- Your path: a filter at the top (All, Tactics, Mates, Endgames, Defense), so chapters like Skewers are quick to find.
+- The Your path card counts steps as well as whole chapters, so Academy lessons you've already mastered show as progress.
+- Each chapter page says what you'll be able to do once it's finished.
+- Your path follows your games from 3 games instead of 5, so it agrees with Your style's Focus next sooner.
 
 ## 2026-11-19 — How you finish, Your style visual pass, cleanup (deployed 9:14 PM)
 

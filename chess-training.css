@@ -630,3 +630,7 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-trait { padding: 5px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: rgba(10,132,255,.16); color: #64a8ff; }
 .tr-trait.good { background: rgba(48,209,88,.15); color: var(--tr-good); }
 .tr-trait.bad { background: rgba(255,69,58,.15); color: #ff6961; }
+.tr-path-seg { margin: 4px 0 12px; flex-wrap: nowrap; gap: 4px; }
+.tr-path-seg .tr-btn { flex: 1 1 0; padding: 0 4px; font-size: 12.5px; }
+.tr-chap-goal { margin-top: 12px; padding: 14px 16px; border-radius: 14px; background: var(--tr-bg); display: flex; flex-direction: column; gap: 6px; }
+.tr-chap-goal p { margin: 0; font-size: 15px; line-height: 1.45; color: #d1d1d6; }

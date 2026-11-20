@@ -1968,14 +1968,33 @@
     row.replaceChildren(btn('Back to Training', 'primary', () => openHub(), 'next'), btn('Keep going', 'quiet', () => { PATH = null; RETURN = null; void startPuzzle(); }, 'retry'));
     return el('div', 'tr-say good', '🔥 ' + D.streak + (D.streak === 1 ? ' day' : ' days') + ' in a row' + (D.streak > 1 && D.streak === D.best ? ' — your best yet!' : '') + ' See you tomorrow.');
   }
+  /* Your path filter: which kind of chapter each one is */
+  let PATH_FILTER = 'all';
+  const CHAPTER_KIND = { c1: 'mates', c4: 'mates', c6: 'mates', c7: 'mates', c8: 'mates', c15: 'mates', c16: 'mates', c11: 'endgames', c12: 'endgames', c14: 'defense' };
+  const chapterKind = (ch) => (ch.defend ? 'defense' : CHAPTER_KIND[ch.id] || 'tactics');
+  /* chapter page: what you can do once the chapter is finished */
+  const CHAPTER_GOAL = {
+    c1: 'Tell check, mate and stalemate apart, and spot a mate in one.', c2: 'Never miss a free piece — and take it safely.',
+    d1: 'Check what your opponent can take before every move.', c3: 'Find a move that attacks two things at once.',
+    c4: 'Checkmate with king and queen against a lone king.', c5: 'Freeze a piece in front of a bigger one, and win it.',
+    c6: 'Mate a king trapped behind its own pawns.', d2: 'See a back-rank mate coming and give your king air in time.',
+    c7: 'Mate with one rook, and with two rooks using the ladder.', c8: 'Find the forcing first move that leads to mate.',
+    d4: 'Find the defense when your king is in danger.', c9: 'Line up a king or queen with the piece behind it, and win that piece.',
+    d3: 'Notice a fork or pin before it lands on you.', c10: 'Move one piece to unleash an attack from the piece behind it.',
+    c11: 'Use the opposition and the square rule in king and pawn endings.', c12: 'Win king and pawn endings with key squares.',
+    c13: 'Lure a defender away, or give material to break through.', c14: 'Hold a worse position with the best defensive move.',
+    c15: 'Keep forcing with checks until mate in three or more.', c16: 'Mate with two bishops, and with bishop and knight.',
+  };
   function pathCard() {
     const rec = recommended(), done = CHAPTERS.filter(chapterDone).length;
+    const steps = CHAPTERS.reduce((n, ch) => n + STEPS.filter((k) => stepDone(ch, k)).length, 0), all = CHAPTERS.length * 3;
     const c = btn('', 'tr-path-card', () => openPath());
     c.innerHTML = '<span class="tr-path-top"><span>Your path</span><em></em></span><b></b><span class="tr-path-sub"></span><span class="tr-path-bar"><i></i></span>';
-    c.querySelector('em').textContent = done + ' of ' + CHAPTERS.length + ' chapters';
+    /* mastered Academy lessons already count as steps, so show steps as well as whole chapters */
+    c.querySelector('em').textContent = done + ' of ' + CHAPTERS.length + ' chapters' + (steps > done * 3 ? ' · ' + steps + ' of ' + all + ' steps' : '');
     c.querySelector('b').textContent = rec ? 'Next: ' + rec.title : 'Every chapter finished';
     c.querySelector('.tr-path-sub').textContent = rec ? stepLabel(rec, nextStep(rec)) : 'Keep sharp with puzzles and challenges below.';
-    c.querySelector('.tr-path-bar i').style.width = Math.round(done / CHAPTERS.length * 100) + '%';
+    c.querySelector('.tr-path-bar i').style.width = Math.round(steps / all * 100) + '%';
     return c;
   }
   function openPath() {
@@ -1983,8 +2002,13 @@
     hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
     const rec = recommended();
     hub.append(subHead('Your path', openHub), el('p', 'tr-note', 'Each chapter: learn the idea, practice it, then prove it. Everything is open — the green one is recommended next' + (rec && fromGames(rec) ? ', picked from what keeps costing you in your games.' : '.') + ' Chapters marked 🛡 train defense: seeing what your opponent is planning.'));
+    const seg = el('div', 'tr-seg tr-path-seg');
+    for (const [v, label] of [['all', 'All'], ['tactics', 'Tactics'], ['mates', 'Mates'], ['endgames', 'Endgames'], ['defense', 'Defense']])
+      seg.append(btn(label, PATH_FILTER === v ? 'on' : '', () => { PATH_FILTER = v; openPath(); }));
+    hub.append(seg);
     const list = el('div', 'tr-path-list');
     CHAPTERS.forEach((ch, i) => {
+      if (PATH_FILTER !== 'all' && chapterKind(ch) !== PATH_FILTER) return;
       const b = btn('', 'tr-chap' + (chapterDone(ch) ? ' done' : '') + (ch === rec ? ' next' : ''), () => openChapter(ch));
       b.innerHTML = '<span class="tr-chap-num"></span><span class="tr-card-text"><b></b><span></span></span><span class="tr-dots"><i></i><i></i><i></i></span>';
       b.querySelector('.tr-chap-num').textContent = chapterDone(ch) ? '✓' : String(i + 1);
@@ -1994,7 +2018,7 @@
       list.append(b);
     });
     hub.append(list); hub.hidden = false;
-    hub.querySelector('.tr-chap.next')?.scrollIntoView({ block: 'center' });
+    if (PATH_FILTER === 'all') hub.querySelector('.tr-chap.next')?.scrollIntoView({ block: 'center' });
   }
   function openChapter(ch) {
     session++; screen = 'chapter'; PATH = null; RETURN = () => openChapter(ch); top.hidden = true; panel.hidden = true; B().onMove(null); mark({});
@@ -2012,6 +2036,7 @@
       list.append(b);
     });
     hub.append(list);
+    if (CHAPTER_GOAL[ch.id]) { const g = el('div', 'tr-chap-goal'); g.append(el('span', 'tr-label', 'After this chapter'), el('p', '', CHAPTER_GOAL[ch.id])); hub.append(g); }
     if (!nx) hub.append(el('div', 'tr-chap-done', '★ Chapter complete'));
     const row = el('div', 'tr-actions tr-chap-actions');
     if (nx) row.append(btn('Start: ' + ['Learn', 'Practice', 'Prove it'][STEPS.indexOf(nx)], 'primary', () => runStep(ch, nx), 'play'));
@@ -2944,7 +2969,7 @@
   }
   /* the profile's top finding (with practice behind it) becomes the recommended chapter */
   function styleFocus(S = styleStats()) {
-    if (S.N < 5) return null;
+    if (S.N < 3) return null;
     const top = S.costs.find((c) => (c.fix.chapter || c.fix.lesson) && c.n / S.N >= 0.3);
     if (!top) return null;
     if (top.fix.chapter) { const ch = CHAPTERS.find((c) => c.id === top.fix.chapter); if (!ch || chapterDone(ch)) return null; return { ...top, ch }; }

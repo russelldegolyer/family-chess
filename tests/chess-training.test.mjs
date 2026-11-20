@@ -42,3 +42,12 @@ test('Academy starts with fundamentals and every "only move" claim is exact',()=
  assert.match(tr,/function runKeep/);
  assert.match(tr,/a winning move that is much slower than the best is "inefficient", never "wrong"/);
 });
+
+test('Your path: steps count, a kind filter, a goal on each chapter, and it follows your games from 3 games', async () => {
+  const { readFileSync } = await import('node:fs');
+  const t = readFileSync(new URL('../chess-training.js', import.meta.url), 'utf8');
+  assert.match(t, /' · ' \+ steps \+ ' of ' \+ all \+ ' steps'/);
+  assert.match(t, /\['tactics', 'Tactics'\], \['mates', 'Mates'\], \['endgames', 'Endgames'\], \['defense', 'Defense'\]/);
+  assert.match(t, /'After this chapter'/);
+  assert.match(t, /if \(S\.N < 3\) return null;/);
+});
