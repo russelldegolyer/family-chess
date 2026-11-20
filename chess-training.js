@@ -29,6 +29,16 @@
   const dist = (a, b) => { const [f1, r1] = fr(a), [f2, r2] = fr(b); return Math.max(Math.abs(f1 - f2), Math.abs(r1 - r2)); };
   const other = (c) => (c === 'w' ? 'b' : 'w');
   const uciOf = (m) => m.from + m.to + (m.promotion || '');
+  /* computer games are kept as positions: rebuild the moves between them (stops at the first gap) */
+  function movesFromFens(f) {
+    const C = B()?.Chess, key = (x) => x.split(' ').slice(0, 2).join(' '), moves = [];
+    if (C && Array.isArray(f)) for (let i = 1; i < f.length; i++) {
+      let c; try { c = new C(f[i - 1]); } catch { break; }
+      const m = c.moves({ verbose: true }).find((x) => { c.move(x); const same = key(c.fen()) === key(f[i]); c.undo(); return same; });
+      if (!m) break; moves.push(uciOf(m));
+    }
+    return moves;
+  }
 
   /* ------------------------------------------------------------------ progress (per profile) */
   let uid = 'local';
@@ -2758,12 +2768,7 @@
     for (const g of log.slice(-20)) {
       const key = 'c:' + g.id; if (have.has(key) || !Array.isArray(g.fens) || g.fens.length < 9) continue;
       try {
-        const moves = [];
-        for (let i = 0; i + 1 < g.fens.length; i++) {
-          const c = new C(g.fens[i]), want = g.fens[i + 1].split(' ').slice(0, 2).join(' ');
-          const m = c.moves({ verbose: true }).find((x) => { c.move(x); const ok = c.fen().split(' ').slice(0, 2).join(' ') === want; c.undo(); return ok; });
-          if (!m) break; moves.push(uciOf(m));
-        }
+        const moves = movesFromFens(g.fens);
         if (moves.length < 8) continue;
         let acc = null; try { acc = JSON.parse(localStorage.getItem('chess.acc2.' + key) || 'null'); } catch { }
         const R = PL.read({ Chess: C, moves, side: g.color, acc, fens: g.fens.slice(0, moves.length), result: g.result === 'w' ? 'win' : g.result === 'l' ? 'loss' : 'draw' });
@@ -2930,8 +2935,7 @@
       g.fin = 1; changed = true;
       const x = log.find((y) => y.id === g.key.slice(2)); if (!x || !Array.isArray(x.fens)) continue;
       try {
-        const key = (f) => f.split(' ').slice(0, 2).join(' '), moves = [];
-        for (let i = 1; i < x.fens.length; i++) { const b = new C(x.fens[i - 1]); const m = b.moves({ verbose: true }).find((v) => { b.move(v); const ok = key(b.fen()) === key(x.fens[i]); b.undo(); return ok; }); if (!m) break; moves.push(m.from + m.to + (m.promotion || '')); }
+        const moves = movesFromFens(x.fens);
         const R = PL.read({ Chess: C, moves, side: x.color, fens: x.fens.slice(0, moves.length) });
         if (R?.tags.finish) g.tags.finish = R.tags.finish;
       } catch { /* optional */ }
@@ -2978,8 +2982,7 @@
       try {
         const PL = window.familyChessPlan, C = B()?.Chess, x = (window.familyChessCpuGames?.() || []).find((y) => y.id === g.key.slice(2));
         if (PL && C && x && Array.isArray(x.fens)) {
-          const key = (f) => f.split(' ').slice(0, 2).join(' '), moves = [];
-          for (let i = 1; i < x.fens.length; i++) { const b = new C(x.fens[i - 1]); const m = b.moves({ verbose: true }).find((v) => { b.move(v); const ok = key(b.fen()) === key(x.fens[i]); b.undo(); return ok; }); if (!m) break; moves.push(m.from + m.to + (m.promotion || '')); }
+          const moves = movesFromFens(x.fens);
           const R = PL.read({ Chess: C, moves, side: x.color, fens: x.fens.slice(0, moves.length) });
           const hit = R?.issues.find((y) => y.code === c.code); if (hit) { g.notes = styleNotes(R); save(); return hit.text; }
         }
@@ -3224,13 +3227,7 @@
   /* a computer game is kept as its positions: rebuild the moves and open the plan read for it */
   function openCpuRead(g) {
     const PL = window.familyChessPlan, C = B()?.Chess, f = Array.isArray(g.fens) ? g.fens : [];
-    const key = (x) => x.split(' ').slice(0, 2).join(' ');
-    const moves = [];
-    if (PL && C) for (let i = 1; i < f.length; i++) {
-      let c; try { c = new C(f[i - 1]); } catch { break; }
-      const hit = c.moves({ verbose: true }).find((m) => { c.move(m); const same = key(c.fen()) === key(f[i]); c.undo(); return same; });
-      if (!hit) break; moves.push(hit.from + hit.to + (hit.promotion || ''));
-    }
+    const moves = PL && C ? movesFromFens(f) : [];
     let R = null;
     try { if (moves.length) R = PL.read({ Chess: C, moves, side: g.side, result: { w: 'win', l: 'loss', d: 'draw' }[g.res], fens: f.slice(0, moves.length) }); } catch { R = null; }
     if (!R) { window.familyChessStats?.openComputer(0); return; }

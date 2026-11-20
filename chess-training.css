@@ -505,9 +505,6 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-focus b { font-size: 18px; }
 .tr-focus p { margin: 0 0 4px; font-size: 14px; color: #d1d1d6; }
 .tr-focus .tr-btn { align-self: flex-start; flex: none; padding: 0 16px; display: inline-flex; align-items: center; gap: 7px; }
-.tr-acc-trend { display: flex; align-items: baseline; gap: 10px; }
-.tr-acc-trend b { font-size: 22px; font-variant-numeric: tabular-nums; }
-.tr-acc-trend span { font-size: 13px; color: var(--tr-dim); }
 .tr-actions .tr-choice ~ .tr-btn { flex: 0 0 76px; min-width: 76px; }
 
 /* saved games: swipe left to delete (red), right to send back (green) */

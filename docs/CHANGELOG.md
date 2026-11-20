@@ -29,6 +29,9 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 **Improved**
 - Your style, visual pass: your clearest traits show as chips under your style word (green = a strength, red = costing you games, blue = just your style); slider fills and labels use the same colors; Focus next moves up, right under the summary.
 
+**Removed**
+- Cleanup: one shared helper now rebuilds a computer game's moves (it was copied in four places), and an unused accuracy style left from the old Your style page is gone.
+
 ## 2026-11-19 — Your style: How you play sliders (deployed 8:59 PM)
 
 **Improved**
