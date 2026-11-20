@@ -2836,7 +2836,50 @@
     for (const g of G) { const r = g.res === 'win' ? 'w' : g.res === 'loss' ? 'l' : 'd'; res[r]++; if (bySide[g.side]) bySide[g.side][r]++; }
     const accs = G.map((g) => g.acc).filter((v) => Number.isFinite(v));
     const series = G.filter((g) => Number.isFinite(g.acc)).map((g) => ({ acc: g.acc, res: g.res, at: g.at, g }));
-    return { N, kinds, goes, costs, best, phases: ph, weakest, style, res, bySide, accs, series, wins: res.w };
+    return { N, kinds, goes, costs, best, phases: ph, weakest, style, res, bySide, accs, series, wins: res.w, axes: styleAxes(G) };
+  }
+  /* your style as five sliders between opposites, read from the plans and mistakes in each game.
+     pos: 0 = all the way left, 100 = all the way right; say: what that means for you; why: the games behind it */
+  function styleAxes(G) {
+    const N = G.length; if (N < 3) return [];
+    const has = (g, list, k = 'plans') => list.some((x) => (k === 'plans' ? (g.tags?.plans || []).includes(x) : (g.tags?.issues || {})[x]));
+    const count = (f) => G.filter(f).length, pct = (n) => Math.round(n / N * 100);
+    const of = (n) => n + ' of ' + N + (N === 1 ? ' game' : ' games');
+    const pick = (pos, l, m, r) => (pos < 35 ? l : pos > 65 ? r : m);
+    const AGG = ['attackK', 'attackQ', 'wing', 'checks', 'hunt', 'earlyQueen'], PAT = ['center', 'develop', 'castle', 'centre', 'rooks', 'defend'];
+    const out = [];
+    /* 1. patient or aggressive: how each game's plans split between building up and going after things */
+    let a = 0, built = 0, went = 0;
+    for (const g of G) {
+      const pl = g.tags?.plans || [], ag = pl.filter((x) => AGG.includes(x)).length + ((g.tags?.issues || {}).earlyQueen ? 1 : 0), pa = pl.filter((x) => PAT.includes(x)).length;
+      if (pa) built++; if (ag) went++; a += ag + pa ? ag / (ag + pa) : 0.5;
+    }
+    const p1 = Math.round(a / N * 100);
+    out.push({ l: 'Patient', r: 'Aggressive', pos: p1, why: 'Built up first in ' + of(built) + '; went after the king or material in ' + went + '.',
+      say: pick(p1, 'You build before you strike: center pawns, pieces out, king safe. A strong habit. Once you’re set up, pick a target, or the game drifts.',
+        'You mix setting up with going on the attack.', 'You go after the king and material early. Exciting — but count your attackers against their defenders first, and finish developing so the attack doesn’t run dry.') });
+    /* 2. keeps pieces or trades them */
+    const tr = count((g) => has(g, ['trades', 'simplify', 'convert'])), behind = count((g) => has(g, ['tradeBehind'], 'issues')), p2 = pct(tr);
+    out.push({ l: 'Keeps pieces', r: 'Trades pieces', pos: p2, why: 'Traded pieces off in ' + of(tr) + (behind ? ', ' + behind + ' of them while behind' : '') + '.',
+      say: pick(p2, 'You keep pieces on the board. More pieces means more tactics, for both sides, so check what’s hanging every move.',
+        'You trade when it suits you.', 'You like to swap pieces off. Perfect when you’re ahead') + (p2 > 65 ? (behind ? ', but you also trade when behind — then keep pieces on and look for chances.' : '; when you’re behind, keep pieces on instead.') : '') });
+    /* 3. solid or loose: pieces left hanging, forks walked into, mates allowed */
+    const loose = count((g) => has(g, ['hung', 'forked', 'backRank', 'mated'], 'issues')), p3 = pct(loose);
+    out.push({ l: 'Solid', r: 'Loose', pos: p3, why: 'A piece was left loose, forked or mated in ' + of(loose) + '.',
+      say: pick(p3, 'You rarely leave pieces loose — opponents have to earn their wins.', 'Now and then a piece gets left unprotected.',
+        'Loose pieces decide more of your games than anything else. Before each move, ask: what can my opponent take next?') });
+    /* 4. punishes slips or misses them */
+    const missed = count((g) => has(g, ['missedMate', 'missedFree', 'missedFork', 'missedBest'], 'issues')), p4 = pct(missed);
+    out.push({ l: 'Punishes mistakes', r: 'Misses chances', pos: p4, why: 'A free piece, fork or mate went unplayed in ' + of(missed) + '.',
+      say: pick(p4, 'When your opponent slips, you usually make them pay.', 'Sometimes a chance your opponent gives you goes by.',
+        'Your opponents often hand you something — a free piece, a fork, a mate — and it slips by. Start each move by looking at every check and capture.') });
+    /* 5. quick games or long grinds: game length and how often it reaches an endgame */
+    const avgPly = G.reduce((x, g) => x + (g.plies || 0), 0) / N, ends = count((g) => g.tags?.verdicts?.endgame);
+    const p5 = Math.round(Math.max(0, Math.min(100, (avgPly - 40) / 80 * 100)) * 0.6 + pct(ends) * 0.4);
+    out.push({ l: 'Quick games', r: 'Long grinds', pos: p5, why: 'Games last ' + Math.round(avgPly / 2) + ' moves on average; ' + of(ends) + ' reached an endgame.',
+      say: pick(p5, 'Your games are decided early, in the opening or middlegame, so the first 20 moves matter most for you.', 'Your games run a normal length; some reach an endgame.',
+        'You play long games and grind toward the endgame — a patient style. Endgame skills (an active king, pawn races) pay off most for you.') });
+    return out;
   }
   /* the profile's top finding (with practice behind it) becomes the recommended chapter */
   function styleFocus(S = styleStats()) {
@@ -2971,6 +3014,20 @@
       const key = el('div', 'tr-spark-key'); key.innerHTML = '<span><i class="w"></i>Won</span><span><i class="l"></i>Lost</span><span><i class="d"></i>Drawn</span><span><i class="avg"></i>Average</span>';
       const [chart, cap] = accSpark(S.series);
       sp.append(head, chart, key, cap); hero.append(sp);
+    }
+
+    /* how you play: five sliders between opposites */
+    if (S.axes.length) {
+      const hp = card('How you play', 'tr-axes');
+      for (const x of S.axes) {
+        const lean = x.pos < 35 ? 'l' : x.pos > 65 ? 'r' : 'm';
+        const row = el('div', 'tr-axis');
+        const ends = el('div', 'tr-axis-ends'); ends.append(el('b', lean === 'l' ? 'on' : '', x.l), el('b', lean === 'r' ? 'on' : '', x.r));
+        const track = el('div', 'tr-axis-track'); const dot = el('i'); dot.style.left = Math.max(4, Math.min(96, x.pos)) + '%'; track.append(el('span'), dot);
+        track.setAttribute('role', 'img'); track.setAttribute('aria-label', x.l + ' to ' + x.r + ': ' + (lean === 'm' ? 'in between' : 'leans ' + (lean === 'l' ? x.l : x.r).toLowerCase()));
+        row.append(ends, track, el('p', '', x.say), el('p', 'tr-axis-why', x.why));
+        hp.append(row);
+      }
     }
 
     /* focus: the one thing to work on */

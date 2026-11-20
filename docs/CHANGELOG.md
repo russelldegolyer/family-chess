@@ -20,6 +20,11 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Improved**
+- Your style: a new "How you play" card near the top with five sliders between opposites (Patient–Aggressive, Keeps pieces–Trades pieces, Solid–Loose, Punishes mistakes–Misses chances, Quick games–Long grinds). Each shows where you sit, what that means for your games and the games behind it.
+
 ## 2026-11-19 — Skewers, Your style, walkie-talkie polish, app badge (deployed 8:52 PM)
 
 **Fixed**

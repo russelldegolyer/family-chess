@@ -26,3 +26,9 @@ test('Your style: hub line, tappable accuracy dots, one-line rows, a way into th
   assert.match(t, /'solid in ' \+ \(p\.n - p\.bad\) \+ ' of ' \+ p\.n/);
   assert.match(t, /middlegame: \['Spot the threat ›'/);
 });
+
+test('Your style: five sliders between opposites explain how you play', () => {
+  assert.match(t, /function styleAxes\(G\)/);
+  for (const w of ["'Patient', r: 'Aggressive'", "'Keeps pieces', r: 'Trades pieces'", "'Solid', r: 'Loose'", "'Punishes mistakes', r: 'Misses chances'", "'Quick games', r: 'Long grinds'"]) assert.ok(t.includes("l: " + w), w);
+  assert.match(t, /const hp = card\('How you play', 'tr-axes'\);/);
+});
