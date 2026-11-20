@@ -2,9 +2,8 @@
    While both of you are in the same online game, the apps quietly link up in the background (no ringing, no Join).
    Hold the mic button to talk: your voice streams live while you hold it and stops the moment you let go.
    While you hold it, the other player's mic button lights up green with "<name> is talking".
-   Privacy: the microphone is only opened by holding the button, nothing is sent while it is released (the track is
-   detached from the connection), and the mic is fully closed after 45 s without talking, when the game ends, or when
-   you leave the app. Audio goes straight between the two apps, encrypted by WebRTC (DTLS-SRTP); it is never
+   Privacy: the microphone is only open while you hold the button; letting go stops it at once (the iPhone's mic light
+   goes out), and the game ending or leaving the app closes everything. Audio goes straight between the two apps, encrypted by WebRTC (DTLS-SRTP); it is never
    recorded, uploaded or stored. The "how to reach me" handshake runs on a PRIVATE realtime channel that only the two
    signed-in friends can join (database rule chess_voice_pair_*). */
 (() => {
@@ -19,12 +18,11 @@
       iceCache = { at: Date.now(), servers: list }; return list;
     } catch { return STUN; }
   }
-  const MIC_IDLE_MS = 45000;
   const S = {
     me: null, opp: null, oppName: '', gameId: null, inGame: false,
     pc: null, sid: null, sender: null, link: 'off',   /* link: off | connecting | on */
     local: null, remote: null, holding: false, pressAt: 0, theyTalk: false,
-    helloTimer: 0, linkTimer: 0, theyTimer: 0, beat: 0, idleTimer: 0, reachTimer: 0,
+    helloTimer: 0, linkTimer: 0, theyTimer: 0, beat: 0, reachTimer: 0,
     pendingIce: [], offering: false, meter: null, hinted: false,
   };
   const $ = (id) => document.getElementById(id);
@@ -244,7 +242,6 @@
     return S.local;
   }
   function closeMic() {
-    clearTimeout(S.idleTimer);
     for (const t of S.local?.getTracks() || []) t.stop();
     if (S.local) session('auto');
     S.local = null;
@@ -262,11 +259,11 @@
   /* ---------------- hold to talk ---------------- */
   async function pressStart() {
     if (S.holding || !S.opp || !S.inGame) return;
-    S.holding = true; S.pressAt = Date.now(); clearTimeout(S.idleTimer); paint();
+    S.holding = true; S.pressAt = Date.now(); paint();
     playRemote();
     navigator.vibrate?.(15);
     try { await mic(); } catch (e) { S.holding = false; paint(); return micError(e); }
-    if (!S.holding) return void idleLater();            /* let go before the mic was ready */
+    if (!S.holding) return void closeMic();             /* let go before the mic was ready */
     for (const t of S.local.getAudioTracks()) t.enabled = true;
     await attachMic();
     send('talk', { on: true });
@@ -278,13 +275,11 @@
   function pressEnd() {
     if (!S.holding) return;
     S.holding = false; clearInterval(S.beat); clearTimeout(S.reachTimer);
-    for (const t of S.local?.getAudioTracks() || []) t.enabled = false;
     void attachMic();   /* detaches the track: nothing is sent while released */
     send('talk', { on: false });
     if (Date.now() - S.pressAt < 300 && !S.hinted) { S.hinted = true; toast('Hold the mic button while you talk, then let go.'); }
-    paint(); idleLater();
+    paint(); closeMic();   /* the microphone turns off the moment you let go (the iPhone's mic light goes out) */
   }
-  function idleLater() { clearTimeout(S.idleTimer); S.idleTimer = setTimeout(() => { if (!S.holding) closeMic(); }, MIC_IDLE_MS); }
 
   /* a soft green fill on the button while the other person's voice is coming through */
   function watchLevel() {

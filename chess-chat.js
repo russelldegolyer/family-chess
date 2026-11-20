@@ -150,8 +150,9 @@
     const fab=document.getElementById('chatFab');
     if(fab)fab.setAttribute('aria-label',n?'Open chat, '+n+' unread message'+(n===1?'':'s'):'Open chat');
     try {
-      if(n>0)void navigator.setAppBadge?.(n)?.catch?.(()=>{});
-      else void navigator.clearAppBadge?.()?.catch?.(()=>{});
+      /* the app-icon number is for when you're away; opening the app always resets it to 0 */
+      if(n>0&&document.hidden)void navigator.setAppBadge?.(n)?.catch?.(()=>{});
+      else if(!document.hidden)void navigator.clearAppBadge?.()?.catch?.(()=>{});
     }catch{}
   }
   async function loadReceipt(){

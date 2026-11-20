@@ -21,6 +21,10 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ## Unreleased
 
+**Fixed**
+- Walkie-talkie: the microphone turns off the instant you let go of the button (the iPhone's mic light goes out right away).
+- The number on the app icon: opening the app resets it to 0, and an invite's alert and number go away when it's declined or runs out.
+
 **Improved**
 - Your style page, rebuilt:
   - A summary card on top: your style in a word (Builder, Attacker, Finisher, Trader or Defender), your record, win rate, average accuracy, results as White and as Black, and an accuracy line across your games with each dot colored by the result.

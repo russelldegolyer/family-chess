@@ -22,12 +22,12 @@ test('walkie-talkie: the other player sees who is talking',()=>{
  assert.match(voice,/S\.theyTimer = setTimeout\(\(\) => \{ S\.theyTalk = false; paint\(\); \}, 5000\)/);
 });
 
-test('walkie-talkie: private pair channel, nothing sent while released, mic closed when idle or leaving',()=>{
+test('walkie-talkie: private pair channel, nothing sent while released, mic closed the moment you let go',()=>{
  const sql=read('database/chess-voice-private-channel-2026-11-13.sql');
  assert.match(voice,/c\.channel\('chess-voice:' \+ \[S\.me, friend\]\.sort\(\)\.join\(':'\), \{ config: \{ private: true/);
  assert.match(voice,/const track = S\.holding && S\.local \? S\.local\.getAudioTracks\(\)\[0\] \|\| null : null;/);
  assert.match(voice,/for \(const t of S\.local\?\.getTracks\(\) \|\| \[\]\) t\.stop\(\);/);
- assert.match(voice,/const MIC_IDLE_MS = 45000;/);
+ assert.match(voice,/paint\(\); closeMic\(\);   \/\* the microphone turns off the moment you let go/);
  assert.match(voice,/window\.addEventListener\('pagehide', \(\) => leave\(true\)\)/);
  assert.doesNotMatch(voice,/MediaRecorder|getUserMedia\([^)]*video: true/);
  assert.match(sql,/chess_are_friends/);
@@ -39,4 +39,14 @@ test('walkie-talkie: lower id makes the offer, optional relay from secrets',()=>
  assert.match(voice,/addTransceiver\('audio', \{ direction: 'sendrecv' \}\)/);
  assert.match(ice,/CHESS_TURN_URLS/);
  assert.match(ice,/Sign in first\./);
+});
+
+test('alerts: opening the app clears the badge; an invite alert clears when answered or expired',()=>{
+ const sw=read('chess-sw.js'),social=read('chess-social.js'),chat=read('chess-chat.js');
+ assert.match(sw,/async function syncBadge\(\)/);
+ assert.match(sw,/d\.type!=='chess-clear-alerts'/);
+ assert.match(sw,/await new Promise\(r=>setTimeout\(r,62000\)\)/);
+ assert.match(social,/document\.addEventListener\('visibilitychange',\(\)=>\{if\(document\.visibilityState==='visible'\)clearAlerts\(\);\}\)/);
+ assert.match(social,/clearAlerts\(c\.id\);alert\.hidden=true/);
+ assert.match(chat,/if\(n>0&&document\.hidden\)void navigator\.setAppBadge/);
 });

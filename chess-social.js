@@ -205,9 +205,23 @@
   const available=challenges.filter(c=>c.target_id===user?.id&&c.status==='pending'&&remaining(c)>0);
   return available.find(c=>c.id===deepLink)||available[0]||null;
  }
+ /* phone alerts and the app-icon badge: everything clears when the app opens; an invite's alert clears when it is
+    answered or runs out (the background worker keeps the badge equal to the alerts still showing) */
+ function clearAlerts(id){
+  const tag=id?'chess-challenge-'+id:null;
+  try{navigator.serviceWorker?.getRegistration?.().then(reg=>{
+   const w=reg?.active; if(w)w.postMessage({type:'chess-clear-alerts',tag});
+   else if(!tag)void navigator.clearAppBadge?.()?.catch?.(()=>{});
+  }).catch(()=>{});}catch{/* no service worker */}
+  if(!tag)try{void navigator.clearAppBadge?.()?.catch?.(()=>{});}catch{/* no badge support */}
+ }
+ clearAlerts();
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')clearAlerts();});
+ window.addEventListener('focus',()=>clearAlerts());
  function renderAlert(){
   const c=incoming();
   if(!c){
+   if(openAlertId)clearAlerts(openAlertId);
    openAlertId=null;alert.hidden=true;
    return;
   }
@@ -219,7 +233,7 @@
   if(!user)return;
   if(openAlertId){
    const c=challenges.find(x=>x.id===openAlertId);
-   if(!c||remaining(c)<=0){alert.hidden=true;openAlertId=null;message('Invite expired.');}
+   if(!c||remaining(c)<=0){clearAlerts(openAlertId);alert.hidden=true;openAlertId=null;message('Invite expired.');}
    else $('cgAlertCountdown').textContent=left(c)+' remaining';
   }
   renderOutgoing();
@@ -232,7 +246,7 @@
   try{
    const {data,error}=await api.rpc('chess_respond_challenge',{p_id:c.id,p_accept:accept});
    if(error)throw error;
-   alert.hidden=true;openAlertId=null;clearDeepLink();
+   clearAlerts(c.id);alert.hidden=true;openAlertId=null;clearDeepLink();
    if(accept){
     if(!data)throw new Error('Invite expired.');
     await window.familyChessOpenMatch(data,'play');

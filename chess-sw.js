@@ -1,4 +1,9 @@
 /* Push alerts for directly invited Chess players. No credentials live here. */
+/* The app-icon badge always matches the alerts still showing (0 once they're gone). */
+async function syncBadge(){
+ try{const n=(await self.registration.getNotifications()).length;
+  if(n)await self.navigator.setAppBadge?.(n);else await self.navigator.clearAppBadge?.();}catch{/* no badge support */}
+}
 self.addEventListener('push',event=>{
  let payload={};
  try{payload=event.data?.json()||{}}catch{payload={}}
@@ -10,10 +15,30 @@ self.addEventListener('push',event=>{
   body,icon:'/icon-192-svg-v4.png',badge:'/favicon-svg-v4.png',
   tag:String(payload.tag||'family-chess-invite').slice(0,90),
   data:{url:path},timestamp:Date.now()
+ }).then(async()=>{
+  await syncBadge();
+  /* a 60-second invite takes its alert (and the badge) away when it runs out */
+  const tag=String(payload.tag||'');
+  if(/^chess-challenge-/.test(tag)&&!/continue your saved game/.test(body)){
+   await new Promise(r=>setTimeout(r,62000));
+   for(const n of await self.registration.getNotifications({tag}))n.close();
+   await syncBadge();
+  }
  }));
 });
+/* the app asks to clear alerts: everything when it opens, or one invite when it's declined or expires */
+self.addEventListener('message',event=>{
+ const d=event.data||{};
+ if(d.type!=='chess-clear-alerts')return;
+ event.waitUntil((async()=>{
+  for(const n of await self.registration.getNotifications())if(!d.tag||n.tag===d.tag)n.close();
+  await syncBadge();
+ })());
+});
+self.addEventListener('notificationclose',event=>{event.waitUntil(syncBadge());});
 self.addEventListener('notificationclick',event=>{
  event.notification.close();
+ event.waitUntil(syncBadge());
  const path=event.notification.data?.url||'/';
  const dest=new URL(path,self.location.origin);
  if(dest.origin!==self.location.origin)return;
