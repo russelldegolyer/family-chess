@@ -6,7 +6,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 | Day | Commits |
 | --- | --- |
-| 2026-11-19 | 5 |
+| 2026-11-19 | 8 |
 | 2026-11-18 | 4 |
 | 2026-11-17 | 19 |
 | 2026-11-16 | 1 |
@@ -20,7 +20,7 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
-## Unreleased
+## 2026-11-19 — Your style: How you play sliders (deployed 8:59 PM)
 
 **Improved**
 - Your style: a new "How you play" card near the top with five sliders between opposites (Patient–Aggressive, Keeps pieces–Trades pieces, Solid–Loose, Punishes mistakes–Misses chances, Quick games–Long grinds). Each shows where you sit, what that means for your games and the games behind it.
