@@ -2855,7 +2855,7 @@
       if (pa) built++; if (ag) went++; a += ag + pa ? ag / (ag + pa) : 0.5;
     }
     const p1 = Math.round(a / N * 100);
-    out.push({ l: 'Patient', r: 'Aggressive', pos: p1, why: 'Built up first in ' + of(built) + '; went after the king or material in ' + went + '.',
+    out.push({ l: 'Patient', r: 'Aggressive', pos: p1, why: 'Built up first in ' + of(built) + (went ? '; went after the king or material in ' + went + '.' : '; never went straight for the king or material.'),
       say: pick(p1, 'You build before you strike: center pawns, pieces out, king safe. A strong habit. Once you’re set up, pick a target, or the game drifts.',
         'You mix setting up with going on the attack.', 'You go after the king and material early. Exciting — but count your attackers against their defenders first, and finish developing so the attack doesn’t run dry.') });
     /* 2. keeps pieces or trades them */
@@ -3023,7 +3023,8 @@
         const lean = x.pos < 35 ? 'l' : x.pos > 65 ? 'r' : 'm';
         const row = el('div', 'tr-axis');
         const ends = el('div', 'tr-axis-ends'); ends.append(el('b', lean === 'l' ? 'on' : '', x.l), el('b', lean === 'r' ? 'on' : '', x.r));
-        const track = el('div', 'tr-axis-track'); const dot = el('i'); dot.style.left = Math.max(4, Math.min(96, x.pos)) + '%'; track.append(el('span'), dot);
+        const track = el('div', 'tr-axis-track'), at = Math.max(4, Math.min(96, x.pos)), dot = el('i'), fill = el('em');
+        dot.style.left = at + '%'; fill.style.left = Math.min(50, at) + '%'; fill.style.width = Math.abs(at - 50) + '%'; track.append(el('span'), fill, dot);
         track.setAttribute('role', 'img'); track.setAttribute('aria-label', x.l + ' to ' + x.r + ': ' + (lean === 'm' ? 'in between' : 'leans ' + (lean === 'l' ? x.l : x.r).toLowerCase()));
         row.append(ends, track, el('p', '', x.say), el('p', 'tr-axis-why', x.why));
         hp.append(row);
