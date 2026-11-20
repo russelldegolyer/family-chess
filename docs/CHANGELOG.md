@@ -26,14 +26,22 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 - Walkie-talkie: fixed a quick press-release-press opening the microphone twice and leaving one running.
 - Walkie-talkie: "Talking…" now appears only once your voice is actually going out (the button shows pressed while the mic starts), the other phone's speaker fades out instead of clicking when you stop, pressing again right after letting go reuses the same mic, a second finger lifting no longer ends your press, and an incoming call, Siri or switching apps ends the press cleanly.
 - The number on the app icon: opening the app resets it to 0, and an invite's alert and number go away when it's declined or runs out.
+- Puzzle hints and results no longer lead with "Endgame tactic: count tempi…" on puzzles that are also tagged endgame (most skewers are). The chapter's own theme comes first, then the tactic, then broad tags.
 
 **Improved**
+- Skewers chapter:
+  - The Learn step adds two worked examples on the board, one tap per step: a check that wins the queen, and a queen in front of a rook. The reading now covers when a skewer works (your piece can't just be taken, and the piece behind is worth winning).
+  - Practice and Speed rounds use puzzles where the skewer is your first move, so you practice the pattern itself. Prove it can still need a setup move first.
+  - The first hint rings the two pieces on the line and names them, for example "The king on f7 and the queen on e7 stand on the same rank."
+  - After each skewer puzzle, solved or shown, the explanation describes that skewer: the move, the two pieces and what it won.
+  - Spot the threat calls a skewering check a skewer even when a block was possible.
 - Your style page, rebuilt:
-  - A summary card on top: your style in a word (Builder, Attacker, Finisher, Trader or Defender), your record, win rate, average accuracy, results as White and as Black, and an accuracy line across your games with each dot colored by the result.
+  - The Training card shows your style and what to work on at a glance, for example "Builder · focus: guard your pieces".
+  - A summary card on top: your style in a word (Builder, Attacker, Finisher, Trader or Defender), your record, win rate, average accuracy, results as White and as Black, and an accuracy line across your games with each dot colored by the result. Tap a dot to see that game and open it.
   - A filter for All, Online and Computer (it appears once you have at least 3 games of each).
   - What you go for: marks the plan you win most with; tap a plan for what it means and how to get more out of it.
-  - What costs you: shows Improving or More often lately once there are enough games; tap a mistake for your latest real example and a button to open that game.
-  - By phase: three side-by-side tiles with the weakest one highlighted and the reason it's weakest.
+  - What costs you: each mistake fits on one line with its Practice button, then how often and whether it's Improving or happening More often lately; tap it for your latest real example and a button to open that game.
+  - By phase: three side-by-side tiles ("solid in 8 of 10") with the weakest one highlighted, the reason it's weakest and a button straight into the drill for it.
 
 ## 2026-11-18 — Audit cleanup, invite line, pop-up overlap (deployed 7:33 PM)
 

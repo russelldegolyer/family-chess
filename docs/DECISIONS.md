@@ -101,3 +101,7 @@ engine cannot judge Lucena/Philidor), shifted/mirrored to other files.
 - Asking someone to play is an "invite" everywhere (buttons, messages, notifications). "Challenges" means only the training hub.
 - The online sheet is titled "Play online" and opened by the "Online" button; messages tell players to "tap Online".
 - Status and error messages use contractions ("Couldn’t…", "isn’t"); lesson text keeps its own wording. End-of-game headings use sentence case.
+
+## D-42 Skewers: the pattern first (2026-11-19)
+- Skewer Practice and Speed rounds use puzzles whose first move is the skewer, read from the solution line with the same test Lichess uses to tag skewers; Prove it may need a setup move first. Hints ring the two pieces on the line, and results explain that puzzle's skewer.
+- A chapter's Learn step can carry worked examples on the board, one tap per step (`learn(text, look, demo)`); Skewers has two.

@@ -335,7 +335,7 @@
     card('Matches', 'Your record vs humans and the computer', '⚔', '', () => void openMatchesPage());
     const you = el('div', 'tr-cards');
     const ng = (P.games || []).length;
-    card('Your style', ng >= 3 ? 'What you go for, what costs you, what to fix' : 'Builds up from your games', '◎', ng ? String(Math.min(ng, 20)) + (ng === 1 ? ' game' : ' games') : '', () => openStyle()); you.append(cards.lastChild);
+    card('Your style', styleLine(), '◎', ng ? String(Math.min(ng, 20)) + (ng === 1 ? ' game' : ' games') : '', () => openStyle()); you.append(cards.lastChild);
     hub.append(head, hero, mini, pathCard(), dailyCard(), el('div', 'tr-section', 'Sharpen'), sharp, el('div', 'tr-section', 'Practice'), cards, el('div', 'tr-section', 'You'), you);
     const info = el('div', 'tr-cards tr-about-row');
     const ab = btn('', 'tr-card', () => openAbout());
@@ -795,18 +795,29 @@
         .filter(([, st]) => st && st.a >= 6 && st.s / st.a < 0.7).sort((a, b) => a[1].s / a[1].a - b[1].s / b[1].a);
       if (weak.length) { cat = weak[0][0]; focusName = cat[1]; }
     } else if (PATH && PATH.theme) { const th = PATH.theme, re = new RegExp('\\b' + th + '\\b'); cat = [th, th, (t) => re.test(t), th]; const up = Math.max(0, Math.min(400, Math.round(P.puzzle.rating) - 1300)); lo = PATH.lo + up; hi = PATH.hi + up; }
+    /* skewer practice and speed rounds want the skewer on your first move (the pattern itself, no setup moves);
+       about a third of skewer puzzles start with a setup, so a few of those are passed over */
+    const pure = cat[3] === 'skewer' && !!(opt || (PATH && PATH.step === 'practice'));
+    const fits = (p) => !pure || skewerIn(p.fen, p.moves, 1)?.set === 1;
     const c = api();
     if (c && remotePuzzles && uid !== 'local') {
+      let spare = null; const skip = [];
       try {
-        for (let widen = 0; widen < 3; widen++) {
-          const { data, error } = await c.rpc('chess_next_puzzle', { p_min: lo - widen * 200, p_max: hi + widen * 200, p_theme: cat[3], p_exclude: [...recent].slice(-200) });
+        for (let widen = 0; widen < 3;) {
+          const { data, error } = await c.rpc('chess_next_puzzle', { p_min: lo - widen * 200, p_max: hi + widen * 200, p_theme: cat[3], p_exclude: [...recent].slice(-200).concat(skip) });
           if (error) { remotePuzzles = false; break; }
           const row = Array.isArray(data) ? data[0] : data;
-          if (row && row.fen) return { id: row.id, fen: row.fen, moves: row.moves.split(' '), rating: row.rating, themes: (row.themes || []).join(' '), src: 'db' };
+          if (!row || !row.fen) { widen++; continue; }
+          const p = { id: row.id, fen: row.fen, moves: row.moves.split(' '), rating: row.rating, themes: (row.themes || []).join(' '), src: 'db' };
+          if (fits(p)) return p;
+          spare = spare || p; skip.push(p.id);
+          if (skip.length >= 4) break;
         }
       } catch { remotePuzzles = false; }
+      if (spare) return spare;
     }
-    const all = (await loadDev()).filter((p) => cat[2](p.themes));
+    const any = (await loadDev()).filter((p) => cat[2](p.themes)), clean = any.filter(fits);
+    const all = clean.length >= 3 ? clean : any;
     for (let widen = 0; widen < 6; widen++) {
       const inBand = all.filter((p) => p.rating >= lo - widen * 150 && p.rating <= hi + widen * 150);
       const unseen = inBand.filter((p) => !recent.has(p.id));
@@ -863,6 +874,8 @@
     const side = other(c0.turn());
     const casual = !!(PATH && (PATH.review || PATH.speed));   /* review cards and speed rounds never move your rating */
     PZ = { p, side, i: 1, hints: 0, failed: !!retry, done: false, retry, rated: !retry && !casual, recorded: !!retry };
+    /* skewer puzzles (not mates) know their skewer: hints point at the line, the result says what happened */
+    if (/\bskewer\b/.test(p.themes) && ((PATH && PATH.theme === 'skewer') || !/mate/i.test(p.themes))) PZ.sk = skewerIn(p.fen, p.moves, 1);
     if (PATH && PATH.opt) { P.seen = (P.seen || []).concat(p.id).slice(-300); }
     B().setup({ fen: p.fen, side, opponent: 'Puzzle' }); B().busy(true); mark({});
     const level = Object.entries(BANDS).find(([, [lo, hi]]) => p.rating >= lo && p.rating <= hi)?.[1][2] || '';
@@ -891,12 +904,36 @@
     PZ.rowNode = row;
     panel.append(head, msg, row);
   }
-  function themesList(t) { return t.split(' ').filter((x) => IDEA[x]); }
+  /* a puzzle's ideas, most useful first: the chapter's own theme, then the tactics, then broad tags like "endgame" */
+  const BROAD = new Set(['endgame', 'crushing']);
+  function themesList(t) {
+    const lead = PATH && typeof PATH.theme === 'string' ? PATH.theme : '';
+    return t.split(' ').filter((x) => IDEA[x]).sort((a, b) => (b === lead) - (a === lead) || BROAD.has(a) - BROAD.has(b));
+  }
+  /* level-1 hint for a skewer puzzle, by where you are in it: the setup, the skewer itself, or the capture */
+  function skewerHint() {
+    const s = PZ.sk; if (!s) return null;
+    const F = PNAME[s.front.type], K = PNAME[s.back.type];
+    if (s.set > 0 && PZ.i < s.set) return { text: 'Set it up first: one forcing move lines things up, then a skewer wins the ' + K + '.' };
+    if (PZ.i === s.set) return { text: 'The ' + F + ' on ' + s.front.sq + ' and the ' + K + ' on ' + s.back.sq + ' stand on the same ' + s.line.replace(/^.*(file|rank)$/, '$1') + '. ' + (s.front.type === 'k' ? 'Check the king along it.' : 'Attack the ' + F + ' along it.'), rings: [s.front.sq, s.back.sq], legend: 'Ringed: the two pieces on one line' };
+    if (PZ.i === s.take) return { text: 'The ' + F + ' stepped off the line. Take the ' + K + ' that stood behind it.', rings: [s.back.sq], legend: 'Ringed: the piece left behind' };
+    return null;
+  }
+  /* after a skewer puzzle: what the skewer was, in this position */
+  function skewerSay(s) {
+    const F = PNAME[s.front.type], K = PNAME[s.back.type];
+    if (s.set < 0) return 'Skewer — the ' + F + ' on ' + s.front.sq + ' had to step off the line, and ' + s.sans[s.take] + ' took the ' + K + ' behind it.';
+    const lead = s.set === 3 ? s.sans[1] + ' set it up. Then ' : s.set > 3 ? 'The first moves set it up. Then ' : '';
+    return 'Skewer — ' + lead + s.sans[s.set] + (s.front.type === 'k' ? ' checked the king on ' : ' attacked the ' + F + ' on ') + s.front.sq + ', with the ' + K + ' on ' + s.back.sq + ' behind it on the ' + (s.line === 'diagonal' ? 'same diagonal' : s.line) + '. '
+      + (s.front.type === 'k' ? 'The king stepped aside, and ' : 'The ' + F + ' moved away, and ') + s.sans[s.take] + ' took the ' + K + '.';
+  }
   function hint() {
     if (!PZ || PZ.done) return;
     const want = PZ.p.moves[PZ.i]; if (!want) return;
     PZ.hints = Math.min(3, PZ.hints + 1); P.puzzle.hints++; save();
-    if (PZ.hints === 1) { const th = themesList(PZ.p.themes); say(PZ.msgNode, '' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]] || 'Look for checks, captures and threats.'), 'idea'); }
+    const sk = PZ.hints === 1 ? skewerHint() : null;
+    if (sk) { mark(sk.rings ? { rings: sk.rings, ringColor: '#ffd60a', legend: [['ring', sk.legend]] } : {}); say(PZ.msgNode, sk.text, 'idea'); }
+    else if (PZ.hints === 1) { const th = themesList(PZ.p.themes); say(PZ.msgNode, '' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]] || 'Look for checks, captures and threats.'), 'idea'); }
     else if (PZ.hints === 2) { mark({ sel: want.slice(0, 2), lift: want.slice(0, 2) }); say(PZ.msgNode, 'Hint: move the highlighted piece.'); }
     else { mark({ arrows: [[want.slice(0, 2), want.slice(2, 4)]], lift: want.slice(0, 2) }); say(PZ.msgNode, 'Hint: play the move the arrow shows.'); }
     PZ.hintBtn.querySelectorAll('.tr-pips i').forEach((p, k) => p.classList.toggle('on', k < PZ.hints));
@@ -961,7 +998,7 @@
     const head = el('div', 'tr-result ' + (PZ.failed ? 'bad' : 'good'), PZ.retry ? 'Solved on retry' : PZ.failed ? 'Solved after a miss' : PZ.hints ? 'Solved with hints' : 'Solved!');
     const meta = el('div', 'tr-meta');
     meta.append(el('span', 'tr-pill', 'Puzzle ' + PZ.p.rating), el('span', 'tr-pill', rated ? (delta >= 0 ? '+' : '') + delta + ' → ' + Math.round(P.puzzle.rating) : 'Unrated'), el('span', 'tr-pill', 'Streak ' + P.puzzle.streak));
-    const ex = el('div', 'tr-say', th.length ? th.slice(0, 2).map((x) => NAME[x] || x).join(' · ') + ' — ' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]]) : '');
+    const ex = el('div', 'tr-say', PZ.sk ? skewerSay(PZ.sk) : th.length ? th.slice(0, 2).map((x) => NAME[x] || x).join(' · ') + ' — ' + (IDEA[th.find((x) => /mate/.test(x))] || IDEA[th[0]]) : '');
     const row = el('div', 'tr-actions'); row.append(btn('Next puzzle', 'primary', () => void startPuzzle(), 'next'), btn('Retry', 'quiet', () => void startPuzzle(true), 'retry'));
     const pathNote = PATH ? pathPuzzleResult(!PZ.failed, !PZ.hints, row) : null;
     panel.append(head, meta, ex); if (pathNote) panel.append(pathNote); panel.append(row); puzzleTop();
@@ -988,7 +1025,7 @@
     mark({});
     panel.replaceChildren();
     const th = themesList(PZ.p.themes);
-    panel.append(el('div', 'tr-result bad', 'Puzzle failed'), el('div', 'tr-say', th.length ? (NAME[th[0]] || th[0]) + ' — ' + IDEA[th[0]] : ''));
+    panel.append(el('div', 'tr-result bad', 'Puzzle failed'), el('div', 'tr-say', PZ.sk ? skewerSay(PZ.sk) : th.length ? (NAME[th[0]] || th[0]) + ' — ' + IDEA[th[0]] : ''));
     const row = el('div', 'tr-actions');
     if (PATH && PATH.review) { reviewResult(PATH.item, false); panel.append(el('div', 'tr-say', 'It will come back tomorrow.')); row.append(btn('Next card', 'primary', reviewNext, 'next')); }
     else row.append(btn('Next puzzle', 'primary', () => void startPuzzle(), 'next'), btn('Retry', 'quiet', () => void startPuzzle(true), 'retry'));
@@ -1755,7 +1792,8 @@
      (Prove it). Every chapter is open; the first unfinished one is marked "Recommended next". */
   let PATH = null;   /* { ch, step, theme, lo, hi, count } while a path puzzle set is running */
   let RETURN = null; /* where Back / Done go while working through a chapter */
-  const learn = (text, look) => ({ text, look });
+  /* demo (optional): worked examples on the board, a tap per step: [{ title, fen, steps: [{ say, rings, moves }] }] */
+  const learn = (text, look, demo) => ({ text, look, demo });
   const CHAPTERS = [
     { id: 'c1', title: 'Checkmate basics', blurb: 'What check, mate and stalemate are, and finishing a game.',
       learn: { lesson: 'l1' }, practice: { theme: 'mateIn1', lo: 400, hi: 1300, count: 6 }, prove: { challenge: 'stale' } },
@@ -1787,8 +1825,20 @@
     { id: 'd4', title: 'Escaping mate threats', blurb: 'When your king is in danger, find the defense.', defend: true,
       learn: learn(['A mate threat comes before the mate. When your opponent piles pieces toward your king, ask: if it were their move, could they checkmate me?', 'Defend with the most forcing answer: take the attacker, block the line, give your king a square, or check back.'], ['Enemy pieces near your king', 'Squares your king can escape to', 'Checks they could give next move']),
       practice: { drill: 'threat', theme: ['mateIn1', 'mateIn2', 'backRankMate'], count: 5 }, prove: { theme: 'defensiveMove', lo: 800, hi: 1600, count: 3 } },
-    { id: 'c9', title: 'Skewers', blurb: 'Attack a big piece so it moves and exposes the one behind.',
-      learn: learn(['A skewer is a pin in reverse: the valuable piece is in front. When it moves away, you take what was behind it.', 'Look for the king or queen on the same line as another piece, with your bishop, rook or queen able to reach that line.'], ['King and queen on one line', 'Checks along a file, rank or diagonal', 'Long-range pieces']),
+    { id: 'c9', title: 'Skewers', blurb: 'Attack a valuable piece so it has to move, then take the piece behind it.',
+      learn: learn(['A skewer is a pin in reverse: the more valuable piece stands in front. Attack it along a line, it has to move, and you take the piece behind it.',
+        'Checks make the best skewers: a king in check must step aside, so whatever stood behind it on that line is lost. Only bishops, rooks and queens skewer, because they attack along lines.',
+        'Before you play it, check two things: your attacking piece can’t simply be taken, and the piece behind is worth winning — unprotected, or worth more than your attacker.'],
+      ['The king on one line with a queen or rook', 'A check along a file, rank or diagonal', 'A safe square for your bishop, rook or queen'], [
+        { title: 'King in front', fen: 'q7/5p1p/6p1/3k4/8/8/5PPP/3B2K1 w - - 0 1', steps: [
+          { say: 'The black king on d5 and the queen on a8 stand on the same diagonal.', rings: ['d5', 'a8'] },
+          { moves: ['d1f3'], say: 'Bf3+ checks the king along that diagonal. Nothing can block, so the king has to step off the line…', rings: ['d5', 'a8'] },
+          { moves: ['d5d6', 'f3a8'], say: '…and Bxa8 takes the queen that stood behind it. That is a skewer.', rings: ['a8'] }] },
+        { title: 'Queen in front', fen: 'rn4k1/p4ppp/1p6/3q4/8/P7/1P2BPPP/6K1 w - - 0 1', steps: [
+          { say: 'Any valuable piece can be in front. Here the queen on d5 and the rook on a8 share a diagonal.', rings: ['d5', 'a8'] },
+          { moves: ['e2f3'], say: 'Bf3 attacks the queen. She can’t take the bishop, because the pawn on g2 guards it, so she has to move…', rings: ['d5', 'a8', 'g2'] },
+          { moves: ['d5e6', 'f3a8'], say: '…and Bxa8 wins the rook behind her.', rings: ['a8'] }] },
+      ]),
       practice: { theme: 'skewer', lo: 800, hi: 1600, count: 6 }, prove: { theme: 'skewer', lo: 1200, hi: 1900, count: 3 } },
     { id: 'd3', title: 'Forks and pins coming', blurb: 'See a fork or pin before it lands on you.', defend: true,
       learn: learn(['A fork needs a square that touches two of your pieces. A pin needs your pieces lined up with your king or queen.', 'Look for enemy knight jumps that land next to two of your pieces, and for your king and queen standing on the same line as an enemy bishop, rook or queen. Move one of them first.'], ['Your pieces a knight\'s jump from one square', 'Your king and queen on one line', 'Checks that also attack something']),
@@ -1841,7 +1891,7 @@
     if (stepDone(ch, step)) return 'Done';
     if (s.lesson) return P.lessons[s.lesson]?.stage ? 'In progress' : 'Concept, demo, guided, mastery';
     if (s.challenge) return (P.challenges[s.challenge]?.attempts ? 'Not won yet' : 'Win it once') + ' · against a defending computer';
-    if (step === 'learn') return 'A short read: what to look for';
+    if (step === 'learn') return ch.learn.demo ? 'A short read, then ' + (['an example', 'two examples', 'three examples'][ch.learn.demo.length - 1] || ch.learn.demo.length + ' examples') + ' on the board' : 'A short read: what to look for';
     if (s.drill) return step === 'practice' ? (st.practice || 0) + ' of ' + s.count + ' stopped without help' : (st.streak || 0) + ' of ' + s.count + ' in a row · no help';
     if (step === 'practice') return (st.practice || 0) + ' of ' + s.count + ' solved without a miss';
     return (st.streak || 0) + ' of ' + s.count + ' in a row · harder puzzles';
@@ -1979,8 +2029,38 @@
     if (ch.learn.look) { card.append(el('span', 'tr-label', 'Look for')); const ul = el('ul'); for (const t of ch.learn.look) ul.append(el('li', '', t)); card.append(ul); }
     hub.append(card);
     const row = el('div', 'tr-actions tr-chap-actions');
-    row.append(btn('Got it — practice', 'primary', () => { pathState(ch).learn = true; save(); runStep(ch, 'practice'); }, 'play'));
+    const go = () => { pathState(ch).learn = true; save(); runStep(ch, 'practice'); };
+    if (ch.learn.demo) { row.classList.add('tr-stack'); row.append(btn('See it on the board', 'primary', () => openLearnDemo(ch), 'play'), btn('Got it — practice', 'quiet', go, 'next')); }
+    else row.append(btn('Got it — practice', 'primary', go, 'play'));
     hub.append(row); hub.hidden = false; hub.scrollTop = 0;
+  }
+  /* the chapter's worked examples on the board: each tap plays the next step and says what it shows */
+  async function openLearnDemo(ch, ex = 0, st = 0) {
+    const my = ++session, demo = ch.learn.demo, D = demo[ex], step = D.steps[st];
+    const last = ex === demo.length - 1 && st === D.steps.length - 1;
+    screen = 'learn'; hub.hidden = true; B().onMove(null); B().onTap(null);
+    RETURN = withLabel(() => openLearn(ch), 'The idea');
+    setTop(ch.title, el('span', 'tr-chip dim', 'Example ' + (ex + 1) + '/' + demo.length));
+    const go = () => { pathState(ch).learn = true; save(); runStep(ch, 'practice'); };
+    const next = () => (st + 1 < D.steps.length ? openLearnDemo(ch, ex, st + 1) : openLearnDemo(ch, ex + 1, 0));
+    const buttons = last ? [btn('Got it — practice', 'primary', go, 'play'), btn('Watch again', 'quiet', () => openLearnDemo(ch), 'retry')] : [btn('Next', 'primary', next, 'next')];
+    const msg = lessonPanel(D.title, buttons, '');
+    buttons.forEach((b) => { b.disabled = true; });
+    /* start from the position this step begins in (no flash when it is already on the board) */
+    const C = B().Chess, c = new C(D.fen);
+    for (let k = 0; k < st; k++) for (const u of D.steps[k].moves || []) c.move(mvOf(u));
+    if (B().fen() !== c.fen() || st === 0) { B().setup({ fen: c.fen(), side: 'w', opponent: 'Example' }); }
+    B().busy(true); mark({});
+    if (st === 0) await sleep(350);
+    for (const u of step.moves || []) {
+      if (my !== session) return;
+      mark({ arrows: [[u.slice(0, 2), u.slice(2, 4)]], noLegend: true }); await sleep(550); if (my !== session) return;
+      B().play(u); await sleep(420);
+    }
+    if (my !== session) return;
+    mark({ rings: step.rings || [], ringColor: '#ffd60a', noLegend: true });
+    say(msg, step.say);
+    buttons.forEach((b) => { b.disabled = false; });
   }
 
   /* ================================================================== sharpen: review, drills, speed, style */
@@ -2111,6 +2191,32 @@
   /* name the tactic from what the move really does on the board; puzzle tags describe the whole line, not move one */
   const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
   const PNAME = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+  const ORD = (r) => r + (r === '1' ? 'st' : r === '2' ? 'nd' : r === '3' ? 'rd' : 'th');
+  /* the skewer in a line of moves, read from what the line really does (the same test Lichess uses to tag them):
+     one of our bishops, rooks or queens attacks along a line, the piece in front (worth more than the one behind)
+     steps off it, and we take the piece behind. moves[from], moves[from + 2], ... are ours.
+     -> { set: index of our move that lined it up (-1: the attacker was already there), take: index of the capture,
+          front/back: { type, sq } at the moment of the skewer, line: 'f-file' | '7th rank' | 'diagonal', sans } */
+  function skewerIn(fen, moves, from = 0) {
+    const C = B()?.Chess; if (!C || !Array.isArray(moves)) return null;
+    let c; try { c = new C(fen); } catch { return null; }
+    const H = [];
+    for (const u of moves) { let m = null; try { m = c.move(mvOf(u)); } catch { /* stop at a bad move */ } if (!m) break; H.push(m); }
+    const xy = (q) => ['abcdefgh'.indexOf(q[0]), +q[1] - 1];
+    const between = (a, z, q) => {
+      const [x0, y0] = xy(a), [x1, y1] = xy(z), [x, y] = xy(q), dx = Math.sign(x1 - x0), dy = Math.sign(y1 - y0);
+      if (!(x0 === x1 || y0 === y1 || Math.abs(x1 - x0) === Math.abs(y1 - y0))) return false;
+      for (let i = x0 + dx, j = y0 + dy; i !== x1 || j !== y1; i += dx, j += dy) if (i === x && j === y) return true;
+      return false;
+    };
+    for (let k = from + 2; k < H.length; k += 2) {
+      const me = H[k], op = H[k - 1];
+      if (!me.captured || !'brq'.includes(me.piece) || op.to === me.to || !between(me.from, me.to, op.from) || VAL[op.piece] <= VAL[me.captured]) continue;
+      const line = op.from[0] === me.to[0] ? me.to[0] + '-file' : op.from[1] === me.to[1] ? ORD(me.to[1]) + ' rank' : 'diagonal';
+      return { set: H[k - 2].to === me.from ? k - 2 : -1, take: k, front: { type: op.piece, sq: op.from }, back: { type: me.captured, sq: me.to }, line, sans: H.map((m) => m.san) };
+    }
+    return null;
+  }
   /* line (optional): the puzzle's solution from this move on. A skewer, pin or fork is only named when the
      solution really goes on to win the piece it names; otherwise the move is described as what it is. */
   function moveIdea(fen, uci, themes, line = null) {
@@ -2121,6 +2227,9 @@
     const xy = (q) => ['abcdefgh'.indexOf(q[0]), +q[1] - 1], sq = (x, y) => (x >= 0 && x < 8 && y >= 0 && y < 8 ? 'abcdefgh'[x] + (y + 1) : null);
     const guarded = (q, by) => { try { return c.attackers(q, by).length > 0; } catch { return false; } };
     if (c.isCheckmate()) return 'checkmate.';
+    /* the line itself shows a skewer starting with this move: name it, even where a block was possible but worse */
+    const sk = line && line[0] === uci ? skewerIn(fen, line, 0) : null;
+    if (sk && sk.set === 0) return 'a skewer — ' + (sk.front.type === 'k' ? 'it checks your king on ' + sk.front.sq + ', and when the king moves' : 'your ' + PNAME[sk.front.type] + ' on ' + sk.front.sq + ' is attacked, and when it moves') + ' your ' + PNAME[sk.back.type] + ' on ' + sk.back.sq + ' behind it falls.';
     const check = c.inCheck();
     const mate = (themes || []).some((x) => /mate/i.test(x)), gain = (themes || []).includes('equality') ? '.' : ', which wins material.';
     /* safe = nothing of theirs can take the attacker profitably (a cheaper piece, or any piece when it's undefended) */
@@ -2726,17 +2835,30 @@
     const res = { w: 0, l: 0, d: 0 }, bySide = { w: { w: 0, l: 0, d: 0 }, b: { w: 0, l: 0, d: 0 } };
     for (const g of G) { const r = g.res === 'win' ? 'w' : g.res === 'loss' ? 'l' : 'd'; res[r]++; if (bySide[g.side]) bySide[g.side][r]++; }
     const accs = G.map((g) => g.acc).filter((v) => Number.isFinite(v));
-    const series = G.filter((g) => Number.isFinite(g.acc)).map((g) => ({ acc: g.acc, res: g.res, at: g.at }));
+    const series = G.filter((g) => Number.isFinite(g.acc)).map((g) => ({ acc: g.acc, res: g.res, at: g.at, g }));
     return { N, kinds, goes, costs, best, phases: ph, weakest, style, res, bySide, accs, series, wins: res.w };
   }
   /* the profile's top finding (with practice behind it) becomes the recommended chapter */
-  function styleFocus() {
-    const S = styleStats(); if (S.N < 5) return null;
+  function styleFocus(S = styleStats()) {
+    if (S.N < 5) return null;
     const top = S.costs.find((c) => (c.fix.chapter || c.fix.lesson) && c.n / S.N >= 0.3);
     if (!top) return null;
     if (top.fix.chapter) { const ch = CHAPTERS.find((c) => c.id === top.fix.chapter); if (!ch || chapterDone(ch)) return null; return { ...top, ch }; }
     if (P.lessons[top.fix.lesson]?.mastered) return null;
     return { ...top, lesson: top.fix.lesson };
+  }
+  /* what to work on: the recommendation above, else the most frequent finding that has practice behind it */
+  function focusPick(S) {
+    const F = styleFocus(S); if (F) return { ...F, strict: true };
+    const c = S.costs[0]; if (!c || !(c.fix.chapter || c.fix.lesson)) return null;
+    return { ...c, ch: c.fix.chapter ? CHAPTERS.find((x) => x.id === c.fix.chapter) : null, lesson: c.fix.lesson };
+  }
+  /* the hub card's line: your style, then the thing to work on (or your record) */
+  function styleLine() {
+    let S; try { S = styleStats(); } catch { return 'What you go for, what costs you, what to fix'; }
+    if (S.N < 3) return 'Builds up from your games' + (S.N ? ' · ' + (3 - S.N) + ' more to go' : '');
+    const F = focusPick(S), name = S.style.length ? S.style.map((f) => f.name).join(' & ') : 'Still forming';
+    return name + ' · ' + (F && (F.ch || F.fix.title) ? 'focus: ' + (F.ch ? F.ch.title : F.fix.title).toLowerCase() : S.res.w + '–' + S.res.l + '–' + S.res.d + ' in your last ' + S.N);
   }
   let STYLE_FILTER = 'all';
   /* open the game a profile entry came from (computer games are read again; online games open on the board) */
@@ -2766,18 +2888,34 @@
     return null;
   }
   const shortDate = (t) => (t ? new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '');
-  /* accuracy, game by game: a small line chart with one dot per game, colored by the result */
+  /* accuracy, game by game: a small line chart with one dot per game, colored by the result.
+     Tap (or focus and press Enter on) a dot to see that game underneath, with a way to open it. -> [chart, caption] */
   function accSpark(series) {
     const W = 300, H = 64, pad = 6, n = series.length;
     const lo = Math.max(0, Math.min(...series.map((s) => s.acc)) - 4), hi = Math.min(100, Math.max(...series.map((s) => s.acc)) + 4);
     const x = (i) => pad + (n === 1 ? (W - 2 * pad) / 2 : i * (W - 2 * pad) / (n - 1)), y = (v) => H - pad - (v - lo) / Math.max(1, hi - lo) * (H - 2 * pad);
     const avg = series.reduce((a, s) => a + s.acc, 0) / n;
     const pts = series.map((s, i) => x(i).toFixed(1) + ',' + y(s.acc).toFixed(1)).join(' ');
-    const dots = series.map((s, i) => '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(s.acc).toFixed(1) + '" r="3.6" class="' + (s.res === 'win' ? 'w' : s.res === 'loss' ? 'l' : 'd') + '"><title>' + s.acc.toFixed(1) + (s.at ? ' · ' + shortDate(s.at) : '') + '</title></circle>').join('');
-    const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Accuracy in each of your last ' + n + ' games, average ' + avg.toFixed(1) + '">' +
+    const what = (s) => [shortDate(s.at), s.g?.mode === 'cpu' ? 'vs computer' : s.g?.mode === 'live' ? 'online' : '', s.res === 'win' ? 'won' : s.res === 'loss' ? 'lost' : 'drawn', 'accuracy ' + Math.round(s.acc)].filter(Boolean).join(' · ');
+    const at = (s, i) => 'cx="' + x(i).toFixed(1) + '" cy="' + y(s.acc).toFixed(1) + '"';
+    const dots = series.map((s, i) => '<circle ' + at(s, i) + ' r="3.6" class="dot ' + (s.res === 'win' ? 'w' : s.res === 'loss' ? 'l' : 'd') + '"/>').join('');
+    const hits = series.map((s, i) => '<circle ' + at(s, i) + ' r="12" class="hit" tabindex="0" role="button" aria-label="' + what(s) + '"/>').join('');
+    const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="group" aria-label="Accuracy in each of your last ' + n + ' games, average ' + avg.toFixed(1) + '">' +
       '<line x1="' + pad + '" x2="' + (W - pad) + '" y1="' + y(avg).toFixed(1) + '" y2="' + y(avg).toFixed(1) + '" class="avg"/>' +
-      (n > 1 ? '<polyline points="' + pts + '" class="ln"/>' : '') + dots + '</svg>';
-    const box = el('div', 'tr-spark'); box.innerHTML = svg; return box;
+      (n > 1 ? '<polyline points="' + pts + '" class="ln"/>' : '') + dots + hits + '</svg>';
+    const box = el('div', 'tr-spark'); box.innerHTML = svg;
+    const cap = el('div', 'tr-spark-pick', 'Tap a dot to see that game.');
+    const dotEls = [...box.querySelectorAll('circle.dot')];
+    const pick = (i) => {
+      dotEls.forEach((d, k) => { d.classList.toggle('on', k === i); d.setAttribute('r', k === i ? '5.4' : '3.6'); });
+      const s = series[i]; cap.replaceChildren(el('span', '', what(s))); cap.classList.add('on');
+      if (canOpen(s.g)) cap.append(btn('Open ›', 'tr-chip tr-mini-link', () => openStyleGame(s.g)));
+    };
+    box.querySelectorAll('circle.hit').forEach((h, i) => {
+      h.addEventListener('click', () => pick(i));
+      h.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(i); } });
+    });
+    return [box, cap];
   }
   function openStyle() {
     session++; screen = 'style'; PATH = null; RETURN = null; top.hidden = true; panel.hidden = true; B().onMove(null); B().onTap(null); mark({});
@@ -2793,7 +2931,13 @@
     }
     if (S.N < 3) { hub.append(el('div', 'tr-empty', S.N ? 'Play ' + (3 - S.N) + ' more ' + (3 - S.N === 1 ? 'game' : 'games') + ' and your profile appears here.' : 'Finish a game against the computer or a friend to start your profile.')); hub.hidden = false; return; }
     const card = (title, cls) => { const c = el('div', 'tr-style-card' + (cls ? ' ' + cls : '')); if (title) c.append(el('span', 'tr-label', title)); hub.append(c); return c; };
-    const bar = (label, n, of, sub, tone) => { const r = el('div', 'tr-bar-row' + (tone ? ' ' + tone : '')); const t = el('div', 'tr-bar-top'); t.append(el('b', '', label), el('span', 'cnt', sub || n + ' of ' + of)); const b = el('div', 'tr-bar'); const i = el('i'); i.style.width = Math.round(n / Math.max(1, of) * 100) + '%'; b.append(i); r.append(t, b); return r; };
+    /* a row: the finding (with its Practice link on the right), then how often and any trend, then the bar */
+    const bar = (label, n, of, sub, tone) => {
+      const r = el('div', 'tr-bar-row' + (tone ? ' ' + tone : '')), t = el('div', 'tr-bar-top'), meta = el('div', 'tr-bar-meta');
+      t.append(el('b', '', label)); meta.append(el('span', 'cnt', sub || n + ' of ' + of));
+      const b = el('div', 'tr-bar'); const i = el('i'); i.style.width = Math.round(n / Math.max(1, of) * 100) + '%'; b.append(i);
+      r.append(t, meta, b); return r;
+    };
     /* tap a row to open its detail underneath */
     const expandable = (row, fill) => {
       row.classList.add('tap'); row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-expanded', 'false');
@@ -2825,13 +2969,14 @@
       const before = mean(S.series.slice(0, h)), after = mean(S.series.slice(h));
       const head = el('div', 'tr-spark-head'); head.append(el('span', '', 'Accuracy, game by game'), el('em', after - before >= 1.5 ? 'up' : after - before <= -1.5 ? 'down' : '', after - before >= 1.5 ? '▲ ' + before.toFixed(0) + ' → ' + after.toFixed(0) : after - before <= -1.5 ? '▼ ' + before.toFixed(0) + ' → ' + after.toFixed(0) : 'Steady'));
       const key = el('div', 'tr-spark-key'); key.innerHTML = '<span><i class="w"></i>Won</span><span><i class="l"></i>Lost</span><span><i class="d"></i>Drawn</span><span><i class="avg"></i>Average</span>';
-      sp.append(head, accSpark(S.series), key); hero.append(sp);
+      const [chart, cap] = accSpark(S.series);
+      sp.append(head, chart, key, cap); hero.append(sp);
     }
 
     /* focus: the one thing to work on */
-    const F = styleFocus() || (S.costs[0] && (S.costs[0].fix.chapter || S.costs[0].fix.lesson) ? { ...S.costs[0], ch: S.costs[0].fix.chapter ? CHAPTERS.find((c) => c.id === S.costs[0].fix.chapter) : null, lesson: S.costs[0].fix.lesson } : null);
+    const F = focusPick(S);
     if (F) {
-      const f = el('div', 'tr-focus'); f.append(el('span', 'tr-label', 'Focus next'), el('b', '', F.fix.what), el('p', '', 'Showed up in ' + F.n + ' of your last ' + S.N + ' games. ' + (F.ch ? 'Chapter "' + F.ch.title + '" drills exactly this' + (styleFocus() ? ' — it is now your recommended next step.' : '.') : 'The "' + F.fix.title + '" lesson in the Academy covers it.')));
+      const f = el('div', 'tr-focus'); f.append(el('span', 'tr-label', 'Focus next'), el('b', '', F.fix.what), el('p', '', 'Showed up in ' + F.n + ' of your last ' + S.N + ' games. ' + (F.ch ? 'The "' + F.ch.title + '" chapter drills exactly this' + (F.strict ? ', so it is now your recommended next step.' : '.') : 'The "' + F.fix.title + '" lesson in the Academy covers it.')));
       f.append(btn('Practice: ' + (F.ch ? F.ch.title : F.fix.title), 'primary', () => (F.ch ? openChapter(F.ch) : (() => { const l = lessonById(F.lesson); if (l) startLesson(l); })()), 'play'));
       hub.append(f);
     }
@@ -2839,7 +2984,7 @@
     const c1 = card('What you go for');
     S.goes.filter((g) => g.code !== 'drift').slice(0, 5).forEach((g) => {
       const r = bar(g.name, g.n, S.N, g.n + ' of ' + S.N + ' games' + (g.n >= 2 ? ' · won ' + g.w : ''));
-      if (S.best && S.best.code === g.code) r.querySelector('.tr-bar-top b').append(el('span', 'tr-pill-good', 'Wins most'));
+      if (S.best && S.best.code === g.code) r.querySelector('.tr-bar-meta').append(el('span', 'tr-pill-good', 'Wins most'));
       if (PLAN_HELP[g.code]) expandable(r, (m) => {
         m.append(el('p', '', PLAN_HELP[g.code]));
         if (g.n >= 2) m.append(el('p', 'tr-row-stat', 'When you play this: won ' + g.w + ' of ' + g.n + ' (' + Math.round(g.w / g.n * 100) + '%).'));
@@ -2853,8 +2998,8 @@
     const practiceFor = (c) => () => { if (c.fix.chapter) { const ch = CHAPTERS.find((x) => x.id === c.fix.chapter); if (ch) openChapter(ch); } else { const l = lessonById(c.fix.lesson); if (l) startLesson(l); } };
     if (S.costs.length) S.costs.slice(0, 5).forEach((c) => {
       const r = bar(c.fix.what, c.n, S.N, c.n + ' of ' + S.N + ' games', 'warn');
-      if (c.trend === 'down') r.querySelector('.tr-bar-top b').append(el('span', 'tr-pill-good', 'Improving'));
-      else if (c.trend === 'up') r.querySelector('.tr-bar-top b').append(el('span', 'tr-pill-bad', 'More often lately'));
+      if (c.trend === 'down') r.querySelector('.tr-bar-meta').append(el('span', 'tr-pill-good', 'Improving'));
+      else if (c.trend === 'up') r.querySelector('.tr-bar-meta').append(el('span', 'tr-pill-bad', 'More often lately'));
       if (c.fix.chapter || c.fix.lesson) r.querySelector('.tr-bar-top').append(btn('Practice ›', 'tr-chip tr-mini-link', practiceFor(c)));
       expandable(r, (m) => {
         const ex = styleExample(c);
@@ -2875,7 +3020,7 @@
       t.append(el('span', 'nm', NAMES[key]));
       if (p) {
         const pct = Math.round((p.n - p.bad) / p.n * 100);
-        t.append(el('b', '', pct + '%'), el('span', 'sub', 'held up ' + (p.n - p.bad) + ' of ' + p.n));
+        t.append(el('b', '', pct + '%'), el('span', 'sub', 'solid in ' + (p.n - p.bad) + ' of ' + p.n));
         const m = el('div', 'tr-bar'); const i = el('i'); i.style.width = pct + '%'; m.append(i); t.append(m);
         if (weak) t.append(el('em', '', 'Weakest'));
       } else t.append(el('b', '', '–'), el('span', 'sub', 'not enough games yet'));
@@ -2883,6 +3028,9 @@
     }
     c3.append(tiles);
     if (S.weakest) c3.append(el('p', 'tr-muted', NAMES[S.weakest.key] + ' is where you ' + S.weakest.why + '. ' + { opening: 'Develop knights and bishops first, castle early, and don’t move a piece twice.', middlegame: 'Before each move, check what your opponent threatens — the Spot the threat and Blunder check drills train exactly that.', endgame: 'The Academy’s pawn and rook lessons, plus king activity, turn these around fastest.' }[S.weakest.key]));
+    /* and a way straight into the drill that trains it */
+    const train = S.weakest && { middlegame: ['Spot the threat ›', () => { PATH = null; RETURN = withLabel(() => openStyle(), 'Your style'); startThreat(); }], endgame: ['Endgame Academy ›', () => openAcademy()] }[S.weakest.key];
+    if (train) c3.append(btn(train[0], 'tr-chip tr-mini-link tr-card-link', train[1]));
     hub.hidden = false; hub.scrollTop = 0;
   }
 

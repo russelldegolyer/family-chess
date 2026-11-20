@@ -93,3 +93,46 @@ test('game review flags a blunder (Stockfish, or the built-in engine as fallback
   assert.deepEqual(errors, []);
   await ctx.close();
 });
+
+test('Skewers chapter: two worked examples, then a skewer puzzle with a ringed hint and a skewer explanation', async () => {
+  const { page, ctx, errors } = await open({ width: 390, height: 844, store: { 'chess.trainView': '2d' } });
+  const tap = (txt) => page.evaluate((t) => { const b = [...document.querySelectorAll('button')].find((e) => e.offsetParent && !e.disabled && e.textContent.includes(t)); if (!b) throw new Error('no button ' + t); b.click(); }, txt);
+  const ready = (txt) => page.waitForFunction((t) => [...document.querySelectorAll('button')].some((b) => b.offsetParent && !b.disabled && b.textContent.includes(t)), txt, { timeout: 15000, polling: 100 });
+  await page.evaluate(() => familyChessTraining.open());
+  await page.evaluate(() => familyChessTraining.openChapterId('c9'));
+  await page.evaluate(() => [...document.querySelectorAll('.tr-step')][0].click());
+  await tap('See it on the board');
+  for (let k = 0; k < 5; k++) { await ready('Next'); await tap('Next'); }
+  await ready('Got it');
+  assert.equal(await page.evaluate(() => familyChessBoard.fen().split(' ')[0]), 'Bn4k1/p4ppp/1p2q3/8/8/P7/1P3PPP/6K1');
+  await tap('Got it');
+  await page.waitForFunction(() => familyChessTraining._test.pz()?.sk && familyChessBoard.moves().length === 1, null, { timeout: 15000, polling: 100 });
+  const pz = await page.evaluate(() => { const z = familyChessTraining._test.pz(); return { moves: z.p.moves, sk: z.sk }; });
+  assert.equal(pz.sk.set, 1);   /* practice puzzles open with the skewer itself */
+  await ready('Hint'); await tap('Hint');
+  assert.match(await page.evaluate(() => document.querySelector('.tr-legend')?.textContent || ''), /Ringed: the two pieces on one line/);
+  for (let i = 1; i < pz.moves.length; i += 2) {
+    await page.waitForFunction(([u, n]) => { if (familyChessBoard.moves().length === n - 1) familyChessBoard.userMove(u); return familyChessBoard.moves().length >= n; }, [pz.moves[i], i + 1], { timeout: 15000, polling: 150 });
+  }
+  await page.waitForFunction(() => !!document.querySelector('.tr-result'), null, { timeout: 15000, polling: 100 });
+  assert.ok(await page.evaluate(() => [...document.querySelectorAll('.tr-say')].some((e) => e.textContent.startsWith('Skewer — '))));
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+test('Your style: tapping a dot on the accuracy line shows that game', async () => {
+  const { page, ctx, errors } = await open({ width: 390, height: 844 });
+  await page.evaluate(() => familyChessTraining.open());
+  const cap = await page.evaluate(() => {
+    const T = familyChessTraining._test, P = T.P(), now = Date.now();
+    P.games = [0, 1, 2, 3, 4].map((i) => ({ key: 'g:00000000-0000-4000-8000-00000000000' + i, at: now - (5 - i) * 864e5, side: i % 2 ? 'b' : 'w', res: i % 2 ? 'loss' : 'win', mode: 'live', plies: 50, acc: 80 + i,
+      tags: { plans: ['center'], issues: i % 2 ? { hung: 1 } : {}, loss: {}, verdicts: { opening: 'good', middlegame: i % 2 ? 'bad' : 'good' } }, tip: null }));
+    T.openStyle();
+    document.querySelectorAll('.tr-spark circle.hit')[4].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    return document.querySelector('.tr-spark-pick').textContent;
+  });
+  assert.match(cap, /online · won · accuracy 84/);
+  assert.match(cap, /Open ›/);
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});

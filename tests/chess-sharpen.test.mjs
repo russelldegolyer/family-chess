@@ -38,7 +38,7 @@ test('your plan on the end card feeds the style profile',()=>{
  assert.match(page,/function fillEndPlan\(me, acc\)/);
  assert.match(page,/window\.familyChessTraining\?\.recordGame\?\.\(/);
  assert.match(tr,/function recordGame\(g\)/);
- assert.match(tr,/function styleFocus\(\)/);
+ assert.match(tr,/function styleFocus\(S = styleStats\(\)\)/);
  assert.match(stats,/drops\[i\] = Math\.max\(0, Math\.round\(drop\)\);/);
 });
 

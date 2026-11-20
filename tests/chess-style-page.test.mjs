@@ -14,3 +14,15 @@ test('Your style: summary, filter, trends only with enough games, examples saved
   assert.match(t, /notes: g\.notes \|\| prev\?\.notes \|\| undefined/);
   assert.match(page, /misses, notes: \(\(\) => \{ const seen = new Set\(\);/);
 });
+
+test('Your style: hub line, tappable accuracy dots, one-line rows, a way into the weakest phase', () => {
+  assert.match(t, /card\('Your style', styleLine\(\), '◎'/);
+  assert.match(t, /function focusPick\(S\)/);
+  assert.match(t, /'focus: ' \+ \(F\.ch \? F\.ch\.title : F\.fix\.title\)\.toLowerCase\(\)/);
+  assert.match(t, /const \[chart, cap\] = accSpark\(S\.series\);/);
+  assert.match(t, /class="hit" tabindex="0" role="button"/);
+  assert.match(t, /if \(canOpen\(s\.g\)\) cap\.append\(btn\('Open ›'/);
+  assert.match(t, /r\.querySelector\('\.tr-bar-meta'\)\.append\(el\('span', 'tr-pill-good', 'Improving'\)\)/);
+  assert.match(t, /'solid in ' \+ \(p\.n - p\.bad\) \+ ' of ' \+ p\.n/);
+  assert.match(t, /middlegame: \['Spot the threat ›'/);
+});
