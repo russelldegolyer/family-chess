@@ -624,3 +624,4 @@ body.training.view-2d #stage { opacity: 0 !important; }
 .tr-axis-track i { position: absolute; top: 2px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5), 0 0 0 .5px rgba(0,0,0,.2); }
 .tr-axis p { margin: 0; font-size: 14px; line-height: 1.45; color: #d1d1d6; }
 .tr-axis p.tr-axis-why { margin-top: -2px; font-size: 12px; color: #8e8e93; }
+.tr-axes-note { margin: 4px 0 2px; }

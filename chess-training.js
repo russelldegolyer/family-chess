@@ -2841,7 +2841,7 @@
   /* your style as five sliders between opposites, read from the plans and mistakes in each game.
      pos: 0 = all the way left, 100 = all the way right; say: what that means for you; why: the games behind it */
   function styleAxes(G) {
-    const N = G.length; if (N < 3) return [];
+    const N = G.length; if (N < 3) return { play: [], finish: [], ahead: 0 };
     const has = (g, list, k = 'plans') => list.some((x) => (k === 'plans' ? (g.tags?.plans || []).includes(x) : (g.tags?.issues || {})[x]));
     const count = (f) => G.filter(f).length, pct = (n) => Math.round(n / N * 100);
     const of = (n) => n + ' of ' + N + (N === 1 ? ' game' : ' games');
@@ -2879,7 +2879,60 @@
     out.push({ l: 'Quick games', r: 'Long grinds', pos: p5, why: 'Games last ' + Math.round(avgPly / 2) + ' moves on average; ' + of(ends) + ' reached an endgame.',
       say: pick(p5, 'Your games are decided early, in the opening or middlegame, so the first 20 moves matter most for you.', 'Your games run a normal length; some reach an endgame.',
         'You play long games and grind toward the endgame — a patient style. Endgame skills (an active king, pawn races) pay off most for you.') });
-    return out;
+    /* 6. how the opening goes: pieces out early, or a slow / queen-first start */
+    const dev = count((g) => has(g, ['develop', 'castle'])), slow = count((g) => has(g, ['slowDev', 'earlyQueen'], 'issues'));
+    const p6 = Math.round(Math.max(0, Math.min(100, ((dev - slow) / N + 1) / 2 * 100)));
+    out.push({ l: 'Slow start', r: 'Quick development', pos: p6, why: 'Got pieces out or castled early in ' + of(dev) + (slow ? '; a slow or queen-first start in ' + slow + '.' : '.'),
+      say: pick(p6, 'Your openings start slowly — pieces stay home or the queen comes out first. Knights and bishops out, castle, then the queen.',
+        'Some openings go smoothly, some start slowly.', 'You get your pieces out and your king safe quickly. That gives you an easy middlegame.') });
+
+    /* how you finish: from games where you got a rook or more ahead (tags.finish, read since 2026-11-19) */
+    const F = G.filter((g) => g.tags?.finish), fin = [];
+    if (F.length >= 2) {
+      const won = F.filter((g) => g.res === 'win'), mates = F.filter((g) => g.tags.finish.mate).length;
+      const f1 = Math.round(won.length / F.length * 100);
+      fin.push({ l: 'Lets wins slip', r: 'Closes out wins', pos: f1, why: 'A rook or more ahead in ' + F.length + ' games: won ' + won.length + (mates ? ', ' + mates + ' by checkmate' : '') + '.',
+        say: pick(f1, 'Big leads often don’t turn into wins. Once you’re well ahead, slow down: guard your pieces, trade, and walk the king into a mate.',
+          'You win some big leads and let others get away.', 'When you get well ahead, you bring it home.') });
+      const mv = F.reduce((x, g) => x + g.tags.finish.mine, 0), ck = F.reduce((x, g) => x + g.tags.finish.checks, 0);
+      const room = F.reduce((x, g) => x + g.tags.finish.room, 0) / F.length, cr = ck / Math.max(1, mv);
+      const f2 = Math.round(Math.max(0, Math.min(100, 100 - room / 5 * 70 - cr * 30)));
+      fin.push({ l: 'Chases with checks', r: 'Boxes the king in', pos: f2, why: 'Once ahead, ' + ck + ' of your ' + mv + ' moves were checks; their king had about ' + room.toFixed(1) + ' moves left each turn.',
+        say: pick(f2, 'Once you’re winning, you chase the king with checks and it keeps finding room. Take its squares away first — like the rook ladder — then check.',
+          'You mix checks with taking squares away.', 'You squeeze the king before you check — exactly how mates are built.') });
+      if (won.length) {
+        const m = won.reduce((x, g) => x + Math.max(0, (g.plies || 0) - g.tags.finish.up) / 2, 0) / won.length;
+        const f3 = Math.round(Math.max(0, Math.min(100, 100 - (m - 6) / 30 * 100)));
+        fin.push({ l: 'Slow to finish', r: 'Finishes fast', pos: f3, why: 'From a rook up, your wins took about ' + Math.round(m) + ' more moves.',
+          say: pick(f3, 'Won positions take you a while to finish. The queen, rook and two-rook mates in the Endgame Academy make this much quicker.',
+            'You finish wins at a steady pace.', 'Once you’re ahead, you finish quickly.') });
+      }
+    }
+    const up = count((g) => has(g, ['kingUp'])), passive = count((g) => has(g, ['passiveKing'], 'issues'));
+    if (up + passive >= 2) {
+      const f4 = Math.round(up / (up + passive) * 100);
+      fin.push({ l: 'King hides', r: 'King joins in', pos: f4, why: 'In the endgame your king got active in ' + up + (up === 1 ? ' game' : ' games') + ' and stayed back in ' + passive + '.',
+        say: pick(f4, 'In endgames your king stays home. With the queens gone it’s a strong piece — walk it to the center.',
+          'Sometimes your king helps in the endgame, sometimes it waits.', 'Your king joins the fight in the endgame — exactly right.') });
+    }
+    return { play: out, finish: fin, ahead: F.length };
+  }
+  /* games read before finishing was tracked: read computer games again (their positions are on this device) */
+  function fillFinish() {
+    const PL = window.familyChessPlan, C = B()?.Chess, log = window.familyChessCpuGames?.() || []; if (!PL || !C) return;
+    let changed = false;
+    for (const g of P.games || []) {
+      if (g.fin || !g.tags || g.tags.finish || !g.key?.startsWith('c:')) continue;
+      g.fin = 1; changed = true;
+      const x = log.find((y) => y.id === g.key.slice(2)); if (!x || !Array.isArray(x.fens)) continue;
+      try {
+        const key = (f) => f.split(' ').slice(0, 2).join(' '), moves = [];
+        for (let i = 1; i < x.fens.length; i++) { const b = new C(x.fens[i - 1]); const m = b.moves({ verbose: true }).find((v) => { b.move(v); const ok = key(b.fen()) === key(x.fens[i]); b.undo(); return ok; }); if (!m) break; moves.push(m.from + m.to + (m.promotion || '')); }
+        const R = PL.read({ Chess: C, moves, side: x.color, fens: x.fens.slice(0, moves.length) });
+        if (R?.tags.finish) g.tags.finish = R.tags.finish;
+      } catch { /* optional */ }
+    }
+    if (changed) save();
   }
   /* the profile's top finding (with practice behind it) becomes the recommended chapter */
   function styleFocus(S = styleStats()) {
@@ -2962,7 +3015,7 @@
   }
   function openStyle() {
     session++; screen = 'style'; PATH = null; RETURN = null; top.hidden = true; panel.hidden = true; B().onMove(null); B().onTap(null); mark({});
-    try { backfillGames(); } catch { /* history is optional */ }
+    try { backfillGames(); fillFinish(); } catch { /* history is optional */ }
     hub.classList.remove('tr-sg-page', 'tr-ed-page'); hub.replaceChildren();
     let S = styleStats(STYLE_FILTER);
     if (STYLE_FILTER !== 'all' && S.N < 3) { STYLE_FILTER = 'all'; S = styleStats('all'); }
@@ -3017,9 +3070,10 @@
     }
 
     /* how you play: five sliders between opposites */
-    if (S.axes.length) {
-      const hp = card('How you play', 'tr-axes');
-      for (const x of S.axes) {
+    const sliders = (title, list, note) => {
+      const hp = card(title, 'tr-axes');
+      if (note) hp.append(el('p', 'tr-muted tr-axes-note', note));
+      for (const x of list) {
         const lean = x.pos < 35 ? 'l' : x.pos > 65 ? 'r' : 'm';
         const row = el('div', 'tr-axis');
         const ends = el('div', 'tr-axis-ends'); ends.append(el('b', lean === 'l' ? 'on' : '', x.l), el('b', lean === 'r' ? 'on' : '', x.r));
@@ -3029,7 +3083,9 @@
         row.append(ends, track, el('p', '', x.say), el('p', 'tr-axis-why', x.why));
         hp.append(row);
       }
-    }
+    };
+    if (S.axes.play.length) sliders('How you play', S.axes.play);
+    if (S.N >= 3) sliders('How you finish', S.axes.finish, S.axes.finish.length < 2 ? 'These fill in from games where you get a rook or more ahead' + (S.axes.ahead ? ' — ' + (2 - Math.min(2, S.axes.ahead)) + ' more to go.' : '. Every game from now on counts.') : '');
 
     /* focus: the one thing to work on */
     const F = focusPick(S);

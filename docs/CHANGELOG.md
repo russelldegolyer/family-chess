@@ -20,6 +20,12 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Added**
+- Your style: a "How you finish" card with sliders for how you trap the king once you're winning — Lets wins slip ↔ Closes out wins, Chases with checks ↔ Boxes the king in, Slow to finish ↔ Finishes fast, and King hides ↔ King joins in. They read games where you got a rook or more ahead (computer games already on your phone count; online games count from now on).
+- How you play: a sixth slider, Slow start ↔ Quick development.
+
 ## 2026-11-19 — Your style: How you play sliders (deployed 8:59 PM)
 
 **Improved**

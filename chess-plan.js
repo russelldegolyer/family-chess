@@ -231,7 +231,21 @@
     const counts = {}; for (const x of issues) counts[x.code] = (counts[x.code] || 0) + 1;
     const loss = {}; for (const p of phases) loss[p.key] = p.loss;
     const plans = [...new Set(phases.flatMap((p) => p.plans))];
-    return { side, plies: n, result, phases, issues: ranked, tip, tags: { plans, issues: counts, loss, verdicts: Object.fromEntries(phases.map((p) => [p.key, p.verdict])) } };
+    /* finishing: from the first time you were clearly ahead (a rook or more), how you went after the king.
+       mine = your moves from then on, checks = how many of them gave check, room = the enemy king's legal moves after
+       your moves (on average: lower = boxed in), mate = you gave checkmate */
+    let finish = null;
+    const upAt = H.findIndex((h) => h.diff >= 5);
+    if (upAt >= 0 && n - upAt >= 4) {
+      let mineN = 0, checks = 0, room = 0;
+      for (let i = upAt; i < n; i++) {
+        const h = H[i]; if (!mine(h)) continue;
+        mineN++; if (h.check) checks++;
+        try { room += new Chess(h.after).moves({ verbose: true }).filter((m) => m.piece === 'k').length; } catch { /* odd position */ }
+      }
+      if (mineN) finish = { up: upAt + 1, mine: mineN, checks, room: Math.round(room / mineN * 10) / 10, mate: !!(last.mate && mine(last)) };
+    }
+    return { side, plies: n, result, phases, issues: ranked, tip, tags: { plans, issues: counts, loss, verdicts: Object.fromEntries(phases.map((p) => [p.key, p.verdict])), ...(finish ? { finish } : {}) } };
   }
   function list(a) { return a.length <= 1 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
   function headline(R) {
