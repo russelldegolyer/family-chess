@@ -22,7 +22,9 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 ## Unreleased
 
 **Fixed**
-- Walkie-talkie: the microphone turns off the instant you let go of the button (the iPhone's mic light goes out right away).
+- Walkie-talkie: the microphone turns off the moment you let go (about 0.2 seconds: your last syllable still goes out, then it closes and the iPhone's mic light goes out). The button lets go instantly.
+- Walkie-talkie: fixed a quick press-release-press opening the microphone twice and leaving one running.
+- Walkie-talkie: "Talking…" now appears only once your voice is actually going out (the button shows pressed while the mic starts), the other phone's speaker fades out instead of clicking when you stop, pressing again right after letting go reuses the same mic, a second finger lifting no longer ends your press, and an incoming call, Siri or switching apps ends the press cleanly.
 - The number on the app icon: opening the app resets it to 0, and an invite's alert and number go away when it's declined or runs out.
 
 **Improved**

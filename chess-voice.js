@@ -2,8 +2,9 @@
    While both of you are in the same online game, the apps quietly link up in the background (no ringing, no Join).
    Hold the mic button to talk: your voice streams live while you hold it and stops the moment you let go.
    While you hold it, the other player's mic button lights up green with "<name> is talking".
-   Privacy: the microphone is only open while you hold the button; letting go stops it at once (the iPhone's mic light
-   goes out), and the game ending or leaving the app closes everything. Audio goes straight between the two apps, encrypted by WebRTC (DTLS-SRTP); it is never
+   Privacy: the microphone is only open while you hold the button. Letting go stops it within about 0.2 s (the last
+   syllable goes out, then the mic closes and the iPhone's mic light goes out); the game ending or leaving the app
+   closes everything at once. Audio goes straight between the two apps, encrypted by WebRTC (DTLS-SRTP); it is never
    recorded, uploaded or stored. The "how to reach me" handshake runs on a PRIVATE realtime channel that only the two
    signed-in friends can join (database rule chess_voice_pair_*). */
 (() => {
@@ -21,8 +22,8 @@
   const S = {
     me: null, opp: null, oppName: '', gameId: null, inGame: false,
     pc: null, sid: null, sender: null, link: 'off',   /* link: off | connecting | on */
-    local: null, remote: null, holding: false, pressAt: 0, theyTalk: false,
-    helloTimer: 0, linkTimer: 0, theyTimer: 0, beat: 0, reachTimer: 0,
+    local: null, remote: null, holding: false, live: false, press: 0, pid: null, pressAt: 0, theyTalk: false,
+    helloTimer: 0, linkTimer: 0, theyTimer: 0, beat: 0, reachTimer: 0, offTimer: 0,
     pendingIce: [], offering: false, meter: null, hinted: false,
   };
   const $ = (id) => document.getElementById(id);
@@ -32,6 +33,9 @@
   /* iPhone: move sounds put the audio session in 'playback', and Safari refuses the microphone in that mode
      (InvalidStateError). Talking switches it to 'play-and-record'; closing the mic hands it back ('auto'). */
   const session = (t) => { try { if (navigator.audioSession && navigator.audioSession.type !== t) navigator.audioSession.type = t; } catch { /* older Safari */ } };
+  /* letting go: the last syllable still goes out (TAIL), then a few silent frames (HUSH) so the other speaker fades
+     out instead of clicking or buzzing, then the microphone stops completely — about 0.2 s in all */
+  const TAIL_MS = 150, HUSH_MS = 60;
 
   /* ---------------- UI ---------------- */
   const MIC = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
@@ -44,7 +48,8 @@
 #voiceBox.show{display:flex}
 #voiceBox button{width:46px;height:46px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#f2f2f7;
  background:rgba(36,36,40,.94);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 6px 18px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
- touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;transition:transform .12s,background .12s}
+ touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;transition:transform .12s,background .12s,box-shadow .12s}
+#voiceBox[data-s="arming"] .v-main{background:#1c5a33;color:#fff;transform:scale(1.06);box-shadow:0 0 0 3px rgba(48,209,88,.3),0 6px 18px rgba(0,0,0,.45)}
 #voiceBox[data-s="talking"] .v-main{background:#1f8f45;color:#fff;transform:scale(1.12);box-shadow:0 0 0 4px rgba(48,209,88,.55),0 0 22px rgba(48,209,88,.65)}
 #voiceBox[data-s="hearing"] .v-main{color:#30d158;box-shadow:0 0 0 2px rgba(48,209,88,.85),0 6px 18px rgba(0,0,0,.45);animation:vPulse 1.1s ease-in-out infinite}
 #voiceBox[data-s="hearing"].loud .v-main{background:rgba(31,143,69,.35)}
@@ -64,11 +69,12 @@
     lbl = document.createElement('span'); lbl.className = 'v-lbl'; lbl.setAttribute('aria-live', 'polite');
     box.append(lbl, mainBtn); document.body.append(box);
     /* hold to talk: pointer (touch and mouse) plus Space/Enter for keyboards */
-    mainBtn.addEventListener('pointerdown', (e) => { if (e.button > 0) return; e.preventDefault(); try { mainBtn.setPointerCapture(e.pointerId); } catch { /* old browser */ } void pressStart(); });
-    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) mainBtn.addEventListener(ev, () => pressEnd());
-    mainBtn.addEventListener('keydown', (e) => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); void pressStart(); } });
-    mainBtn.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); pressEnd(); } });
+    mainBtn.addEventListener('pointerdown', (e) => { if (e.button > 0 || S.holding) return; e.preventDefault(); try { mainBtn.setPointerCapture(e.pointerId); } catch { /* old browser */ } void pressStart(e.pointerId); });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) mainBtn.addEventListener(ev, (e) => pressEnd(e.pointerId));
+    mainBtn.addEventListener('keydown', (e) => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); void pressStart('key'); } });
+    mainBtn.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); pressEnd('key'); } });
     mainBtn.addEventListener('blur', () => pressEnd());
+    window.addEventListener('blur', () => pressEnd(null, true));   /* app switcher, Control Center, an incoming call */
     box.addEventListener('contextmenu', (e) => e.preventDefault());
     audio = document.createElement('audio'); audio.autoplay = true; audio.setAttribute('playsinline', ''); audio.hidden = true; document.body.append(audio);
     new MutationObserver(place).observe(document.body, { attributes: true, attributeFilter: ['class'] });
@@ -103,11 +109,11 @@
   }
   function paint() {
     if (!box) return;
-    const st = S.holding ? 'talking' : S.theyTalk ? 'hearing' : S.link === 'on' ? 'ready' : S.link;
+    const st = S.holding ? (S.live ? 'talking' : 'arming') : S.theyTalk ? 'hearing' : S.link === 'on' ? 'ready' : S.link;
     box.dataset.s = st;
     lbl.textContent = st === 'talking' ? (S.link === 'on' ? 'Talking…' : 'Connecting…') : st === 'hearing' ? S.oppName + ' is talking' : '';
     const name = S.oppName || 'your opponent';
-    mainBtn.setAttribute('aria-label', 'Hold to talk to ' + name);
+    mainBtn.setAttribute('aria-label', 'Hold to talk to ' + name); mainBtn.setAttribute('aria-pressed', String(S.holding));
     mainBtn.title = S.link === 'on' ? 'Hold to talk to ' + name : 'Hold to talk (connecting to ' + name + ')';
     place();
   }
@@ -140,7 +146,7 @@
     if (m.t === 'talk') {
       clearTimeout(S.theyTimer);
       S.theyTalk = !!m.on;
-      if (S.theyTalk) { S.theyTimer = setTimeout(() => { S.theyTalk = false; paint(); }, 5000); playRemote(); }   /* refreshed every 2 s while they hold */
+      if (S.theyTalk) { S.theyTimer = setTimeout(() => { S.theyTalk = false; paint(); }, 4000); playRemote(); }   /* refreshed every 1.5 s while they hold */
       paint(); return;
     }
     if (m.t === 'bye') { relink(); }
@@ -225,26 +231,41 @@
   function playRemote() { if (audio?.srcObject && audio.paused) void audio.play().catch(() => {}); }
 
   /* ---------------- the microphone ---------------- */
-  async function mic() {
-    if (S.local && S.local.getAudioTracks().some((t) => t.readyState === 'live')) return S.local;
-    S.local = null;
-    if (!supported()) { const e = new Error('unsupported'); e.name = 'NotSupportedError'; throw e; }
-    session('play-and-record');
-    try { S.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
-    catch (e) {
-      if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) throw e;
-      /* some phones refuse the tuned settings: try once more with the plainest request */
-      console.warn('voice mic (tuned)', e && e.name, e && e.message);
+  /* one request at a time: a quick press-release-press shares the same request, so a second microphone can never
+     be opened and left running */
+  let micPending = null;
+  function mic() {
+    if (S.local && S.local.getAudioTracks().some((t) => t.readyState === 'live')) return Promise.resolve(S.local);
+    if (micPending) return micPending;
+    if (S.local) { for (const t of S.local.getTracks()) t.stop(); S.local = null; }
+    if (!supported()) { const e = new Error('unsupported'); e.name = 'NotSupportedError'; return Promise.reject(e); }
+    micPending = (async () => {
       session('play-and-record');
-      S.local = await navigator.mediaDevices.getUserMedia({ audio: true });
-    }
-    for (const t of S.local.getAudioTracks()) t.enabled = false;
-    return S.local;
+      let s;
+      try { s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
+      catch (e) {
+        if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) throw e;
+        /* some phones refuse the tuned settings: try once more with the plainest request */
+        console.warn('voice mic (tuned)', e && e.name, e && e.message);
+        session('play-and-record');
+        s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      for (const t of s.getAudioTracks()) {
+        t.enabled = false;
+        /* the phone took the mic away (a call, Siri): end the press cleanly instead of leaving it stuck */
+        t.addEventListener('ended', () => { if (S.local !== s) return; S.local = null; session('auto'); if (S.holding) pressEnd(null, true); paint(); }, { once: true });
+      }
+      S.local = s;
+      return s;
+    })().finally(() => { micPending = null; });
+    return micPending;
   }
   function closeMic() {
-    for (const t of S.local?.getTracks() || []) t.stop();
-    if (S.local) session('auto');
-    S.local = null;
+    clearTimeout(S.offTimer); S.offTimer = 0;
+    const s = S.local; S.local = null;
+    if (S.sender?.track) void S.sender.replaceTrack(null).catch(() => {});   /* nothing left attached to the line */
+    for (const t of s?.getTracks() || []) t.stop();
+    if (s) session('auto');
   }
   function micError(e) {
     const n = (e && e.name) || 'Error';
@@ -257,28 +278,40 @@
   }
 
   /* ---------------- hold to talk ---------------- */
-  async function pressStart() {
+  async function pressStart(pid = null) {
     if (S.holding || !S.opp || !S.inGame) return;
-    S.holding = true; S.pressAt = Date.now(); paint();
-    playRemote();
+    const press = ++S.press;
+    S.holding = true; S.live = false; S.pid = pid; S.pressAt = Date.now();
+    clearTimeout(S.offTimer); S.offTimer = 0;          /* pressed again while letting go: the same mic carries on */
+    paint(); playRemote();
     navigator.vibrate?.(15);
-    try { await mic(); } catch (e) { S.holding = false; paint(); return micError(e); }
-    if (!S.holding) return void closeMic();             /* let go before the mic was ready */
+    try { await mic(); } catch (e) { if (press === S.press) { S.holding = false; if (!S.local) session('auto'); paint(); micError(e); } return; }
+    if (press !== S.press) return;                     /* a newer press took over */
+    if (!S.holding) return void closeMic();            /* let go before the mic was ready: nothing was sent */
     for (const t of S.local.getAudioTracks()) t.enabled = true;
     await attachMic();
+    if (press !== S.press || !S.holding) return;
+    S.live = true; paint();                            /* "Talking…" appears the moment your voice is going out */
     send('talk', { on: true });
-    clearInterval(S.beat); S.beat = setInterval(() => { if (S.holding) send('talk', { on: true }); }, 2000);
+    clearInterval(S.beat); S.beat = setInterval(() => { if (S.holding) send('talk', { on: true }); }, 1500);
     if (S.link === 'off') { stopHello(); startHello(); }
     clearTimeout(S.reachTimer);
     if (S.link !== 'on') S.reachTimer = setTimeout(() => { if (S.link !== 'on') toast('Can’t reach ' + (S.oppName || 'your opponent') + ' yet. Voice works while you’re both in this game.'); }, 8000);
   }
-  function pressEnd() {
+  function pressEnd(pid = null, now = false) {
     if (!S.holding) return;
-    S.holding = false; clearInterval(S.beat); clearTimeout(S.reachTimer);
-    void attachMic();   /* detaches the track: nothing is sent while released */
-    send('talk', { on: false });
+    if (pid != null && S.pid != null && pid !== S.pid) return;   /* a different finger let go */
+    S.holding = false; S.live = false; clearInterval(S.beat); clearTimeout(S.reachTimer);
     if (Date.now() - S.pressAt < 300 && !S.hinted) { S.hinted = true; toast('Hold the mic button while you talk, then let go.'); }
-    paint(); closeMic();   /* the microphone turns off the moment you let go (the iPhone's mic light goes out) */
+    paint();                                           /* the button lets go at once */
+    if (now || !S.local) { send('talk', { on: false }); closeMic(); return; }
+    clearTimeout(S.offTimer);
+    S.offTimer = setTimeout(() => {
+      if (S.holding) return;
+      for (const t of S.local?.getAudioTracks() || []) t.enabled = false;
+      send('talk', { on: false });
+      S.offTimer = setTimeout(() => { if (!S.holding) closeMic(); }, HUSH_MS);
+    }, TAIL_MS);
   }
 
   /* a soft green fill on the button while the other person's voice is coming through */
@@ -299,8 +332,8 @@
   /* ---------------- game hookup ---------------- */
   function leave(tell) {
     stopHello(); clearInterval(S.beat); clearTimeout(S.reachTimer);
-    if (S.holding) { S.holding = false; send('talk', { on: false }); }
-    closeLink(tell); closeMic(); paint();
+    if (S.holding) { S.holding = false; S.live = false; send('talk', { on: false }); }
+    closeMic(); closeLink(tell); paint();
   }
   /* called by the game whenever the online view changes */
   let lastView = null;
@@ -326,7 +359,7 @@
   let awayTimer = 0;
   document.addEventListener('visibilitychange', () => {
     clearTimeout(awayTimer);
-    if (document.visibilityState === 'hidden') { pressEnd(); awayTimer = setTimeout(() => { if (document.visibilityState === 'hidden') leave(true); }, 4000); }
+    if (document.visibilityState === 'hidden') { pressEnd(null, true); awayTimer = setTimeout(() => { if (document.visibilityState === 'hidden') leave(true); }, 4000); }
     else if (lastView) update(lastView);
   });
   window.familyChessVoice = { update, hangUp: () => leave(true), state: () => (S.local ? 'mic' : 'idle') };
