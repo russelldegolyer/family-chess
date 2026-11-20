@@ -55,12 +55,12 @@ body.short .status { left: calc(208px + (100vw - 208px - var(--area-r, 0px)) / 2
 <script defer src="./chess-review-analysis.js?v=6"></script>
 <link rel="stylesheet" href="./chess-social.css?v=6">
 <script defer src="./chess-social.js?v=28"></script>
-<link rel="stylesheet" href="./chess-training.css?v=25">
+<link rel="stylesheet" href="./chess-training.css?v=26">
 <link rel="stylesheet" href="./chess-plan.css?v=1">
 <link rel="stylesheet" href="./chess-stats.css?v=3">
 <script defer src="./chess-stats.js?v=8"></script>
 <script defer src="./chess-plan.js?v=3"></script>
-<script defer src="./chess-training.js?v=35"></script>
+<script defer src="./chess-training.js?v=36"></script>
 <title>Chess</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -6146,7 +6146,7 @@ function fillEndPlan(me, acc) {
     const key = accuracyKey() || ('x:' + endKey());
     const misses = (acc?.big || []).filter((x) => (x.ply % 2 === 1) === (me === 'w') && x.best && x.drop >= 15).slice(0, 3)
       .map((x) => ({ fen: fens[x.ply - 1], best: x.best, played: G.moves[x.ply - 1], ply: x.ply, drop: x.drop }));
-    window.familyChessTraining?.recordGame?.({ key, at: Date.now(), side: me, res, mode: G.mode, plies: G.moves.length, acc: acc ? acc[me] : null, tags: R.tags, tip: R.tip ? { code: R.tip.code } : null, misses });
+    window.familyChessTraining?.recordGame?.({ key, at: Date.now(), side: me, res, mode: G.mode, plies: G.moves.length, acc: acc ? acc[me] : null, tags: R.tags, tip: R.tip ? { code: R.tip.code } : null, misses, notes: (() => { const seen = new Set(); return R.issues.filter((x) => !seen.has(x.code) && seen.add(x.code)).slice(0, 5).map((x) => ({ code: x.code, ply: x.ply, text: String(x.text || '').slice(0, 200) })); })() });
   } catch { /* profile is optional */ }
 }
 /* What did the better move do? Only clear, teachable patterns: checkmate, a free piece, a fork. */

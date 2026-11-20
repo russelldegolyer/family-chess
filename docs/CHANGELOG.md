@@ -19,6 +19,16 @@ come from `git log --format=%ad --date=short | sort | uniq -c`.
 
 ---
 
+## Unreleased
+
+**Improved**
+- Your style page, rebuilt:
+  - A summary card on top: your style in a word (Builder, Attacker, Finisher, Trader or Defender), your record, win rate, average accuracy, results as White and as Black, and an accuracy line across your games with each dot colored by the result.
+  - A filter for All, Online and Computer (it appears once you have at least 3 games of each).
+  - What you go for: marks the plan you win most with; tap a plan for what it means and how to get more out of it.
+  - What costs you: shows Improving or More often lately once there are enough games; tap a mistake for your latest real example and a button to open that game.
+  - By phase: three side-by-side tiles with the weakest one highlighted and the reason it's weakest.
+
 ## 2026-11-18 — Audit cleanup, invite line, pop-up overlap (deployed 7:33 PM)
 
 **Improved**
